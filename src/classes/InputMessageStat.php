@@ -1,10 +1,13 @@
 <?php
+use Swagger\Annotations as SWG;
 
 /**
  * @SWG\Definition(definition="NewInputMessageStat", type="object", required={"deviceId", "adapterInstance", "messageType", "noOfMessages"})
  */
 class InputMessageStat
 {
+	public static $tableName = 'InputMessageStat';
+	
     public $id;
     /**
      * @SWG\Property()
@@ -26,10 +29,8 @@ class InputMessageStat
      * @SWG\Property()
      */
     public $noOfMessages;
-    /**
-     * @var dateTime
-     * @SWG\Property()
-     */
+
+	public $updateTime;
     public $createdTime;
 }
 
@@ -40,8 +41,10 @@ class InputMessageStat
  *   allOf={
  *       @SWG\Schema(ref="#/definitions/NewInputMessageStat"),
  *       @SWG\Schema(
- *           required={"id", "deviceId", "adapterInstance", "messageType", "noOfMessages", "createdTime"},
- *           @SWG\Property(property="id", format="int64", type="integer")
+ *           required={"id", "createdTime"},
+ *           @SWG\Property(property="id", format="int64", type="integer"),
+ * 			 @SWG\Property(property="updateTime", format="date-time", type="string"),
+ * 			 @SWG\Property(property="createdTime", format="date-time", type="string")
  *       )
  *   }
  * )

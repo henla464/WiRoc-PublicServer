@@ -1,10 +1,11 @@
 <?php
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
+use Doctrine\Common\Annotations\AnnotationReader;
 
 require '../vendor/autoload.php';
-require_once('../classes/Device.php');
-require_once('../classes/ErrorModel.php');
+#require_once('../classes/Device.php');
+#require_once('../classes/ErrorModel.php');
 \Doctrine\Common\Annotations\AnnotationRegistry::registerLoader('class_exists');
 
 $config['displayErrorDetails'] = true;
@@ -17,6 +18,7 @@ $config['db']['dbname'] = "wiroc";
 
 $app = new \Slim\App(["settings" => $config]);
 $container = $app->getContainer();
+$annotationReader = new AnnotationReader();
 
 $container['logger'] = function($c) {
     $logger = new \Monolog\Logger('my_logger');
@@ -27,14 +29,16 @@ $container['logger'] = function($c) {
 
 $container['db'] = function ($c) {
     $db = $c['settings']['db'];
-    $pdo = new PDO("mysql:host=" . $db['host'] . ";dbname=" . $db['dbname'],
+    $pdo = new PDO("mysql:host=" . $db['host'] . ";dbname=" . $db['dbname'] .";charset=utf8mb4",
         $db['user'], $db['pass']);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     return $pdo;
 };
 
-
+$container['helper'] = function ($container) {
+    return new Helper($container);
+};
 
 /**
  * @SWG\Info(title="WiRoc Monitor API", version="1")
@@ -59,10 +63,35 @@ $app->get('/api/v1', function($request, $response, $args) use ($app) {
  * )
  */
 $app->get('/swagger/docs', function($request, $response, $args) {
-    #return $app->response->redirect($app->urlFor('swagger'), 303);
     return $response->withStatus(303)->withHeader('Location', 'http://localhost/api/v1');
 });
 
+
+/**
+     * @SWG\Post(
+     *     path="/api/v1/CreateTables",
+     *     description="Create the tables in the database if they don't exist",
+     *     operationId="createTables",
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=200,
+     *         description="command response",
+     *         @SWG\Schema(
+     *             ref="#/definitions/CommandResponse"
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     )
+     * )
+     */
+$app->post('/api/v1/CreateTables', function (Request $request, Response $response) {
+	return $response->withJson($this->helper->CreateTables());
+});
 
 # DEVICES
 /**
@@ -89,10 +118,8 @@ $app->get('/swagger/docs', function($request, $response, $args) {
      * )
      */
 $app->get('/api/v1/Devices', function (Request $request, Response $response) {
-    #$name = $request->getAttribute('name');
-    $response->getBody()->write("Hello");
-
-    return $response;
+	$cls = Device::class;
+    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName));
 });
 
 /**
@@ -126,10 +153,9 @@ $app->get('/api/v1/Devices', function (Request $request, Response $response) {
      * )
      */
 $app->get('/api/v1/Devices/{deviceId}', function (Request $request, Response $response) {
-    $deviceId = $request->getAttribute('deviceId');
-    #$response->getBody()->write("Hello, $name");
-
-    return $response;
+    $id = $request->getAttribute('deviceId');
+    $cls = Device::class;
+    return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
 });
 
 /**
@@ -170,10 +196,11 @@ $app->get('/api/v1/Devices/{deviceId}', function (Request $request, Response $re
      * )
      */
 $app->put('/api/v1/Devices/{deviceId}', function (Request $request, Response $response) {
-    #$deviceId = $request->getAttribute('deviceId');
-    #$response->getBody()->write("Hello, $name");
-
-    return $response;
+    $id = $request->getAttribute('deviceId');
+    $cls = Device::class;
+    $objectArray = json_decode($request->getBody(), true);
+    $this->helper->Update($cls, $objectArray, $cls::$tableName, $id);
+    return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
 });
 
 /**
@@ -206,10 +233,10 @@ $app->put('/api/v1/Devices/{deviceId}', function (Request $request, Response $re
      * )
      */
 $app->post('/api/v1/Devices', function (Request $request, Response $response) {
-    #$deviceId = $request->getAttribute('id');
-    #$response->getBody()->write("Hello, $name");
-
-    return $response;
+    $objectArray = json_decode($request->getBody(), true);
+	$cls = Device::class;
+    $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
+	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
 });
 
 #SUBDEVICE
@@ -246,9 +273,10 @@ $app->post('/api/v1/Devices', function (Request $request, Response $response) {
      */
 $app->get('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, Response $response) {
     $deviceId = $request->getAttribute('deviceId');
-    #$response->getBody()->write("Hello, $name");
-
-    return $response;
+    $cls = SubDevice::class;
+    $sql = "SELECT SubDevices.* FROM SubDevices JOIN Devices ON SubDevices.HeadBTAddress = Devices.BTAddress WHERE Devices.id = :deviceId";
+    $subDevices = $this->helper->GetAllBySql($cls, $sql, ['deviceId'=>$deviceId]);
+    return $response->withJson($subDevices);
 });
 
 /**
@@ -275,10 +303,8 @@ $app->get('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, R
      * )
      */
 $app->get('/api/v1/SubDevices', function (Request $request, Response $response) {
-    #$deviceId = $request->getAttribute('deviceId');
-    #$response->getBody()->write("Hello, $name");
-
-    return $response;
+    $cls = SubDevice::class;
+    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName));
 });
 
 /**
@@ -312,10 +338,9 @@ $app->get('/api/v1/SubDevices', function (Request $request, Response $response) 
      * )
      */
 $app->get('/api/v1/SubDevices/{subDeviceId}', function (Request $request, Response $response) {
-    $subDeviceId = $request->getAttribute('subDeviceId');
-    #$response->getBody()->write("Hello, $name");
-
-    return $response;
+    $id = $request->getAttribute('subDeviceId');
+    $cls = SubDevice::class;
+    return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
 });
 
 /**
@@ -356,10 +381,11 @@ $app->get('/api/v1/SubDevices/{subDeviceId}', function (Request $request, Respon
      * )
      */
 $app->put('/api/v1/SubDevices/{subDeviceId}', function (Request $request, Response $response) {
-    $subDeviceId = $request->getAttribute('subDeviceId');
-    #$response->getBody()->write("Hello, $name");
-
-    return $response;
+    $id = $request->getAttribute('subDeviceId');
+    $cls = SubDevice::class;
+    $objectArray = json_decode($request->getBody(), true);
+    $this->helper->Update($cls, $objectArray, $cls::$tableName, $id);
+	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id"); 
 });
 
 /**
@@ -410,9 +436,10 @@ $app->put('/api/v1/SubDevices/{subDeviceId}', function (Request $request, Respon
 $app->put('/api/v1/SubDevices/LookupUpdateSubDeviceByHeadBTAddressAndDistanceToHead/{headBTAddress}/{distanceToHead}', function (Request $request, Response $response) {
     $headBTAddress = $request->getAttribute('headBTAddress');
     $distanceToHead = $request->getAttribute('distanceToHead');
-    #$response->getBody()->write("Hello, $name");
-# redirect
-    return $response;
+    $cls = SubDevice::class;
+    $sql = "SELECT * FROM {$cls::$tableName} WHERE headBTAddress = :headBTAddress AND distanceToHead = :distanceToHead";
+    $subDevice = $this->helper->GetBySql($cls, $sql, ['headBTAddress'=>$headBTAddress, 'distanceToHead'=>$distanceToHead]);
+	return $response->withStatus(307)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/{$subDevice->id}");
 });
 
 /**
@@ -433,7 +460,7 @@ $app->put('/api/v1/SubDevices/LookupUpdateSubDeviceByHeadBTAddressAndDistanceToH
      *         in="body",
      *         description="SubDevice to add to the store",
      *         required=true,
-     *         @SWG\Schema(ref="#/definitions/NewSubDevice"),
+     *         @SWG\Schema(ref="#/definitions/NewSubDevice2"),
      *     ),
      *     produces={"application/json"},
      *     @SWG\Response(
@@ -454,53 +481,13 @@ $app->put('/api/v1/SubDevices/LookupUpdateSubDeviceByHeadBTAddressAndDistanceToH
      */
 $app->post('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, Response $response) {
     $deviceId = $request->getAttribute('deviceId');
-    #$response->getBody()->write("Hello, $name");
-
-    return $response;
-});
-
-/**
-     * @SWG\Post(
-     *     path="/api/v1/SubDevices/LookupAddSubDeviceByHeadBTAddress/{headBTAddress}",
-     *     description="Adds a new subdevice to a device given headBTAddress",
-     *     operationId="postSubDevice",
-     *     @SWG\Parameter(
-     *         description="BT Address of head Device",
-     *         format="int64",
-     *         in="path",
-     *         name="headBTAddress",
-     *         required=true,
-     *         type="string"
-     *     ), 
-     *     @SWG\Parameter(
-     *         name="subDevice",
-     *         in="body",
-     *         description="SubDevice to add to the store",
-     *         required=true,
-     *         @SWG\Schema(ref="#/definitions/NewSubDevice"),
-     *     ),
-     *     produces={"application/json"},
-     *     @SWG\Response(
-     *         response=200,
-     *         description="subDevice response",
-     *         @SWG\Schema(
-     *             ref="#/definitions/SubDevice"
-     *         ),
-     *     ),
-     *     @SWG\Response(
-     *         response="default",
-     *         description="unexpected error",
-     *         @SWG\Schema(
-     *             ref="#/definitions/ErrorModel"
-     *         )
-     *     )
-     * )
-     */
-$app->post('/api/v1/SubDevices/LookupAddSubDeviceByHeadBTAddress/{headBTAddress}', function (Request $request, Response $response) {
-    $headBTAddress = $request->getAttribute('headBTAddress');
-    #$response->getBody()->write("Hello, $name");
-# redirect
-    return $response;
+    $cls = Device::class;
+    $device = $this->helper->Get($cls, $cls::$tableName, $deviceId);
+	$objectArray = json_decode($request->getBody(), true);
+	$objectArray['headBTAddress'] = $device->BTAddress;
+	$cls = SubDevice::class;
+    $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
+	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
 });
 
 
@@ -531,9 +518,8 @@ $app->post('/api/v1/SubDevices/LookupAddSubDeviceByHeadBTAddress/{headBTAddress}
      */
 $app->get('/api/v1/SubDeviceStatuses', function (Request $request, Response $response) {
     #sort=created&dir=asc&limit=1&SubDeviceId=1
-    #$response->getBody()->write("Hello, $name");
-# redirect
-    return $response;
+	$cls = SubDeviceStatus::class;
+    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName));
 });
 
 
@@ -568,10 +554,9 @@ $app->get('/api/v1/SubDeviceStatuses', function (Request $request, Response $res
      * )
      */
 $app->get('/api/v1/SubDeviceStatuses/{subDeviceStatusId}', function (Request $request, Response $response) {
-    $subDeviceStatusId = $request->getAttribute('subDeviceStatusId');
-    #$response->getBody()->write("Hello, $name");
-
-    return $response;
+    $id = $request->getAttribute('subDeviceStatusId');
+    $cls = SubDeviceStatus::class;
+    return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
 });
 
 
@@ -605,9 +590,10 @@ $app->get('/api/v1/SubDeviceStatuses/{subDeviceStatusId}', function (Request $re
      * )
      */
 $app->post('/api/v1/SubDeviceStatuses', function (Request $request, Response $response) {
-    #$response->getBody()->write("Hello, $name");
-# redirect
-    return $response;
+	$objectArray = json_decode($request->getBody(), true);
+	$cls = SubDeviceStatus::class;
+    $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
+	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
 });
 
 
@@ -637,9 +623,8 @@ $app->post('/api/v1/SubDeviceStatuses', function (Request $request, Response $re
      */
 $app->get('/api/v1/InputMessageStats', function (Request $request, Response $response) {
     #sort=created&dir=asc&limit=1&DeviceId=1
-    #$response->getBody()->write("Hello, $name");
-# redirect
-    return $response;
+	$cls = InputMessageStat::class;
+    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName));
 });
 
 /**
@@ -673,10 +658,9 @@ $app->get('/api/v1/InputMessageStats', function (Request $request, Response $res
      * )
      */
 $app->get('/api/v1/InputMessageStats/{statId}', function (Request $request, Response $response) {
-    $statId = $request->getAttribute('statId');
-    #$response->getBody()->write("Hello, $name");
-
-    return $response;
+    $id = $request->getAttribute('statId');
+    $cls = InputMessageStat::class;
+    return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
 });
 
 /**
@@ -709,9 +693,10 @@ $app->get('/api/v1/InputMessageStats/{statId}', function (Request $request, Resp
      * )
      */
 $app->post('/api/v1/InputMessageStats', function (Request $request, Response $response) {
-    #$response->getBody()->write("Hello, $name");
-# redirect
-    return $response;
+	$objectArray = json_decode($request->getBody(), true);
+	$cls = InputMessageStat::class;
+    $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
+	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
 });
 
 # OUTPUTMESSAGESTATS
@@ -740,9 +725,8 @@ $app->post('/api/v1/InputMessageStats', function (Request $request, Response $re
      */
 $app->get('/api/v1/OutputMessageStats', function (Request $request, Response $response) {
     #sort=created&dir=asc&limit=1&DeviceId=1
-    #$response->getBody()->write("Hello, $name");
-# redirect
-    return $response;
+	$cls = OutputMessageStat::class;
+    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName));
 });
 
 /**
@@ -776,10 +760,9 @@ $app->get('/api/v1/OutputMessageStats', function (Request $request, Response $re
      * )
      */
 $app->get('/api/v1/OutputMessageStats/{statId}', function (Request $request, Response $response) {
-    $statId = $request->getAttribute('statId');
-    #$response->getBody()->write("Hello, $name");
-
-    return $response;
+    $id = $request->getAttribute('statId');
+    $cls = OutputMessageStat::class;
+    return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
 });
 
 /**
@@ -812,9 +795,10 @@ $app->get('/api/v1/OutputMessageStats/{statId}', function (Request $request, Res
      * )
      */
 $app->post('/api/v1/OutputMessageStats', function (Request $request, Response $response) {
-    #$response->getBody()->write("Hello, $name");
-# redirect
-    return $response;
+	$objectArray = json_decode($request->getBody(), true);
+	$cls = OutputMessageStat::class;
+    $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
+	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
 });
 
 

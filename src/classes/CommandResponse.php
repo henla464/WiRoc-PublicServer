@@ -3,7 +3,7 @@ use Swagger\Annotations as SWG;
 /**
  * @SWG\Definition(required={"code", "message"}, type="object")
  */
-class ErrorModel extends Exception
+class CommandResponse
 {
     /**
      * @SWG\Property(format="int32");

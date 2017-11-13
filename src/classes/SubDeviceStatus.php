@@ -1,10 +1,13 @@
 <?php
+use Swagger\Annotations as SWG;
 
 /**
  * @SWG\Definition(definition="NewSubDeviceStatus", type="object", required={"subDeviceId", "distanceToHead", "batteryLevel", "batteryLevelprecision"})
  */
 class SubDeviceStatus
 {
+	public static $tableName = 'SubDeviceStatuses';
+		
     public $id;
     /**
      * @SWG\Property()
@@ -27,6 +30,7 @@ class SubDeviceStatus
      */
     public $batteryLevelPrecision;
 
+	public $updateTime;
     public $createdTime;
 }
 
@@ -37,9 +41,10 @@ class SubDeviceStatus
  *   allOf={
  *       @SWG\Schema(ref="#/definitions/NewSubDeviceStatus"),
  *       @SWG\Schema(
- *           required={"id", "subDeviceId", "distanceToHead", "batteryLevel", "batteryLevelprecision", "createdTime"},
+ *           required={"id", "createdTime"},
  *           @SWG\Property(property="id", format="int64", type="integer"),
- *           @SWG\Property(property="createdTime", type="dateTime")
+ * 			 @SWG\Property(property="updateTime", format="date-time", type="string"),
+ * 			 @SWG\Property(property="createdTime", format="date-time", type="string")
  *       )
  *   }
  * )

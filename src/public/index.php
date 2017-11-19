@@ -182,7 +182,7 @@ $app->get('/api/v1/Devices/{deviceId}', function (Request $request, Response $re
     $id = $request->getAttribute('deviceId');
     $cls = Device::class;
     return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
-});
+})->setName('getDevice');
 
 /**
      * @SWG\Put(
@@ -227,7 +227,7 @@ $app->put('/api/v1/Devices/{deviceId}', function (Request $request, Response $re
     $objectArray = json_decode($request->getBody(), true);
     $this->helper->Update($cls, $objectArray, $cls::$tableName, $id);
     return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
-});
+})->setName('putDevice');
 
 /**
      * @SWG\Post(
@@ -300,8 +300,13 @@ $app->get('/api/v1/Devices/LookupDeviceByBTAddress/{BTAddress}', function (Reque
     $cls = Device::class;
     $sql = "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress";
     $device = $this->helper->GetBySql($cls, $sql, ['BTAddress'=>$BTAddress]);
-	return $response->withStatus(307)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/{$device->id}");
-});
+    if ($device) {
+		$url = $this->get('router')->pathFor('getDevice', ['deviceId' => $device->id]);
+		return $response->withStatus(307)->withHeader('Location', $url);
+	} else {
+		return $response->withStatus(404);
+	}
+})->setName('getLookupDeviceByBTAddress');
 
 
 #SUBDEVICE
@@ -818,7 +823,7 @@ $app->post('/api/v1/MessageStats/{BTAddress}', function (Request $request, Respo
     $device = $this->helper->GetBySql($cls, $sql, ['BTAddress'=>$BTAddress]);
     
 	$objectArray = json_decode($request->getBody(), true);
-	$objectArray['deviceId'] = $device.id;
+	$objectArray['deviceId'] = $device->id;
 	$cls2 = MessageStat::class;
     $id = $this->helper->Insert($cls2, $objectArray, $cls2::$tableName);
 	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls2::$tableName}/$id");

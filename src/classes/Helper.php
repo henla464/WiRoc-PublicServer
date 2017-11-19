@@ -115,10 +115,7 @@ class Helper
 		$stmt = $this->container->db->query($sql);
 		$sql = 'CREATE TABLE IF NOT EXISTS SubDeviceStatuses (id int NOT NULL AUTO_INCREMENT, subDeviceId int, distanceToHead int, batteryLevel int, batteryLevelprecision int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->container->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS InputMessageStats (id int NOT NULL AUTO_INCREMENT, deviceId int, adapterInstance varchar(50), ';
-		$sql .= 'messageType varchar(50), status varchar(50), noOfMessages int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
-		$stmt = $this->container->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS OutputMessageStats (id int NOT NULL AUTO_INCREMENT, deviceId int, adapterInstance varchar(50), ';
+		$sql = 'CREATE TABLE IF NOT EXISTS MessageStats (id int NOT NULL AUTO_INCREMENT, deviceId int, adapterInstance varchar(50), ';
 		$sql .= 'messageType varchar(50), status varchar(50), noOfMessages int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->container->db->query($sql);
 		

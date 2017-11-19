@@ -47,7 +47,7 @@ $container['helper'] = function ($container) {
 /**
  * @SWG\Get(
  *     path="/api/v1",
- *     @SWG\Response(response="200", description="An example resource")
+ *     @SWG\Response(response="200", description="V1 of the api")
  * )
  */
 $app->get('/api/v1', function($request, $response, $args) use ($app) {
@@ -66,6 +66,25 @@ $app->get('/swagger/docs', function($request, $response, $args) {
     return $response->withStatus(303)->withHeader('Location', 'http://localhost/api/v1');
 });
 
+/**
+ * @SWG\Get(
+ *     path="/api/v1/ping",
+ * 	   description="Ping to check that server is up and replies",
+ *     @SWG\Response(
+ *         response="200", 
+ *         description="CommandResponse code=0 is success",
+ *         @SWG\Schema(
+ *             ref="#/definitions/CommandResponse"
+ *         )
+ *     )
+ * )
+ */
+$app->get('/api/v1/ping', function($request, $response, $args) use ($app) {
+    $res = new CommandResponse();
+	$res->code = 0;
+	$res->message = "Server up";
+    return $response->withJson($res);
+});
 
 /**
      * @SWG\Post(
@@ -96,9 +115,16 @@ $app->post('/api/v1/CreateTables', function (Request $request, Response $respons
 # DEVICES
 /**
      * @SWG\Get(
-     *     path="/api/v1/Devices",
+     *     path="/api/v1/Devices?sort={sort}",
      *     description="Returns all devices",
      *     operationId="getDevices",
+     *     @SWG\Parameter(
+     *         description="columns to sort on",
+     *         in="path",
+     *         name="sort",
+     *         required=false,
+     *         type="string"
+     *     ),
      *     produces={"application/json"},
      *     @SWG\Response(
      *         response=200,
@@ -119,7 +145,7 @@ $app->post('/api/v1/CreateTables', function (Request $request, Response $respons
      */
 $app->get('/api/v1/Devices', function (Request $request, Response $response) {
 	$cls = Device::class;
-    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName));
+    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
 });
 
 /**
@@ -239,6 +265,45 @@ $app->post('/api/v1/Devices', function (Request $request, Response $response) {
 	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
 });
 
+
+/**
+     * @SWG\get(
+     *     path="/api/v1/Devices/LookupDeviceByBTAddress/{BTAddress}",
+     *     description="Given BTAddress redirects to the path gets the device",
+     *     operationId="getLookupDeviceByBTAddress",
+     *     @SWG\Parameter(
+     *         description="BT Address of the Device",
+     *         in="path",
+     *         name="BTAddress",
+     *         required=true,
+     *         type="string"
+     *     ), 
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=200,
+     *         description="device response",
+     *         @SWG\Schema(
+     *             ref="#/definitions/Device"
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     )
+     * )
+     */
+$app->get('/api/v1/Devices/LookupDeviceByBTAddress/{BTAddress}', function (Request $request, Response $response) {
+    $BTAddress = $request->getAttribute('BTAddress');
+    $cls = Device::class;
+    $sql = "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress";
+    $device = $this->helper->GetBySql($cls, $sql, ['BTAddress'=>$BTAddress]);
+	return $response->withStatus(307)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/{$device->id}");
+});
+
+
 #SUBDEVICE
 /**
      * @SWG\Get(
@@ -275,16 +340,23 @@ $app->get('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, R
     $deviceId = $request->getAttribute('deviceId');
     $cls = SubDevice::class;
     $sql = "SELECT SubDevices.* FROM SubDevices JOIN Devices ON SubDevices.HeadBTAddress = Devices.BTAddress WHERE Devices.id = :deviceId";
-    $subDevices = $this->helper->GetAllBySql($cls, $sql, ['deviceId'=>$deviceId]);
+    $subDevices = $this->helper->GetAllBySql($cls, $sql, ['deviceId'=>$deviceId], $request);
     return $response->withJson($subDevices);
 });
 
 /**
      * @SWG\Get(
-     *     path="/api/v1/SubDevices",
+     *     path="/api/v1/SubDevices?sort={sort}",
      *     description="Returns all subDevices",
      *     operationId="getSubDevices",
      *     produces={"application/json"},
+     *     @SWG\Parameter(
+     *         description="columns to sort on",
+     *         in="path",
+     *         name="sort",
+     *         required=false,
+     *         type="string"
+     *     ),
      *     @SWG\Response(
      *         response=200,
      *         description="subdevices response",
@@ -304,7 +376,7 @@ $app->get('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, R
      */
 $app->get('/api/v1/SubDevices', function (Request $request, Response $response) {
     $cls = SubDevice::class;
-    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName));
+    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
 });
 
 /**
@@ -346,8 +418,8 @@ $app->get('/api/v1/SubDevices/{subDeviceId}', function (Request $request, Respon
 /**
      * @SWG\Put(
      *     path="/api/v1/SubDevices/{subDeviceId}",
-     *     description="Updates a device",
-     *     operationId="putDevice",
+     *     description="Updates a subDevice",
+     *     operationId="putSubDevice",
      *     @SWG\Parameter(
      *         description="ID of subDevice to update",
      *         format="int64",
@@ -386,29 +458,13 @@ $app->put('/api/v1/SubDevices/{subDeviceId}', function (Request $request, Respon
     $objectArray = json_decode($request->getBody(), true);
     $this->helper->Update($cls, $objectArray, $cls::$tableName, $id);
 	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id"); 
-});
+})->setName("putSubDevice");
 
 /**
      * @SWG\Put(
-     *     path="/api/v1/SubDevices/LookupUpdateSubDeviceByHeadBTAddressAndDistanceToHead/{headBTAddress}/{distanceToHead}",
-     *     description="Given headBTAddress and distanceToHead redirects to the path that updates the subdevice",
-     *     operationId="putSubDeviceLookupUpdateSubDeviceByHeadBTAddressAndDistanceToHead",
-     *     @SWG\Parameter(
-     *         description="BT Address of head Device",
-     *         format="int64",
-     *         in="path",
-     *         name="headBTAddress",
-     *         required=true,
-     *         type="string"
-     *     ), 
-     *     @SWG\Parameter(
-     *         description="No of hops to the head",
-     *         format="int64",
-     *         in="path",
-     *         name="distanceToHead",
-     *         required=true,
-     *         type="integer"
-     *     ), 
+     *     path="/api/v1/SubDevices",
+     *     description="Uses the given headBTAddress and distanceToHead in the json body to inserts the subdevice or redirects to the path that updates the subdevice",
+     *     operationId="putSubDevice",
      *     @SWG\Parameter(
      *         name="subDevice",
      *         in="body",
@@ -433,12 +489,19 @@ $app->put('/api/v1/SubDevices/{subDeviceId}', function (Request $request, Respon
      *     )
      * )
      */
-$app->put('/api/v1/SubDevices/LookupUpdateSubDeviceByHeadBTAddressAndDistanceToHead/{headBTAddress}/{distanceToHead}', function (Request $request, Response $response) {
-    $headBTAddress = $request->getAttribute('headBTAddress');
-    $distanceToHead = $request->getAttribute('distanceToHead');
+$app->put('/api/v1/SubDevices', function (Request $request, Response $response) {
+	$objectArray = json_decode($request->getBody(), true);
+    $headBTAddress = $objectArray['headBTAddress'];
+    $distanceToHead = $objectArray['distanceToHead'];
     $cls = SubDevice::class;
     $sql = "SELECT * FROM {$cls::$tableName} WHERE headBTAddress = :headBTAddress AND distanceToHead = :distanceToHead";
     $subDevice = $this->helper->GetBySql($cls, $sql, ['headBTAddress'=>$headBTAddress, 'distanceToHead'=>$distanceToHead]);
+    if ($subDevice == False) {
+		# Not found so insert it
+		$objectArray = json_decode($request->getBody(), true);
+		$id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
+    	return $response->withStatus(307)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
+	}
 	return $response->withStatus(307)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/{$subDevice->id}");
 });
 
@@ -488,16 +551,23 @@ $app->post('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, 
 	$cls = SubDevice::class;
     $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
 	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
-});
+})->setName("postSubDevice");
 
 
 # SUBDEVICESTATUS
 
 /**
      * @SWG\Get(
-     *     path="/api/v1/SubDeviceStatuses",
+     *     path="/api/v1/SubDeviceStatuses?sort={sort}",
      *     description="Returns subDeviceStatuses",
      *     operationId="getSubDeviceStatuses",
+     *     @SWG\Parameter(
+     *         description="columns to sort on",
+     *         in="path",
+     *         name="sort",
+     *         required=false,
+     *         type="string"
+     *     ),
      *     produces={"application/json"},
      *     @SWG\Response(
      *         response=200,
@@ -519,7 +589,7 @@ $app->post('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, 
 $app->get('/api/v1/SubDeviceStatuses', function (Request $request, Response $response) {
     #sort=created&dir=asc&limit=1&SubDeviceId=1
 	$cls = SubDeviceStatus::class;
-    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName));
+    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
 });
 
 
@@ -596,20 +666,26 @@ $app->post('/api/v1/SubDeviceStatuses', function (Request $request, Response $re
 	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
 });
 
-
-# INPUTMESSAGESTATS
+# MESSAGESTATS
 /**
      * @SWG\Get(
-     *     path="/api/v1/InputMessageStats",
-     *     description="Returns InputMessageStats",
-     *     operationId="getInputMessageStats",
+     *     path="/api/v1/MessageStats?sort={sort}",
+     *     description="Returns MessageStats",
+     *     operationId="getMessageStats",
+     *     @SWG\Parameter(
+     *         description="columns to sort on",
+     *         in="path",
+     *         name="sort",
+     *         required=false,
+     *         type="string"
+     *     ),
      *     produces={"application/json"},
      *     @SWG\Response(
      *         response=200,
-     *         description="InputMessageStats response",
+     *         description="MessageStats response",
      *         @SWG\Schema(
      *             type="array",
-     *             @SWG\Items(ref="#/definitions/InputMessageStat")
+     *             @SWG\Items(ref="#/definitions/MessageStat")
      *         ),
      *     ),
      *     @SWG\Response(
@@ -621,19 +697,19 @@ $app->post('/api/v1/SubDeviceStatuses', function (Request $request, Response $re
      *     )
      * )
      */
-$app->get('/api/v1/InputMessageStats', function (Request $request, Response $response) {
+$app->get('/api/v1/MessageStats', function (Request $request, Response $response) {
     #sort=created&dir=asc&limit=1&DeviceId=1
-	$cls = InputMessageStat::class;
-    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName));
+	$cls = MessageStat::class;
+    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
 });
 
 /**
      * @SWG\Get(
-     *     path="/api/v1/InputMessageStats/{statId}",
-     *     description="Returns an InputMessageStat",
-     *     operationId="getInputMessageStat",
+     *     path="/api/v1/MessageStats/{statId}",
+     *     description="Returns an MessageStat",
+     *     operationId="getMessageStat",
      *     @SWG\Parameter(
-     *         description="ID of the InputMessageStat",
+     *         description="ID of the MessageStat",
      *         format="int64",
      *         in="path",
      *         name="statId",
@@ -643,9 +719,9 @@ $app->get('/api/v1/InputMessageStats', function (Request $request, Response $res
      *     produces={"application/json"},
      *     @SWG\Response(
      *         response=200,
-     *         description="InputMessageStat response",
+     *         description="MessageStat response",
      *         @SWG\Schema(
-     *             ref="#/definitions/InputMessageStat"
+     *             ref="#/definitions/MessageStat"
      *         ),
      *     ),
      *     @SWG\Response(
@@ -657,30 +733,30 @@ $app->get('/api/v1/InputMessageStats', function (Request $request, Response $res
      *     )
      * )
      */
-$app->get('/api/v1/InputMessageStats/{statId}', function (Request $request, Response $response) {
+$app->get('/api/v1/MessageStats/{statId}', function (Request $request, Response $response) {
     $id = $request->getAttribute('statId');
-    $cls = InputMessageStat::class;
+    $cls = MessageStat::class;
     return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
 });
 
 /**
      * @SWG\Post(
-     *     path="/api/v1/InputMessageStats",
-     *     description="Adds a new InputMessageStat",
-     *     operationId="postInputMessageStats",
+     *     path="/api/v1/MessageStats",
+     *     description="Adds a new MessageStat",
+     *     operationId="postMessageStat",
      *     @SWG\Parameter(
-     *         name="inputMessageStat",
+     *         name="MessageStat",
      *         in="body",
-     *         description="InputMessageStat to add to the store",
+     *         description="MessageStat to add to the store",
      *         required=true,
-     *         @SWG\Schema(ref="#/definitions/NewInputMessageStat"),
+     *         @SWG\Schema(ref="#/definitions/NewMessageStat"),
      *     ),
      *     produces={"application/json"},
      *     @SWG\Response(
      *         response=200,
-     *         description="inputMessageStat response",
+     *         description="MessageStat response",
      *         @SWG\Schema(
-     *             ref="#/definitions/InputMessageStat"
+     *             ref="#/definitions/MessageStat"
      *         ),
      *     ),
      *     @SWG\Response(
@@ -692,97 +768,38 @@ $app->get('/api/v1/InputMessageStats/{statId}', function (Request $request, Resp
      *     )
      * )
      */
-$app->post('/api/v1/InputMessageStats', function (Request $request, Response $response) {
+$app->post('/api/v1/MessageStats', function (Request $request, Response $response) {
 	$objectArray = json_decode($request->getBody(), true);
-	$cls = InputMessageStat::class;
+	$cls = MessageStat::class;
     $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
 	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
 });
 
-# OUTPUTMESSAGESTATS
 /**
-     * @SWG\Get(
-     *     path="/api/v1/OutputMessageStats",
-     *     description="Returns OutputMessageStats",
-     *     operationId="getOutputMessageStats",
-     *     produces={"application/json"},
-     *     @SWG\Response(
-     *         response=200,
-     *         description="OutputMessageStats response",
-     *         @SWG\Schema(
-     *             type="array",
-     *             @SWG\Items(ref="#/definitions/OutputMessageStat")
-     *         ),
-     *     ),
-     *     @SWG\Response(
-     *         response="default",
-     *         description="unexpected error",
-     *         @SWG\Schema(
-     *             ref="#/definitions/ErrorModel"
-     *         )
-     *     )
-     * )
-     */
-$app->get('/api/v1/OutputMessageStats', function (Request $request, Response $response) {
-    #sort=created&dir=asc&limit=1&DeviceId=1
-	$cls = OutputMessageStat::class;
-    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName));
-});
-
-/**
-     * @SWG\Get(
-     *     path="/api/v1/OutputMessageStats/{statId}",
-     *     description="Returns an OutputMessageStat",
-     *     operationId="getOutputMessageStat",
+     * @SWG\Post(
+     *     path="/api/v1/MessageStats/{btAddress}",
+     *     description="Adds a new MessageStat",
+     *     operationId="postMessageStatByBTAddress",
      *     @SWG\Parameter(
-     *         description="ID of the OutputMessageStat",
-     *         format="int64",
+     *         description="bt address",
      *         in="path",
-     *         name="statId",
+     *         name="btAddress",
      *         required=true,
-     *         type="integer"
+     *         type="string"
      *     ),
-     *     produces={"application/json"},
-     *     @SWG\Response(
-     *         response=200,
-     *         description="OutputMessageStat response",
-     *         @SWG\Schema(
-     *             ref="#/definitions/OutputMessageStat"
-     *         ),
-     *     ),
-     *     @SWG\Response(
-     *         response="default",
-     *         description="unexpected error",
-     *         @SWG\Schema(
-     *             ref="#/definitions/ErrorModel"
-     *         )
-     *     )
-     * )
-     */
-$app->get('/api/v1/OutputMessageStats/{statId}', function (Request $request, Response $response) {
-    $id = $request->getAttribute('statId');
-    $cls = OutputMessageStat::class;
-    return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
-});
-
-/**
-     * @SWG\Post(
-     *     path="/api/v1/OutputMessageStats",
-     *     description="Adds a new OutputMessageStat",
-     *     operationId="postOutputMessageStat",
      *     @SWG\Parameter(
-     *         name="outputMessageStat",
+     *         name="MessageStat",
      *         in="body",
-     *         description="OutputMessageStat to add to the store",
+     *         description="MessageStat to add to the store",
      *         required=true,
-     *         @SWG\Schema(ref="#/definitions/NewOutputMessageStat"),
+     *         @SWG\Schema(ref="#/definitions/NewMessageStat"),
      *     ),
      *     produces={"application/json"},
      *     @SWG\Response(
      *         response=200,
-     *         description="outputMessageStat response",
+     *         description="MessageStat response",
      *         @SWG\Schema(
-     *             ref="#/definitions/OutputMessageStat"
+     *             ref="#/definitions/MessageStat"
      *         ),
      *     ),
      *     @SWG\Response(
@@ -794,13 +811,18 @@ $app->get('/api/v1/OutputMessageStats/{statId}', function (Request $request, Res
      *     )
      * )
      */
-$app->post('/api/v1/OutputMessageStats', function (Request $request, Response $response) {
+$app->post('/api/v1/MessageStats/{BTAddress}', function (Request $request, Response $response) {
+	$BTAddress = $request->getAttribute('BTAddress');
+    $cls = Device::class;
+    $sql = "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress";
+    $device = $this->helper->GetBySql($cls, $sql, ['BTAddress'=>$BTAddress]);
+    
 	$objectArray = json_decode($request->getBody(), true);
-	$cls = OutputMessageStat::class;
-    $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
-	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
+	$objectArray['deviceId'] = $device.id;
+	$cls2 = MessageStat::class;
+    $id = $this->helper->Insert($cls2, $objectArray, $cls2::$tableName);
+	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls2::$tableName}/$id");
 });
-
 
 
 $app->run();

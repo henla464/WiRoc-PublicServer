@@ -22,9 +22,40 @@ class Helper
 		}
 		return array("set"=>$set, "values"=>$values);
 	}
+	
+	private function getSort($objectName, $request) {
+		$returnSortString = '';
+		$sort = $request->getQueryParam('sort');
+		$columns = explode(",", trim($sort));
+		$properties = get_object_vars(new $objectName);
+		foreach ($columns AS $column) {
+			$columnAndSort = explode(" ", trim($column));
+			$columnOnly = trim($columnAndSort[0]);
+			$sortOnly = ' asc';
+			if (sizeof($columnAndSort) > 1 and strtolower(trim($columnAndSort[1])) == 'desc') {
+				$sortOnly = ' desc';
+			}
+			if (array_key_exists($columnOnly,$properties)) {
+				$returnSortString .= "$columnOnly$sortOnly, ";
+			}
+		}
+		if ($returnSortString == '') {
+			return '';
+		}
+		return substr(" order by $returnSortString", 0, -2);
+	}
+	
     
-    public function GetAll($objectName, $tableName) {
-		$stmt = $this->container->db->prepare("SELECT * FROM $tableName");
+    public function GetAll($objectName, $tableName, $request) {
+		$sort = $this->getSort($objectName, $request);
+		
+		#$allGetVars = $request->getQueryParams();
+		#foreach($allGetVars as $key => $param){
+			//GET parameters list
+		#	if $key = '' 
+		#}
+		#return $sort;
+		$stmt = $this->container->db->prepare("SELECT * FROM $tableName$sort");
 		$stmt->execute();
 		return $stmt->fetchAll(PDO::FETCH_CLASS, $objectName);
 	}
@@ -78,17 +109,17 @@ class Helper
 		#$pdo->query("CREATE DATABASE IF NOT EXISTS " . $this->settings['db']['dbname']);
 		#$pdo->query("use " . $this->settings->db->dbname);
 
-		$sql = 'CREATE TABLE IF NOT EXISTS Devices (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), name varchar(50), description varchar(255), createdTime datetime, PRIMARY KEY (id))';
+		$sql = 'CREATE TABLE IF NOT EXISTS Devices (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), name varchar(50), description varchar(255), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->container->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS SubDevices (id int NOT NULL AUTO_INCREMENT, headBTAddress varchar(50), distanceToHead int, createdTime datetime, PRIMARY KEY (id))';
+		$sql = 'CREATE TABLE IF NOT EXISTS SubDevices (id int NOT NULL AUTO_INCREMENT, headBTAddress varchar(50), distanceToHead int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->container->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS SubDeviceStatuses (id int NOT NULL AUTO_INCREMENT, subDeviceId int, distanceToHead int, batteryLevel int, batteryLevelprecision int, createdTime datetime, PRIMARY KEY (id))';
+		$sql = 'CREATE TABLE IF NOT EXISTS SubDeviceStatuses (id int NOT NULL AUTO_INCREMENT, subDeviceId int, distanceToHead int, batteryLevel int, batteryLevelprecision int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->container->db->query($sql);
 		$sql = 'CREATE TABLE IF NOT EXISTS InputMessageStats (id int NOT NULL AUTO_INCREMENT, deviceId int, adapterInstance varchar(50), ';
-		$sql .= 'messageType varchar(50), status varchar(50), noOfMessages int, createdTime datetime, PRIMARY KEY (id))';
+		$sql .= 'messageType varchar(50), status varchar(50), noOfMessages int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->container->db->query($sql);
 		$sql = 'CREATE TABLE IF NOT EXISTS OutputMessageStats (id int NOT NULL AUTO_INCREMENT, deviceId int, adapterInstance varchar(50), ';
-		$sql .= 'messageType varchar(50), status varchar(50), noOfMessages int, createdTime datetime, PRIMARY KEY (id))';
+		$sql .= 'messageType varchar(50), status varchar(50), noOfMessages int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->container->db->query($sql);
 		
 		$res = new CommandResponse();

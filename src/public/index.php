@@ -8,16 +8,21 @@ require '../vendor/autoload.php';
 #require_once('../classes/ErrorModel.php');
 \Doctrine\Common\Annotations\AnnotationRegistry::registerLoader('class_exists');
 
+session_start();
+
 $config['displayErrorDetails'] = true;
 $config['addContentLengthHeader'] = false;
 
-$config['db']['host']   = "localhost";
-$config['db']['user']   = "wiroc";
-$config['db']['pass']   = "wiroc";
-$config['db']['dbname'] = "wiroc";
+$ini_array = parse_ini_file("../config/config.ini", true);
+
+$config['db']['host']   = $ini_array['database']['database_hostname'];
+$config['db']['user']   = $ini_array['database']['database_username'];
+$config['db']['pass']   = $ini_array['database']['database_password'];
+$config['db']['dbname'] = $ini_array['database']['database_name'];
 
 $app = new \Slim\App(["settings" => $config]);
 $container = $app->getContainer();
+$app->add( new AuthMiddleware($container) );
 $annotationReader = new AnnotationReader();
 
 $container['logger'] = function($c) {
@@ -54,7 +59,7 @@ $app->get('/api/v1', function($request, $response, $args) use ($app) {
     $swagger = \Swagger\scan(['.', '../classes']);
     header('Content-Type: application/json');
     echo $swagger;
-});
+})->setName("getApiV1");
 
 /**
  * @SWG\Get(
@@ -63,8 +68,9 @@ $app->get('/api/v1', function($request, $response, $args) use ($app) {
  * )
  */
 $app->get('/swagger/docs', function($request, $response, $args) {
-    return $response->withStatus(303)->withHeader('Location', 'http://localhost/api/v1');
-});
+	$url = $this->get('router')->pathFor('getApiV1', []);
+    return $response->withStatus(303)->withHeader('Location', $url);
+})->setName("getDocs");
 
 /**
  * @SWG\Get(
@@ -84,7 +90,49 @@ $app->get('/api/v1/ping', function($request, $response, $args) use ($app) {
 	$res->code = 0;
 	$res->message = "Server up";
     return $response->withJson($res);
-});
+})->setName("getPing");
+
+/**
+ * @SWG\Get(
+ *     path="/api/v1/login",
+ * 	   description="Login method",
+ *     @SWG\Response(
+ *         response="200", 
+ *         description="CommandResponse code=0 is success",
+ *         @SWG\Schema(
+ *             ref="#/definitions/CommandResponse"
+ *         )
+ *     )
+ * )
+ */
+$app->get('/api/v1/login', function($request, $response, $args) use ($app) {
+    $res = new CommandResponse();
+	$res->code = 0;
+	$res->message = "Login OK";
+    return $response->withJson($res);
+})->setName("login");
+
+/**
+ * @SWG\Post(
+ *     path="/api/v1/login",
+ * 	   description="Login method",
+ *     @SWG\Response(
+ *         response="200", 
+ *         description="CommandResponse code=0 is success",
+ *         @SWG\Schema(
+ *             ref="#/definitions/CommandResponse"
+ *         )
+ *     )
+ * )
+ */
+$app->post('/api/v1/login', function($request, $response, $args) use ($app) {
+    $res = new CommandResponse();
+	$res->code = 0;
+	$res->message = "Login OK";
+    return $response->withJson($res);
+})->setName("postLogin");
+
+
 
 /**
      * @SWG\Post(
@@ -110,12 +158,49 @@ $app->get('/api/v1/ping', function($request, $response, $args) use ($app) {
      */
 $app->post('/api/v1/CreateTables', function (Request $request, Response $response) {
 	return $response->withJson($this->helper->CreateTables());
-});
+})->setName("postCreateTables");
+
+
+# USERS
+/**
+     * @SWG\Get(
+     *     path="/api/v1/Users?sort={sort}",
+     *     description="Returns all users",
+     *     operationId="getUsers",
+     *     @SWG\Parameter(
+     *         description="columns to sort on",
+     *         in="path",
+     *         name="sort",
+     *         required=false,
+     *         type="string"
+     *     ),
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=200,
+     *         description="device response",
+     *         @SWG\Schema(
+     *             type="array",
+     *             @SWG\Items(ref="#/definitions/User")
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     )
+     * )
+     */
+$app->get('/api/v1/Users', function (Request $request, Response $response) {
+	$cls = User::class;
+    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
+})->setName("getUsers");
 
 # DEVICES
 /**
      * @SWG\Get(
-     *     path="/api/v1/Devices?sort={sort}",
+     *     path="/api/v1/Devices?sort={sort}&limit={limit}&limitToUser={limitToUser}",
      *     description="Returns all devices",
      *     operationId="getDevices",
      *     @SWG\Parameter(
@@ -124,6 +209,20 @@ $app->post('/api/v1/CreateTables', function (Request $request, Response $respons
      *         name="sort",
      *         required=false,
      *         type="string"
+     *     ),
+     *     @SWG\Parameter(
+     *         description="limit number of results returned",
+     *         in="path",
+     *         name="limit",
+     *         required=false,
+     *         type="string"
+     *     ),
+     *     @SWG\Parameter(
+     *         description="limit to user",
+     *         in="path",
+     *         name="limitToUser",
+     *         required=false,
+     *         type="boolean"
      *     ),
      *     produces={"application/json"},
      *     @SWG\Response(
@@ -145,8 +244,16 @@ $app->post('/api/v1/CreateTables', function (Request $request, Response $respons
      */
 $app->get('/api/v1/Devices', function (Request $request, Response $response) {
 	$cls = Device::class;
-    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
-});
+	$user = $request->getAttribute('user');
+	$userId = $user->id;
+	if ($request->getQueryParam('limitToUser') == 'true') {
+		$sql = 'SELECT Devices.* FROM Devices JOIN UserDevices ON Devices.id = UserDevices.deviceId WHERE UserDevices.userId = :userId';
+		return $response->withJson($this->helper->GetAllBySql($cls, $sql, ['userId'=>$userId], $request));
+	} else {
+		$sql = 'SELECT Devices.*, CASE WHEN UserDevices.id IS NOT NULL THEN true ELSE false END AS connectedToUser FROM Devices LEFT JOIN UserDevices ON Devices.id = UserDevices.deviceId and UserDevices.userId = :userId';
+		return $response->withJson($this->helper->GetAllBySql($cls, $sql, ['userId'=>$userId], $request));
+	}
+})->setName("getDevices");
 
 /**
      * @SWG\Get(
@@ -226,7 +333,8 @@ $app->put('/api/v1/Devices/{deviceId}', function (Request $request, Response $re
     $cls = Device::class;
     $objectArray = json_decode($request->getBody(), true);
     $this->helper->Update($cls, $objectArray, $cls::$tableName, $id);
-    return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
+    $url = $this->get('router')->pathFor('getDevice', ['deviceId' => $id]);
+    return $response->withStatus(303)->withHeader('Location', $url);
 })->setName('putDevice');
 
 /**
@@ -262,8 +370,9 @@ $app->post('/api/v1/Devices', function (Request $request, Response $response) {
     $objectArray = json_decode($request->getBody(), true);
 	$cls = Device::class;
     $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
-	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
-});
+    $url = $this->get('router')->pathFor('getDevice', ['deviceId' => $id]);
+	return $response->withStatus(303)->withHeader('Location', $url);
+})->setName("postDevices");
 
 
 /**
@@ -302,7 +411,7 @@ $app->get('/api/v1/Devices/LookupDeviceByBTAddress/{BTAddress}', function (Reque
     $device = $this->helper->GetBySql($cls, $sql, ['BTAddress'=>$BTAddress]);
     if ($device) {
 		$url = $this->get('router')->pathFor('getDevice', ['deviceId' => $device->id]);
-		return $response->withStatus(307)->withHeader('Location', $url);
+		return $response->withStatus(303)->withHeader('Location', $url);
 	} else {
 		return $response->withStatus(404);
 	}
@@ -347,7 +456,7 @@ $app->get('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, R
     $sql = "SELECT SubDevices.* FROM SubDevices JOIN Devices ON SubDevices.HeadBTAddress = Devices.BTAddress WHERE Devices.id = :deviceId";
     $subDevices = $this->helper->GetAllBySql($cls, $sql, ['deviceId'=>$deviceId], $request);
     return $response->withJson($subDevices);
-});
+})->setName("getSubDevicesOfADevice");
 
 /**
      * @SWG\Get(
@@ -382,7 +491,7 @@ $app->get('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, R
 $app->get('/api/v1/SubDevices', function (Request $request, Response $response) {
     $cls = SubDevice::class;
     return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
-});
+})->setName("getSubDevices");
 
 /**
      * @SWG\Get(
@@ -418,7 +527,7 @@ $app->get('/api/v1/SubDevices/{subDeviceId}', function (Request $request, Respon
     $id = $request->getAttribute('subDeviceId');
     $cls = SubDevice::class;
     return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
-});
+})->setName("getSubDevice");
 
 /**
      * @SWG\Put(
@@ -462,14 +571,15 @@ $app->put('/api/v1/SubDevices/{subDeviceId}', function (Request $request, Respon
     $cls = SubDevice::class;
     $objectArray = json_decode($request->getBody(), true);
     $this->helper->Update($cls, $objectArray, $cls::$tableName, $id);
-	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id"); 
+	$url = $this->get('router')->pathFor('getSubDevice', ['subDeviceId' => $id]);
+	return $response->withStatus(303)->withHeader('Location', $url);
 })->setName("putSubDevice");
 
 /**
      * @SWG\Put(
      *     path="/api/v1/SubDevices",
      *     description="Uses the given headBTAddress and distanceToHead in the json body to inserts the subdevice or redirects to the path that updates the subdevice",
-     *     operationId="putSubDevice",
+     *     operationId="putSubDevices",
      *     @SWG\Parameter(
      *         name="subDevice",
      *         in="body",
@@ -505,10 +615,12 @@ $app->put('/api/v1/SubDevices', function (Request $request, Response $response) 
 		# Not found so insert it
 		$objectArray = json_decode($request->getBody(), true);
 		$id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
-    	return $response->withStatus(307)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
+		$url = $this->get('router')->pathFor('getSubDevice', ['subDeviceId' => $id]);
+    	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
 	}
-	return $response->withStatus(307)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/{$subDevice->id}");
-});
+	$url = $this->get('router')->pathFor('putSubDevice', ['subDeviceId' => $subDevice->id]);
+	return $response->withStatus(307)->withHeader('Location', $url);
+})->setName("putSubDevices");
 
 /**
      * @SWG\Post(
@@ -555,15 +667,71 @@ $app->post('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, 
 	$objectArray['headBTAddress'] = $device->BTAddress;
 	$cls = SubDevice::class;
     $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
-	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
+    $url = $this->get('router')->pathFor('getSubDevice', ['subDeviceId' => $id]);
+	return $response->withStatus(303)->withHeader('Location', $url);
 })->setName("postSubDevice");
 
 
-# SUBDEVICESTATUS
+# SUBDEVICESTATUS 
+/**
+     * @SWG\Get(
+     *     path="/api/v1/SubDevices/{subDeviceId}/SubDeviceStatuses?sort={sort}&limit={limit}",
+     *     description="Returns all statues of a subDevice",
+     *     operationId="getSubDeviceStatuesOfASubDevice",
+     *     @SWG\Parameter(
+     *         description="ID of sub device to get statuses for",
+     *         format="int64",
+     *         in="path",
+     *         name="subDeviceId",
+     *         required=true,
+     *         type="integer"
+     *     ), 
+     *     @SWG\Parameter(
+     *         description="columns to sort on",
+     *         in="path",
+     *         name="sort",
+     *         required=false,
+     *         type="string"
+     *     ),
+     *     @SWG\Parameter(
+     *         description="limit number of results returned",
+     *         in="path",
+     *         name="limit",
+     *         required=false,
+     *         type="string"
+     *     ),
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=200,
+     *         description="device response",
+     *         @SWG\Schema(
+     *             type="array",
+     *             @SWG\Items(ref="#/definitions/SubDeviceStatus")
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     )
+     * )
+     */
+$app->get('/api/v1/SubDevices/{subDeviceId}/SubDeviceStatuses', function (Request $request, Response $response) {
+    $subDeviceId = $request->getAttribute('subDeviceId');
+    $cls = SubDeviceStatus::class;
+    $sort = $this->helper->getSort($cls, $request);
+    $limit = $this->helper->getLimit($request);
+    $sql = "SELECT SubDeviceStatuses.* FROM SubDeviceStatuses WHERE SubDeviceStatuses.SubDeviceId = :subDeviceId " . $sort . " " . $limit;
+    $subDeviceStatuses = $this->helper->GetAllBySql($cls, $sql, ['subDeviceId'=>$subDeviceId], $request);
+    return $response->withJson($subDeviceStatuses);
+})->setName("getSubDeviceStatuesOfASubDevice");
+
 
 /**
      * @SWG\Get(
-     *     path="/api/v1/SubDeviceStatuses?sort={sort}",
+     *     path="/api/v1/SubDeviceStatuses",
      *     description="Returns subDeviceStatuses",
      *     operationId="getSubDeviceStatuses",
      *     @SWG\Parameter(
@@ -572,6 +740,14 @@ $app->post('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, 
      *         name="sort",
      *         required=false,
      *         type="string"
+     *     ),
+     *     @SWG\Parameter(
+     *         description="limit number of results returned",
+     *         in="path",
+     *         name="limit",
+     *         required=false,
+     *         format="int64",
+     *         type="integer"
      *     ),
      *     produces={"application/json"},
      *     @SWG\Response(
@@ -592,10 +768,10 @@ $app->post('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, 
      * )
      */
 $app->get('/api/v1/SubDeviceStatuses', function (Request $request, Response $response) {
-    #sort=created&dir=asc&limit=1&SubDeviceId=1
+    #sort=created&dir=asc&limit=1
 	$cls = SubDeviceStatus::class;
     return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
-});
+})->setName("getSubDeviceStatuses");
 
 
 /**
@@ -632,7 +808,7 @@ $app->get('/api/v1/SubDeviceStatuses/{subDeviceStatusId}', function (Request $re
     $id = $request->getAttribute('subDeviceStatusId');
     $cls = SubDeviceStatus::class;
     return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
-});
+})->setName("getSubDeviceStatus");
 
 
 /**
@@ -668,10 +844,88 @@ $app->post('/api/v1/SubDeviceStatuses', function (Request $request, Response $re
 	$objectArray = json_decode($request->getBody(), true);
 	$cls = SubDeviceStatus::class;
     $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
-	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
-});
+    $url = $this->get('router')->pathFor('getSubDeviceStatus', ['subDeviceStatusId' => $id]);
+	return $response->withStatus(303)->withHeader('Location', $url);
+})->setName("postSubDeviceStatus");
+
+
 
 # MESSAGESTATS
+/**
+     * @SWG\Get(
+     *     path="/api/v1/Devices/{deviceId}/MessageStats?sort={sort}&limit={limit}&outputType={outputType}",
+     *     description="Returns MessageStats",
+     *     operationId="getMessageStats",
+     *     @SWG\Parameter(
+     *         description="ID of device to get stats for",
+     *         format="int64",
+     *         in="path",
+     *         name="deviceId",
+     *         required=true,
+     *         type="integer"
+     *     ), 
+     *     @SWG\Parameter(
+     *         description="columns to sort on",
+     *         in="path",
+     *         name="sort",
+     *         required=false,
+     *         type="string"
+     *     ),
+     *     @SWG\Parameter(
+     *         description="limit number of results returned",
+     *         in="path",
+     *         name="limit",
+     *         required=false,
+     *         type="string"
+     *     ),
+     *     @SWG\Parameter(
+     *         description="outputType, aggregated | normal",
+     *         in="path",
+     *         name="outputType",
+     *         required=false,
+     *         type="string"
+     *     ),
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=200,
+     *         description="MessageStats response",
+     *         @SWG\Schema(
+     *             type="array",
+     *             @SWG\Items(ref="#/definitions/MessageStat")
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     )
+     * )
+     */
+$app->get('/api/v1/Devices/{deviceId}/MessageStats', function (Request $request, Response $response) {
+	$cls = MessageStat::class;
+    $deviceId = $request->getAttribute('deviceId');
+    $sort = $this->helper->getSort($cls, $request);
+    $limit = $this->helper->getLimit($request);
+    $outputType = $request->getQueryParam('outputType');
+    $sql = '';
+    if (strtolower($outputType) == 'aggregated') {
+		$sql = "SELECT MessageStats.deviceId, MessageStats.adapterInstance, MessageStats.messageType, 
+			(SELECT MessageStats.status FROM MessageStats ims WHERE ims.deviceId = MessageStats.deviceId 
+			and ims.adapterInstance = MessageStats.adapterInstance and ims.messageType = MessageStats.messageType ORDER BY ims.createdTime desc LIMIT 1) as status, 
+			sum(MessageStats.noOfMessages) as noOfMessages, max(MessageStats.updateTime) as updateTime, max(MessageStats.createdTime) as createdTime 
+			FROM MessageStats WHERE MessageStats.deviceId = :deviceId GROUP BY MessageStats.deviceId, MessageStats.adapterInstance, 
+			MessageStats.messageType, status " . $sort . " " . $limit;
+	} else {
+		$sql = "SELECT MessageStats.* FROM MessageStats WHERE MessageStats.DeviceId = :deviceId " . $sort . " " . $limit;
+	}
+    $deviceStats = $this->helper->GetAllBySql($cls, $sql, ['deviceId'=>$deviceId], $request);
+    return $response->withJson($deviceStats);
+})->setName("getMessageStatsOfADevice");
+
+
+
 /**
      * @SWG\Get(
      *     path="/api/v1/MessageStats?sort={sort}",
@@ -706,7 +960,7 @@ $app->get('/api/v1/MessageStats', function (Request $request, Response $response
     #sort=created&dir=asc&limit=1&DeviceId=1
 	$cls = MessageStat::class;
     return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
-});
+})->setName("getMessageStats");
 
 /**
      * @SWG\Get(
@@ -742,7 +996,7 @@ $app->get('/api/v1/MessageStats/{statId}', function (Request $request, Response 
     $id = $request->getAttribute('statId');
     $cls = MessageStat::class;
     return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
-});
+})->setName("getMessageStat");
 
 /**
      * @SWG\Post(
@@ -777,8 +1031,9 @@ $app->post('/api/v1/MessageStats', function (Request $request, Response $respons
 	$objectArray = json_decode($request->getBody(), true);
 	$cls = MessageStat::class;
     $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
-	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls::$tableName}/$id");
-});
+    $url = $this->get('router')->pathFor('getMessageStat', ['statId' => $id]);
+	return $response->withStatus(303)->withHeader('Location', $url);
+})->setName("postMessageStat");
 
 /**
      * @SWG\Post(
@@ -826,8 +1081,188 @@ $app->post('/api/v1/MessageStats/{BTAddress}', function (Request $request, Respo
 	$objectArray['deviceId'] = $device->id;
 	$cls2 = MessageStat::class;
     $id = $this->helper->Insert($cls2, $objectArray, $cls2::$tableName);
-	return $response->withStatus(303)->withHeader('Location', "http://localhost/api/v1/{$cls2::$tableName}/$id");
-});
+    $url = $this->get('router')->pathFor('getMessageStat', ['statId' => $id]);
+	return $response->withStatus(303)->withHeader('Location', $url);
+})->setName("postMessageStatByBTAddress");
 
+
+/**
+     * @SWG\Get(
+     *     path="/api/v1/UserDevices/{userDeviceId}",
+     *     description="Gets a UserDevice",
+     *     operationId="getUserDevice",
+     *     produces={"application/json"},
+     *     @SWG\Parameter(
+     *         description="ID of the UserDevice",
+     *         format="int64",
+     *         in="path",
+     *         name="userDeviceId",
+     *         required=true,
+     *         type="integer"
+     *     ),
+     *     @SWG\Response(
+     *         response=200,
+     *         description="MessageStat response",
+     *         @SWG\Schema(
+     *             ref="#/definitions/UserDevice"
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     )
+     * )
+     */
+$app->get('/api/v1/UserDevices/{userDeviceId}', function (Request $request, Response $response) {
+    $cls = UserDevice::class;
+    $id = $request->getAttribute('userDeviceId');
+	return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
+})->setName("getUserDevice");
+
+/**
+     * @SWG\Get(
+     *     path="/api/v1/UserDevices",
+     *     description="Gets UserDevices",
+     *     operationId="getUserDevices",
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=200,
+     *         description="Userdevices response",
+     *         @SWG\Schema(
+     *             type="array",
+     *             @SWG\Items(ref="#/definitions/UserDevice")
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     )
+     * )
+     */
+$app->get('/api/v1/UserDevices', function (Request $request, Response $response) {
+    $cls = UserDevice::class;
+    return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
+})->setName("getUserDevices");
+
+
+/**
+     * @SWG\Post(
+     *     path="/api/v1/UserDevices",
+     *     description="Adds a new UserDevice",
+     *     operationId="postUserDevice",
+     *     @SWG\Parameter(
+     *         name="UserDevice",
+     *         in="body",
+     *         description="UserDevice to add to the store",
+     *         required=true,
+     *         @SWG\Schema(ref="#/definitions/NewUserDevice"),
+     *     ),
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=200,
+     *         description="UserDevice response",
+     *         @SWG\Schema(
+     *             ref="#/definitions/UserDevice"
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     )
+     * )
+     */
+$app->post('/api/v1/UserDevices', function (Request $request, Response $response) {
+    $cls = UserDevice::class;
+    $objectArray = json_decode($request->getBody(), true);
+    if (!array_key_exists("userId", $objectArray)) {
+		$user = $request->getAttribute('user');
+		$objectArray['userId'] = $user->id;
+	}
+    $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
+    $url = $this->get('router')->pathFor('getUserDevice', ['userDeviceId' => $id]);
+	return $response->withStatus(303)->withHeader('Location', $url);
+})->setName("postUserDevice");
+
+
+/**
+     * @SWG\Delete(
+     *     path="/api/v1/UserDevices/{userDeviceId}",
+     *     description="Delete a new UserDevice",
+     *     operationId="deleteUserDevice",
+     *     @SWG\Parameter(
+     *         description="ID of the userDevice",
+     *         format="int64",
+     *         in="path",
+     *         name="userDeviceId",
+     *         required=true,
+     *         type="integer"
+     *     ),
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=204,
+     *         description="deleted",
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     )
+     * )
+     */
+$app->delete('/api/v1/UserDevices/{userDeviceId}', function (Request $request, Response $response) {
+	$id = $request->getAttribute('userDeviceId');
+    $cls = UserDevice::class;
+    $this->helper->Delete($id, $cls::$tableName);
+	return $response->withStatus(204);
+})->setName("deleteUserDevice");
+
+
+/**
+     * @SWG\Delete(
+     *     path="/api/v1/Devices/{deviceId}/UserDevices",
+     *     description="Delete a the UserDevice of of the device and logged in user",
+     *     operationId="deleteUserDeviceByDevice",
+     *     @SWG\Parameter(
+     *         description="ID of the device",
+     *         format="int64",
+     *         in="path",
+     *         name="deviceId",
+     *         required=true,
+     *         type="integer"
+     *     ),
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=204,
+     *         description="deleted",
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     )
+     * )
+     */
+$app->delete('/api/v1/Devices/{deviceId}/UserDevices', function (Request $request, Response $response) {
+	$deviceId = $request->getAttribute('deviceId');
+    $cls = UserDevice::class;
+    $sql = "DELETE FROM {$cls::$tableName} WHERE deviceId = :deviceId AND userId = :userId";
+    $user = $request->getAttribute('user');
+	$values = ['deviceId'=>$deviceId, 'userId'=>$user->id];
+    $this->helper->DeleteBySql($sql, $values);
+	return $response->withStatus(204);
+})->setName("deleteUserDeviceByDevice");
 
 $app->run();

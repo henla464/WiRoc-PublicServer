@@ -1,0 +1,24 @@
+
+@media	screen and (orientation: landscape) and (-webkit-min-device-pixel-ratio : 2),
+		screen and (orientation: landscape) and (min--moz-device-pixel-ratio: 2),
+		screen and (orientation: landscape) and (min-device-pixel-ratio : 2) {
+	body { font-size: 4.5vw; }
+}
+
+
+
+.signal-strength {
+	font-size: 60%;
+	overflow-
+}
+
+.peek-a-bar {
+	margin: 0;
+	position: relative;
+	width: 100%;
+	left: 0;
+	right: 0;
+	text-align: center;
+	z-index: 1000;
+	text-shadow: none;
+}

@@ -2,34 +2,28 @@
 use Swagger\Annotations as SWG;
 
 /**
- * @SWG\Definition(definition="NewDevice", type="object", required={"name", "BTAddress", "description"})
+ * @SWG\Definition(definition="NewUser", type="object", required={"oauthProvider", "oauthUserId", "email"})
  */
-class Device
+class User
 {
-	public static $tableName = 'Devices';
+	public static $tableName = 'Users';
 	
     public $id;
     /**
      * @SWG\Property()
      * @var string
      */
-    public $BTAddress;
+    public $oauthProvider;
     /**
      * @var string
      * @SWG\Property()
      */
-    public $name;
+    public $oauthUserId;
     /**
      * @var string
      * @SWG\Property()
      */
-    public $description;
-    
-     /**
-     * @var boolean
-     * @SWG\Property()
-     */
-    public $connectedToUser;
+    public $email;
     
 	public $updateTime;
     public $createdTime;
@@ -37,14 +31,13 @@ class Device
 
 /**
  *  @SWG\Definition(
- *   definition="Device",
+ *   definition="User",
  *   type="object",
  *   allOf={
- *       @SWG\Schema(ref="#/definitions/NewDevice"),
+ *       @SWG\Schema(ref="#/definitions/NewUser"),
  *       @SWG\Schema(
  *           required={"id"},
  *           @SWG\Property(property="id", format="int64", type="integer"),
- * 			 @SWG\Property(property="connectedToUser", type="boolean"),
  * 			 @SWG\Property(property="updateTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="createdTime", format="date-time", type="string")
  *       )

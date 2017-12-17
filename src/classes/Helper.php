@@ -12,22 +12,37 @@ class Helper
     
     private function GetSetAndValues($objectName, $objectArray) {
 		$annotationReader = new AnnotationReader();
-		$reflectionClass = new ReflectionClass($objectName);
-		$classAnnotations = $annotationReader->getClassAnnotations($reflectionClass);
+		#$reflectionClass = new ReflectionClass($objectName);
+		#$classAnnotations = $annotationReader->getClassAnnotations($reflectionClass);
+		#var_dump($classAnnotations);
+		
+		$obj = new $objectName();
+		$reflectionObject = new ReflectionObject($obj);
+		$allPropertiesOfObject = $reflectionObject->getProperties();
+		
 		$values = [];
 		$set = "";
-		foreach ($classAnnotations[0]->required AS $columnName) {
-			$set.="`".str_replace("`", "``", $columnName)."`". "=:$columnName, ";
-			$values[$columnName] = $objectArray[$columnName];
+		foreach ($allPropertiesOfObject AS $prop) {
+			$propertyAnnotations = $annotationReader->getPropertyAnnotations($prop);
+			if (sizeof($propertyAnnotations) > 0) {
+				$set.="`".str_replace("`", "``", $prop->name)."`". "=:$prop->name, ";
+				$values[$prop->name] = $objectArray[$prop->name];
+			}
 		}
+		#var_dump($set);
+		#foreach ($classAnnotations[0]->required AS $columnName) {
+			#$set.="`".str_replace("`", "``", $columnName)."`". "=:$columnName, ";
+			#$values[$columnName] = $objectArray[$columnName];
+		#}
 		return array("set"=>$set, "values"=>$values);
 	}
 	
-	private function getSort($objectName, $request) {
+	public function getSort($objectName, $request) {
 		$returnSortString = '';
 		$sort = $request->getQueryParam('sort');
 		$columns = explode(",", trim($sort));
 		$properties = get_object_vars(new $objectName);
+		
 		foreach ($columns AS $column) {
 			$columnAndSort = explode(" ", trim($column));
 			$columnOnly = trim($columnAndSort[0]);
@@ -45,17 +60,19 @@ class Helper
 		return substr(" order by $returnSortString", 0, -2);
 	}
 	
+	public function getLimit($request) {
+		$limit = $request->getQueryParam('limit');
+		if (trim($limit) != '' && ctype_digit($limit)) {
+			return "LIMIT " . $limit;
+		}
+		return '';
+	}
+	
     
     public function GetAll($objectName, $tableName, $request) {
 		$sort = $this->getSort($objectName, $request);
-		
-		#$allGetVars = $request->getQueryParams();
-		#foreach($allGetVars as $key => $param){
-			//GET parameters list
-		#	if $key = '' 
-		#}
-		#return $sort;
-		$stmt = $this->container->db->prepare("SELECT * FROM $tableName$sort");
+		$limit = $this->getLimit($request);
+		$stmt = $this->container->db->prepare("SELECT * FROM $tableName$sort $limit");
 		$stmt->execute();
 		return $stmt->fetchAll(PDO::FETCH_CLASS, $objectName);
 	}
@@ -100,6 +117,16 @@ class Helper
 		$stmt->execute($values);
 	}
 	
+	public function Delete($id, $tableName) {
+		$stmt = $this->container->db->prepare("DELETE FROM $tableName WHERE id = :id");
+		$stmt->execute(['id'=>$id]);
+	}
+	
+	public function DeleteBySql($sql, $values) {
+		$stmt = $this->container->db->prepare($sql);
+		$stmt->execute($values);
+	}
+	
 	public function CreateTables() {
 		#$name = $request->getAttribute('name');
 		#$response->getBody()->write($this->settings['db']['user']);
@@ -117,6 +144,10 @@ class Helper
 		$stmt = $this->container->db->query($sql);
 		$sql = 'CREATE TABLE IF NOT EXISTS MessageStats (id int NOT NULL AUTO_INCREMENT, deviceId int, adapterInstance varchar(50), ';
 		$sql .= 'messageType varchar(50), status varchar(50), noOfMessages int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
+		$stmt = $this->container->db->query($sql);
+		$sql = 'CREATE TABLE IF NOT EXISTS Users (id int NOT NULL AUTO_INCREMENT, oauthProvider varchar(255), oauthUserId varchar(255), email varchar(255), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
+		$stmt = $this->container->db->query($sql);
+		$sql = 'CREATE TABLE IF NOT EXISTS UserDevices (id int NOT NULL AUTO_INCREMENT, userId int, deviceId int, createdTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->container->db->query($sql);
 		
 		$res = new CommandResponse();

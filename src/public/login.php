@@ -28,7 +28,7 @@ if (!isset($_SESSION['access_token'])){
     echo '<div align="center">';
     echo '<h3>Login with Google</h3>';
     echo '<div>Please click login button to connect to Google.</div>';
-    echo '<a class="login" href="' . $authUrl . '"><img src="images/google-login.png" /></a>';
+    echo '<a class="login" href="' . $authUrl . '"><img src="res/google-login.png" /></a>';
     echo '</div>';
     
 } else {

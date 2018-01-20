@@ -2,10 +2,6 @@
 class AuthMiddleware
 {
 	########## Google Settings.Client ID, Client Secret from https://console.developers.google.com #############
-	private $client_id = '751087396976-rsc4nkrhseut92nmpa5agio9omd2e2ms.apps.googleusercontent.com'; 
-	private $client_secret = 'mBXR9tlznWjg3UzNn_lKJpck';
-	private $redirect_uri = 'http://localhost/api/v1/login';
-
 	private $client;
 	private $service;
 	public $container;
@@ -13,9 +9,15 @@ class AuthMiddleware
 	function __construct($c) {
 		$this->container = $c;
 		$this->client = new Google_Client();
-		$this->client->setClientId($this->client_id);
-		$this->client->setClientSecret($this->client_secret);
-		$this->client->setRedirectUri($this->redirect_uri);
+	
+		$ini_array = parse_ini_file("../config/config.ini", true);
+		$client_id = $ini_array['google_login']['client_id'];
+		$client_secret = $ini_array['google_login']['client_secret'];
+		$redirect_uri = $ini_array['google_login']['redirect_uri'];
+
+		$this->client->setClientId($client_id);
+		$this->client->setClientSecret($client_secret);
+		$this->client->setRedirectUri($redirect_uri);
 		$this->client->addScope("email");
 		$this->client->addScope("profile");
 
@@ -34,9 +36,9 @@ class AuthMiddleware
     public function __invoke($request, $response, $next)
     {
 		$path_only = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-		//$response->getBody()->write($path_only);
+		#$response->getBody()->write($path_only);
 		if ($path_only == '/api/v1' or $path_only == '/swagger/docs' or
-				$path_only == '/api/v1/ping') {
+				$path_only == '/api/v1/ping' or $path_only == '/api/v1/CreateTables') {
 			$response = $next($request, $response);
 			return $response;
 		}
@@ -45,9 +47,12 @@ class AuthMiddleware
 				$this->client->authenticate($_GET['code']);
 				$_SESSION['access_token'] = $this->client->getAccessToken();
 				$response = $next($request, $response);
+				#echo('code');
 				return $response;
 			} else {
+				#echo('idtoken');
 				$id_token = $request->getParam('idtoken');
+				#echo('idtoken $id_token');
 				Firebase\JWT\JWT::$leeway = 5; // Allows a 5 second tolerance on timing checks
 				$payload = $this->client->verifyIdToken($id_token);
 				if ($payload) {
@@ -67,6 +72,7 @@ class AuthMiddleware
 		$oauthUserId = NULL;
 		$email = NULL;
 		if (isset($_SESSION['access_token']) and $_SESSION['access_token']){
+			#echo($_SESSION['access_token']);
 			$this->client->setAccessToken($_SESSION['access_token']);
 			$googleUser = $this->service->userinfo->get(); //get user info
 			$oauthUserId = $googleUser->id;

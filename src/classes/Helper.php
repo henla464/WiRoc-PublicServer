@@ -128,14 +128,7 @@ class Helper
 	}
 	
 	public function CreateTables() {
-		#$name = $request->getAttribute('name');
-		#$response->getBody()->write($this->settings['db']['user']);
-
-		#$pdo = new PDO("mysql:host=localhost", 'root', 'root');
-		#$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-		#$pdo->query("CREATE DATABASE IF NOT EXISTS " . $this->settings['db']['dbname']);
-		#$pdo->query("use " . $this->settings->db->dbname);
-
+		
 		$sql = 'CREATE TABLE IF NOT EXISTS Devices (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), name varchar(50), description varchar(255), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->container->db->query($sql);
 		$sql = 'CREATE TABLE IF NOT EXISTS SubDevices (id int NOT NULL AUTO_INCREMENT, headBTAddress varchar(50), distanceToHead int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
@@ -154,11 +147,6 @@ class Helper
 		$res->code = 0;
 		$res->message = "Tables created";
 		return $res;
-		#$sql = "INSERT INTO Devices (BTAddress, name, description) VALUES ('btaddr', 'device name', 'descr')";
-		#$stmt = $this->db->query($sql);
-		
-		#$sql = "INSERT INTO SubDevices (headBTAddress, distanceToHead) VALUES ('my bt', 1)";
-		#$stmt = $this->container->db->query($sql);
 	}
 	
 }

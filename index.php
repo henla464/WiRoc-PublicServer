@@ -1,20 +1,22 @@
 <?php
+// Powered by Zyro.com
+include dirname(__FILE__).'/zyro/index.php';
+
+
 
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
 use Doctrine\Common\Annotations\AnnotationReader;
 
-require '../vendor/autoload.php';
-#require_once('../classes/Device.php');
-#require_once('../classes/ErrorModel.php');
+require 'src/vendor/autoload.php';
 \Doctrine\Common\Annotations\AnnotationRegistry::registerLoader('class_exists');
 
-session_start();
+#session_start();
 
 $config['displayErrorDetails'] = true;
 $config['addContentLengthHeader'] = false;
 
-$ini_array = parse_ini_file("../config/config.ini", true);
+$ini_array = parse_ini_file("src/config/config.ini", true);
 
 $config['db']['host']   = $ini_array['database']['database_hostname'];
 $config['db']['user']   = $ini_array['database']['database_username'];
@@ -26,12 +28,12 @@ $container = $app->getContainer();
 $app->add( new AuthMiddleware($container) );
 $annotationReader = new AnnotationReader();
 
-#echo('asdf');
+echo('asdf');
 
 
 $container['logger'] = function($c) {
     $logger = new \Monolog\Logger('my_logger');
-    $file_handler = new \Monolog\Handler\StreamHandler("../logs/app.log");
+    $file_handler = new \Monolog\Handler\StreamHandler("src/logs/app.log");
     $logger->pushHandler($file_handler);
     return $logger;
 };
@@ -49,9 +51,9 @@ $container['helper'] = function ($container) {
     return new Helper($container);
 };
 
-#$a = new Helper($container);
-#$a->CreateTables();
-#echo('END');
+$a = new Helper($container);
+$a->CreateTables();
+echo('END');
 
 /**
  * @SWG\Info(title="WiRoc Monitor API", version="1")
@@ -64,7 +66,7 @@ $container['helper'] = function ($container) {
  * )
  */
 $app->get('/api/v1', function($request, $response, $args) use ($app) {
-    $swagger = \Swagger\scan(['.', '../classes']);
+    $swagger = \Swagger\scan(['.', 'src/classes']);
     header('Content-Type: application/json');
     echo $swagger;
 })->setName("getApiV1");
@@ -1274,3 +1276,5 @@ $app->delete('/api/v1/Devices/{deviceId}/UserDevices', function (Request $reques
 })->setName("deleteUserDeviceByDevice");
 
 $app->run();
+
+?>

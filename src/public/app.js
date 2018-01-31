@@ -17,7 +17,7 @@ app.initialize = function()
 
 function onSignIn(googleUser) {
 	app.loggedIn = true;
-				
+	console.log('logging in');			
 	var id_token = googleUser.getAuthResponse().id_token;
 	var xhr = new XMLHttpRequest();
 	xhr.open('POST', '/api/v1/login');

@@ -4,6 +4,7 @@ class AuthMiddleware
 	########## Google Settings.Client ID, Client Secret from https://console.developers.google.com #############
 	private $client;
 	private $service;
+	private $apiKey;
 	public $container;
 	
 	function __construct($c) {
@@ -14,7 +15,7 @@ class AuthMiddleware
 		$client_id = $ini_array['google_login']['client_id'];
 		$client_secret = $ini_array['google_login']['client_secret'];
 		$redirect_uri = $ini_array['google_login']['redirect_uri'];
-
+		$this->apiKey = $ini_array['api']['api_key'];
 		$this->client->setClientId($client_id);
 		$this->client->setClientSecret($client_secret);
 		$this->client->setRedirectUri($redirect_uri);
@@ -38,7 +39,7 @@ class AuthMiddleware
 		$path_only = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 		#$response->getBody()->write($path_only);
 		if ($path_only == '/api/v1' or $path_only == '/swagger/docs' or
-				$path_only == '/api/v1/ping' or $path_only == '/api/v1/CreateTables') {
+				$path_only == '/api/v1/ping' or $path_only == '/api/v1/CreateTables' or $path_only == '/') {
 			$response = $next($request, $response);
 			return $response;
 		}
@@ -68,11 +69,10 @@ class AuthMiddleware
 				}
 			}
 		}
-		
+		#echo($_SESSION['access_token']);
 		$oauthUserId = NULL;
 		$email = NULL;
 		if (isset($_SESSION['access_token']) and $_SESSION['access_token']){
-			#echo($_SESSION['access_token']);
 			$this->client->setAccessToken($_SESSION['access_token']);
 			$googleUser = $this->service->userinfo->get(); //get user info
 			$oauthUserId = $googleUser->id;
@@ -83,6 +83,7 @@ class AuthMiddleware
 			$oauthUserId = $_SESSION['user_id'];
 			$email = $_SESSION['email'];
 		}
+		
 		if ($oauthUserId) {
 			$cls = User::class;
 			$sql = "SELECT * FROM Users WHERE oauthUserId = :oauthUserId";
@@ -96,12 +97,18 @@ class AuthMiddleware
 			$request = $request->withAttribute('user', $userFromDb);
 			$response = $next($request, $response);
 		} else {
-			/* Set response headers before giving it to error callback */
-            $response = $response->withStatus(401);
-            $response->getBody()->write('Unauthorized');
-            return $response;
+			$headerValueString = $request->getHeaderLine('Authorization');
+			echo($headerValueString);
+			if ($headerValueString == $this->apiKey) {
+				$response = $next($request, $response);
+				return $response;
+			} else {
+				/* Set response headers before giving it to error callback */
+				$response = $response->withStatus(401);
+				$response->getBody()->write('Unauthorized');
+				return $response;
+			}
 		}
-
         return $response;
     }
 }

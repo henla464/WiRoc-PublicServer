@@ -1,0 +1,5 @@
+php_value display_errors 1
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ slim.php [QSA,L]

@@ -25,12 +25,7 @@ class Device
      */
     public $description;
     
-     /**
-     * @var boolean
-     * @SWG\Property()
-     */
     public $connectedToUser;
-    
 	public $updateTime;
     public $createdTime;
 }

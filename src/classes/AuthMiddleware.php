@@ -98,8 +98,10 @@ class AuthMiddleware
 			$response = $next($request, $response);
 		} else {
 			$headerValueString = $request->getHeaderLine('Authorization');
-			echo($headerValueString);
-			if ($headerValueString == $this->apiKey) {
+			#echo("incoming:" . $headerValueString);
+			$correctAuth = 'Token token=' . $this->apiKey;
+			#echo("correctAuth:" . $correctAuth);
+			if ($headerValueString == $correctAuth) {
 				$response = $next($request, $response);
 				return $response;
 			} else {

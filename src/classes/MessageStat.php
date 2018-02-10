@@ -2,18 +2,18 @@
 use Swagger\Annotations as SWG;
 
 /**
- * @SWG\Definition(definition="NewMessageStat", type="object", required={"deviceId", "adapterInstance", "messageType", "status", "noOfMessages"})
+ * @SWG\Definition(definition="NewMessageStat", type="object", required={"BTAddress", "adapterInstance", "messageType", "status", "noOfMessages"})
  */
 class MessageStat
 {
 	public static $tableName = 'MessageStats';
 		
     public $id;
-    /**
+     /**
      * @SWG\Property()
-     * @var integer
+     * @var string
      */
-    public $deviceId;
+    public $BTAddress;
     /**
      * @var string
      * @SWG\Property()

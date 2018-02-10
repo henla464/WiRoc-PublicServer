@@ -45,13 +45,20 @@ class AuthMiddleware
 		}
 		if ($path_only == '/api/v1/login') {
 			if (isset($_GET['code'])) {
+				if ($this->client->isAccessTokenExpired()) {
+					echo('Access token has expired');
+					#$client->refreshToken($refresh_token_accessed_from_my_database);
+				}
+				#echo($_GET['code']);
 				$this->client->authenticate($_GET['code']);
-				$_SESSION['access_token'] = $this->client->getAccessToken();
+				$accessToken = $this->client->getAccessToken();
+				#echo('accessToken:' . $accessToken);
+				$_SESSION['access_token'] = $accessToken;
+				
 				$response = $next($request, $response);
-				#echo('code');
 				return $response;
 			} else {
-				#echo('idtoken');
+				echo('idtoken');
 				$id_token = $request->getParam('idtoken');
 				#echo('idtoken $id_token');
 				Firebase\JWT\JWT::$leeway = 5; // Allows a 5 second tolerance on timing checks
@@ -63,47 +70,46 @@ class AuthMiddleware
 					return $response;
 				} else {
 					// Invalid ID token
+					echo("clear session");
 					$_SESSION['user_id'] = NULL;
 					$_SESSION['email'] = NULL;
 					$_SESSION['access_token'] = NULL;
 				}
 			}
 		}
-		#echo($_SESSION['access_token']);
-		$oauthUserId = NULL;
-		$email = NULL;
-		if (isset($_SESSION['access_token']) and $_SESSION['access_token']){
-			$this->client->setAccessToken($_SESSION['access_token']);
-			$googleUser = $this->service->userinfo->get(); //get user info
-			$oauthUserId = $googleUser->id;
-			$email = $googleUser->email;
-		}
-		if (isset($_SESSION['user_id']) and $_SESSION['user_id']){
-			$userData = $_SESSION['user_id'];
-			$oauthUserId = $_SESSION['user_id'];
-			$email = $_SESSION['email'];
-		}
-		
-		if ($oauthUserId) {
-			$cls = User::class;
-			$sql = "SELECT * FROM Users WHERE oauthUserId = :oauthUserId";
-			$values = ['oauthUserId'=>$oauthUserId];
-			$userFromDb = $this->container->helper->GetBySql($cls, $sql, $values);
-			if (!$userFromDb) {
-				$userToSaveToDb = ['email' => $email,'oauthProvider' => 'Google', 'oauthUserId' => $oauthUserId];
-				$id = $this->container->helper->Insert($cls, $userToSaveToDb, $cls::$tableName);
-				$userFromDb = $this->container->helper->Get($cls, $cls::$tableName, $id);
-			}
-			$request = $request->withAttribute('user', $userFromDb);
+		$headerValueString = $request->getHeaderLine('Authorization');
+		#echo("incoming:" . $headerValueString);
+		if ($headerValueString == $this->apiKey) {
 			$response = $next($request, $response);
+			return $response;
 		} else {
-			$headerValueString = $request->getHeaderLine('Authorization');
-			#echo("incoming:" . $headerValueString);
-			$correctAuth = 'Token token=' . $this->apiKey;
-			#echo("correctAuth:" . $correctAuth);
-			if ($headerValueString == $correctAuth) {
+			#echo($_SESSION['access_token']);
+			$oauthUserId = NULL;
+			$email = NULL;
+			if (isset($_SESSION['access_token']) and $_SESSION['access_token']){
+				$this->client->setAccessToken($_SESSION['access_token']);
+				$googleUser = $this->service->userinfo->get(); //get user info
+				$oauthUserId = $googleUser->id;
+				$email = $googleUser->email;
+			}
+			if (isset($_SESSION['user_id']) and $_SESSION['user_id']){
+				$userData = $_SESSION['user_id'];
+				$oauthUserId = $_SESSION['user_id'];
+				$email = $_SESSION['email'];
+			}
+			
+			if ($oauthUserId) {
+				$cls = User::class;
+				$sql = "SELECT * FROM Users WHERE oauthUserId = :oauthUserId";
+				$values = ['oauthUserId'=>$oauthUserId];
+				$userFromDb = $this->container->helper->GetBySql($cls, $sql, $values);
+				if (!$userFromDb) {
+					$userToSaveToDb = ['email' => $email,'oauthProvider' => 'Google', 'oauthUserId' => $oauthUserId];
+					$id = $this->container->helper->Insert($cls, $userToSaveToDb, $cls::$tableName);
+					$userFromDb = $this->container->helper->Get($cls, $cls::$tableName, $id);
+				}
+				$request = $request->withAttribute('user', $userFromDb);
 				$response = $next($request, $response);
-				return $response;
 			} else {
 				/* Set response headers before giving it to error callback */
 				$response = $response->withStatus(401);

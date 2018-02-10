@@ -5,7 +5,7 @@ app.loggedIn = false;
 app.ui.usersDeviceList = null;
 app.ui.addDeviceList = null;
 app.userDeviceFn = doT.template('<div class="device-item"><span class="device-header">{{=it.name}}</span><dl class="table-display"><dt>Description</dt><dd>{{= app.ui.formatText(it.description)}}</dd>{{~it.MessageStats :messageStat:index}}<dt>Received {{=messageStat.messageType}}</dt><dd>{{=messageStat.noOfMessages}} ({{=messageStat.createdTime}})</dd>{{~}}</dl>{{~it.SubDevices :subDevice:index}}<div class="subdevice-item"><ul class="subdevice-item-desc-list"><li>{{=subDevice.distanceToHead}} ({{=app.ui.getSubDeviceStatusCreateDate(subDevice)}}){{ for (var i = 0; i < subDevice.SubDeviceStatuses.length; i++) { }}<li>Batt: {{=subDevice.SubDeviceStatuses[i].batteryLevel}}%</li>{{ }}}</ul></div>{{~}}<img class="flag" src="../res/flag.jpg"/></div>');
-app.addDeviceListFn = doT.template('<li data-checked="{{=it.connectedToUser}}" data-deviceid="{{=it.id}}"><input type="checkbox" name="checkbox{{=it.id}}" id="checkbox{{=it.id}}" class="css-checkbox" {{? it.connectedToUser==="1" }}checked="checked"{{?}}/><label class="css-label" for="checkbox{{=it.id}}"><span class="add-device-header">{{=it.name}}</span><dl class="table-display add-device-desc"><dt>Description</dt><dd>{{=it.description}}</dd></dl></label></li>');
+app.addDeviceListFn = doT.template('<li data-checked="{{=it.connectedToUser}}" data-deviceid="{{=it.id}}"><input type="checkbox" name="checkbox{{=it.id}}" id="checkbox{{=it.id}}" class="css-checkbox" {{? it.connectedToUser==="1" }}checked="checked"{{?}}/><label class="css-label" for="checkbox{{=it.id}}"><span class="add-device-header">{{=it.name}}</span><dl class="table-display add-device-desc"><dt>Description</dt><dd>{{=app.ui.formatText(it.description)}}</dd></dl></label></li>');
 
 
 
@@ -34,14 +34,14 @@ app.ui.formatText = function(txt) {
 		return "";
 	}
 	return txt;
-}
+};
 
 app.ui.getSubDeviceStatusCreateDate = function(device) {
 	if (device.SubDeviceStatuses && device.SubDeviceStatuses.length > 0) {
 		return device.SubDeviceStatuses[0].createdTime;
 	}
 	return 'No data';
-}
+};
 
 
 app.fillDevicesWithSubDeviceStatuses = function(devices) {
@@ -187,7 +187,7 @@ app.addDeviceToUser = function(deviceId) {
 };
 
 app.removeDeviceFromUser = function(deviceId) {
-	fetch("/api/v1/Devices/" + deviceId + "/UserDevices", {
+	fetch("/api/v1/Devices/" + deviceId + "/DeleteUserDevices", {
 		credentials: 'same-origin',
 		headers: {
 		  'Accept': 'application/json'

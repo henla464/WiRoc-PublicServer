@@ -1,4 +1,5 @@
 <?php
+session_start();
 
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
@@ -7,7 +8,8 @@ use Doctrine\Common\Annotations\AnnotationReader;
 require '../vendor/autoload.php';
 \Doctrine\Common\Annotations\AnnotationRegistry::registerLoader('class_exists');
 
-session_start();
+
+
 
 $config['displayErrorDetails'] = true;
 $config['addContentLengthHeader'] = false;
@@ -21,7 +23,7 @@ $config['db']['dbname'] = $ini_array['database']['database_name'];
 
 $app = new \Slim\App(["settings" => $config]);
 $container = $app->getContainer();
-#$app->add( new AuthMiddleware($container) );
+$authMiddleware = new AuthMiddleware($container);
 $annotationReader = new AnnotationReader();
 
 
@@ -47,8 +49,15 @@ $container['helper'] = function ($container) {
 
 /**
  * @SWG\Info(title="WiRoc Monitor API", version="1")
+ * @SWG\Swagger(
+ *   @SWG\SecurityScheme(
+ *     securityDefinition="api_key",
+ *     type="apiKey",
+ *     in="header",
+ *     name="Authorization"
+ *   )
+ * )
  */
-
 
 /**
  * @SWG\Get(
@@ -111,7 +120,7 @@ $app->get('/api/v1/login', function($request, $response, $args) use ($app) {
 	$res->code = 0;
 	$res->message = "Login OK";
     return $response->withJson($res);
-})->setName("login")->add( new AuthMiddleware($container));
+})->setName("login")->add($authMiddleware);
 
 /**
  * @SWG\Post(
@@ -131,7 +140,7 @@ $app->post('/api/v1/login', function($request, $response, $args) use ($app) {
 	$res->code = 0;
 	$res->message = "Login OK";
     return $response->withJson($res);
-})->setName("postLogin")->add( new AuthMiddleware($container));
+})->setName("postLogin")->add($authMiddleware);
 
 
 
@@ -154,7 +163,10 @@ $app->post('/api/v1/login', function($request, $response, $args) use ($app) {
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->post('/api/v1/CreateTables', function (Request $request, Response $response) {
@@ -190,13 +202,16 @@ $app->post('/api/v1/CreateTables', function (Request $request, Response $respons
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->get('/api/v1/Users', function (Request $request, Response $response) {
 	$cls = User::class;
     return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
-})->setName("getUsers")->add( new AuthMiddleware($container));
+})->setName("getUsers")->add($authMiddleware);
 
 # DEVICES
 /**
@@ -240,7 +255,10 @@ $app->get('/api/v1/Users', function (Request $request, Response $response) {
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->get('/api/v1/Devices', function (Request $request, Response $response) {
@@ -254,7 +272,7 @@ $app->get('/api/v1/Devices', function (Request $request, Response $response) {
 		$sql = 'SELECT Devices.*, CASE WHEN UserDevices.id IS NOT NULL THEN true ELSE false END AS connectedToUser FROM Devices LEFT JOIN UserDevices ON Devices.id = UserDevices.deviceId and UserDevices.userId = :userId';
 		return $response->withJson($this->helper->GetAllBySql($cls, $sql, ['userId'=>$userId], $request));
 	}
-})->setName("getDevices")->add( new AuthMiddleware($container));
+})->setName("getDevices")->add($authMiddleware);
 
 /**
      * @SWG\Get(
@@ -283,14 +301,55 @@ $app->get('/api/v1/Devices', function (Request $request, Response $response) {
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->get('/api/v1/Devices/{deviceId}', function (Request $request, Response $response) {
     $id = $request->getAttribute('deviceId');
     $cls = Device::class;
     return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
-})->setName('getDevice')->add( new AuthMiddleware($container));
+})->setName('getDevice')->add($authMiddleware);
+
+/**
+     * @SWG\Get(
+     *     path="/api/v1/Devices/DeleteByDeviceId/{deviceId}",
+     *     description="Deletes a device",
+     *     operationId="deleteDevice",
+     *     @SWG\Parameter(
+     *         description="ID of device to fetch",
+     *         format="int64",
+     *         in="path",
+     *         name="deviceId",
+     *         required=true,
+     *         type="integer"
+     *     ),
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=204,
+     *         description="delete",
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+$app->get('/api/v1/Devices/DeleteByDeviceId/{deviceId}', function (Request $request, Response $response) {
+    $id = $request->getAttribute('deviceId');
+    $cls = Device::class;
+    $this->helper->Delete($id, $cls::$tableName);
+    return $response->withStatus(204);
+})->setName('getDevice')->add($authMiddleware);
+
 
 /**
      * @SWG\Put(
@@ -326,7 +385,10 @@ $app->get('/api/v1/Devices/{deviceId}', function (Request $request, Response $re
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->put('/api/v1/Devices/{deviceId}', function (Request $request, Response $response) {
@@ -336,7 +398,7 @@ $app->put('/api/v1/Devices/{deviceId}', function (Request $request, Response $re
     $this->helper->Update($cls, $objectArray, $cls::$tableName, $id);
     $url = $this->get('router')->pathFor('getDevice', ['deviceId' => $id]);
     return $response->withStatus(303)->withHeader('Location', $url);
-})->setName('putDevice')->add( new AuthMiddleware($container));
+})->setName('putDevice')->add($authMiddleware);
 
 /**
      * @SWG\Post(
@@ -364,16 +426,21 @@ $app->put('/api/v1/Devices/{deviceId}', function (Request $request, Response $re
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->post('/api/v1/Devices', function (Request $request, Response $response) {
     $objectArray = json_decode($request->getBody(), true);
+    $objectArrayForSelect = [];
+    $objectArrayForSelect['BTAddress'] = $objectArray['BTAddress'];
 	$cls = Device::class;
-    $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
+    $id = $this->helper->InsertOrUpdate($cls, $objectArray, $cls::$tableName, "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress", $objectArrayForSelect);
     $url = $this->get('router')->pathFor('getDevice', ['deviceId' => $id]);
 	return $response->withStatus(303)->withHeader('Location', $url);
-})->setName("postDevices")->add( new AuthMiddleware($container));
+})->setName("postDevices")->add($authMiddleware);
 
 
 /**
@@ -402,7 +469,10 @@ $app->post('/api/v1/Devices', function (Request $request, Response $response) {
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->get('/api/v1/Devices/LookupDeviceByBTAddress/{BTAddress}', function (Request $request, Response $response) {
@@ -416,7 +486,7 @@ $app->get('/api/v1/Devices/LookupDeviceByBTAddress/{BTAddress}', function (Reque
 	} else {
 		return $response->withStatus(404);
 	}
-})->setName('getLookupDeviceByBTAddress')->add( new AuthMiddleware($container));
+})->setName('getLookupDeviceByBTAddress')->add($authMiddleware);
 
 
 #SUBDEVICE
@@ -448,7 +518,10 @@ $app->get('/api/v1/Devices/LookupDeviceByBTAddress/{BTAddress}', function (Reque
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->get('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, Response $response) {
@@ -457,7 +530,7 @@ $app->get('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, R
     $sql = "SELECT SubDevices.* FROM SubDevices JOIN Devices ON SubDevices.HeadBTAddress = Devices.BTAddress WHERE Devices.id = :deviceId";
     $subDevices = $this->helper->GetAllBySql($cls, $sql, ['deviceId'=>$deviceId], $request);
     return $response->withJson($subDevices);
-})->setName("getSubDevicesOfADevice")->add( new AuthMiddleware($container));
+})->setName("getSubDevicesOfADevice")->add($authMiddleware);
 
 /**
      * @SWG\Get(
@@ -486,13 +559,16 @@ $app->get('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, R
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->get('/api/v1/SubDevices', function (Request $request, Response $response) {
     $cls = SubDevice::class;
     return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
-})->setName("getSubDevices")->add( new AuthMiddleware($container));
+})->setName("getSubDevices")->add($authMiddleware);
 
 /**
      * @SWG\Get(
@@ -521,14 +597,17 @@ $app->get('/api/v1/SubDevices', function (Request $request, Response $response) 
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->get('/api/v1/SubDevices/{subDeviceId}', function (Request $request, Response $response) {
     $id = $request->getAttribute('subDeviceId');
     $cls = SubDevice::class;
     return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
-})->setName("getSubDevice")->add( new AuthMiddleware($container));
+})->setName("getSubDevice")->add($authMiddleware);
 
 /**
      * @SWG\Put(
@@ -564,7 +643,10 @@ $app->get('/api/v1/SubDevices/{subDeviceId}', function (Request $request, Respon
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->put('/api/v1/SubDevices/{subDeviceId}', function (Request $request, Response $response) {
@@ -574,7 +656,7 @@ $app->put('/api/v1/SubDevices/{subDeviceId}', function (Request $request, Respon
     $this->helper->Update($cls, $objectArray, $cls::$tableName, $id);
 	$url = $this->get('router')->pathFor('getSubDevice', ['subDeviceId' => $id]);
 	return $response->withStatus(303)->withHeader('Location', $url);
-})->setName("putSubDevice")->add( new AuthMiddleware($container));
+})->setName("putSubDevice")->add($authMiddleware);
 
 /**
      * @SWG\Put(
@@ -602,7 +684,10 @@ $app->put('/api/v1/SubDevices/{subDeviceId}', function (Request $request, Respon
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->put('/api/v1/SubDevices', function (Request $request, Response $response) {
@@ -621,7 +706,7 @@ $app->put('/api/v1/SubDevices', function (Request $request, Response $response) 
 	}
 	$url = $this->get('router')->pathFor('putSubDevice', ['subDeviceId' => $subDevice->id]);
 	return $response->withStatus(307)->withHeader('Location', $url);
-})->setName("putSubDevices")->add( new AuthMiddleware($container));
+})->setName("putSubDevices")->add($authMiddleware);
 
 /**
      * @SWG\Post(
@@ -657,7 +742,10 @@ $app->put('/api/v1/SubDevices', function (Request $request, Response $response) 
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->post('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, Response $response) {
@@ -670,7 +758,7 @@ $app->post('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, 
     $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
     $url = $this->get('router')->pathFor('getSubDevice', ['subDeviceId' => $id]);
 	return $response->withStatus(303)->withHeader('Location', $url);
-})->setName("postSubDevice")->add( new AuthMiddleware($container));
+})->setName("postSubDevice")->add($authMiddleware);
 
 
 # SUBDEVICESTATUS 
@@ -716,7 +804,10 @@ $app->post('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, 
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->get('/api/v1/SubDevices/{subDeviceId}/SubDeviceStatuses', function (Request $request, Response $response) {
@@ -727,7 +818,7 @@ $app->get('/api/v1/SubDevices/{subDeviceId}/SubDeviceStatuses', function (Reques
     $sql = "SELECT SubDeviceStatuses.* FROM SubDeviceStatuses WHERE SubDeviceStatuses.SubDeviceId = :subDeviceId " . $sort . " " . $limit;
     $subDeviceStatuses = $this->helper->GetAllBySql($cls, $sql, ['subDeviceId'=>$subDeviceId], $request);
     return $response->withJson($subDeviceStatuses);
-})->setName("getSubDeviceStatuesOfASubDevice")->add( new AuthMiddleware($container));
+})->setName("getSubDeviceStatuesOfASubDevice")->add($authMiddleware);
 
 
 /**
@@ -765,14 +856,17 @@ $app->get('/api/v1/SubDevices/{subDeviceId}/SubDeviceStatuses', function (Reques
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->get('/api/v1/SubDeviceStatuses', function (Request $request, Response $response) {
     #sort=created&dir=asc&limit=1
 	$cls = SubDeviceStatus::class;
     return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
-})->setName("getSubDeviceStatuses")->add( new AuthMiddleware($container));
+})->setName("getSubDeviceStatuses")->add($authMiddleware);
 
 
 /**
@@ -802,14 +896,17 @@ $app->get('/api/v1/SubDeviceStatuses', function (Request $request, Response $res
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->get('/api/v1/SubDeviceStatuses/{subDeviceStatusId}', function (Request $request, Response $response) {
     $id = $request->getAttribute('subDeviceStatusId');
     $cls = SubDeviceStatus::class;
     return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
-})->setName("getSubDeviceStatus")->add( new AuthMiddleware($container));
+})->setName("getSubDeviceStatus")->add($authMiddleware);
 
 
 /**
@@ -838,7 +935,10 @@ $app->get('/api/v1/SubDeviceStatuses/{subDeviceStatusId}', function (Request $re
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->post('/api/v1/SubDeviceStatuses', function (Request $request, Response $response) {
@@ -847,7 +947,7 @@ $app->post('/api/v1/SubDeviceStatuses', function (Request $request, Response $re
     $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
     $url = $this->get('router')->pathFor('getSubDeviceStatus', ['subDeviceStatusId' => $id]);
 	return $response->withStatus(303)->withHeader('Location', $url);
-})->setName("postSubDeviceStatus")->add( new AuthMiddleware($container));
+})->setName("postSubDeviceStatus")->add($authMiddleware);
 
 
 
@@ -901,7 +1001,10 @@ $app->post('/api/v1/SubDeviceStatuses', function (Request $request, Response $re
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->get('/api/v1/Devices/{deviceId}/MessageStats', function (Request $request, Response $response) {
@@ -923,7 +1026,7 @@ $app->get('/api/v1/Devices/{deviceId}/MessageStats', function (Request $request,
 	}
     $deviceStats = $this->helper->GetAllBySql($cls, $sql, ['deviceId'=>$deviceId], $request);
     return $response->withJson($deviceStats);
-})->setName("getMessageStatsOfADevice")->add( new AuthMiddleware($container));
+})->setName("getMessageStatsOfADevice")->add($authMiddleware);
 
 
 
@@ -954,14 +1057,17 @@ $app->get('/api/v1/Devices/{deviceId}/MessageStats', function (Request $request,
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->get('/api/v1/MessageStats', function (Request $request, Response $response) {
     #sort=created&dir=asc&limit=1&DeviceId=1
 	$cls = MessageStat::class;
     return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
-})->setName("getMessageStats")->add( new AuthMiddleware($container));
+})->setName("getMessageStats")->add($authMiddleware);
 
 /**
      * @SWG\Get(
@@ -990,14 +1096,17 @@ $app->get('/api/v1/MessageStats', function (Request $request, Response $response
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->get('/api/v1/MessageStats/{statId}', function (Request $request, Response $response) {
     $id = $request->getAttribute('statId');
     $cls = MessageStat::class;
     return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
-})->setName("getMessageStat")->add( new AuthMiddleware($container));
+})->setName("getMessageStat")->add($authMiddleware);
 
 /**
      * @SWG\Post(
@@ -1025,7 +1134,10 @@ $app->get('/api/v1/MessageStats/{statId}', function (Request $request, Response 
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->post('/api/v1/MessageStats', function (Request $request, Response $response) {
@@ -1034,11 +1146,11 @@ $app->post('/api/v1/MessageStats', function (Request $request, Response $respons
     $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
     $url = $this->get('router')->pathFor('getMessageStat', ['statId' => $id]);
 	return $response->withStatus(303)->withHeader('Location', $url);
-})->setName("postMessageStat")->add( new AuthMiddleware($container));
+})->setName("postMessageStat")->add($authMiddleware);
 
 /**
      * @SWG\Post(
-     *     path="/api/v1/MessageStats/{btAddress}",
+     *     path="/api/v1/Devices/ByBTAddress/{BTAddress}/MessageStats",
      *     description="Adds a new MessageStat",
      *     operationId="postMessageStatByBTAddress",
      *     @SWG\Parameter(
@@ -1069,22 +1181,60 @@ $app->post('/api/v1/MessageStats', function (Request $request, Response $respons
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
-$app->post('/api/v1/MessageStats/{BTAddress}', function (Request $request, Response $response) {
+$app->post('/api/v1/Devices/ByBTAddress/{BTAddress}/MessageStats', function (Request $request, Response $response) {
 	$BTAddress = $request->getAttribute('BTAddress');
-    $cls = Device::class;
-    $sql = "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress";
-    $device = $this->helper->GetBySql($cls, $sql, ['BTAddress'=>$BTAddress]);
-    
 	$objectArray = json_decode($request->getBody(), true);
-	$objectArray['deviceId'] = $device->id;
+	$objectArray['BTAddress'] = $BTAddress;
 	$cls2 = MessageStat::class;
     $id = $this->helper->Insert($cls2, $objectArray, $cls2::$tableName);
     $url = $this->get('router')->pathFor('getMessageStat', ['statId' => $id]);
 	return $response->withStatus(303)->withHeader('Location', $url);
-})->setName("postMessageStatByBTAddress")->add( new AuthMiddleware($container));
+})->setName("postMessageStatByBTAddress")->add($authMiddleware);
+
+/**
+     * @SWG\Delete(
+     *     path="/api/v1/MessageStats/DeleteByBTAddress/{btAddress}",
+     *     description="Deletes MessageStats for a device",
+     *     operationId="deleteMessageStatsByBTAddress",
+     *     produces={"application/json"},
+     *     @SWG\Parameter(
+     *         description="bt address",
+     *         in="path",
+     *         name="btAddress",
+     *         required=true,
+     *         type="string"
+     *     ),
+     *     @SWG\Response(
+     *         response=204,
+     *         description="deleted",
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+$app->delete('/api/v1/MessageStats/DeleteByBTAddress/{BTAddress}', function (Request $request, Response $response) {
+	$BTAddress = $request->getAttribute('BTAddress');
+    $cls = Device::class;
+    $sql = "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress";
+    $device = $this->helper->GetBySql($cls, $sql, ['BTAddress'=>$BTAddress]);
+    $objectArray = [];
+    if ($BTAddress = 'all') {
+		$this->helper->DeleteBySql('DELETE FROM MessageStats', $objectArray);
+	} else {
+		$objectArray = [];
+		$objectArray['deviceId'] = $device->id;
+		$this->helper->DeleteBySql('DELETE FROM MessageStats WHERE deviceId = :deviceId', $objectArray);
+	}
+		#return $response->withJson($BTAddress, 204);
+    return $response->withStatus(204);
+})->setName("deleteMessageStatsByBTAddress")->add($authMiddleware);
 
 
 /**
@@ -1114,14 +1264,17 @@ $app->post('/api/v1/MessageStats/{BTAddress}', function (Request $request, Respo
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->get('/api/v1/UserDevices/{userDeviceId}', function (Request $request, Response $response) {
     $cls = UserDevice::class;
     $id = $request->getAttribute('userDeviceId');
 	return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
-})->setName("getUserDevice")->add( new AuthMiddleware($container));
+})->setName("getUserDevice")->add($authMiddleware);
 
 /**
      * @SWG\Get(
@@ -1143,13 +1296,16 @@ $app->get('/api/v1/UserDevices/{userDeviceId}', function (Request $request, Resp
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->get('/api/v1/UserDevices', function (Request $request, Response $response) {
     $cls = UserDevice::class;
     return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
-})->setName("getUserDevices")->add( new AuthMiddleware($container));
+})->setName("getUserDevices")->add($authMiddleware);
 
 
 /**
@@ -1178,7 +1334,10 @@ $app->get('/api/v1/UserDevices', function (Request $request, Response $response)
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->post('/api/v1/UserDevices', function (Request $request, Response $response) {
@@ -1191,7 +1350,7 @@ $app->post('/api/v1/UserDevices', function (Request $request, Response $response
     $id = $this->helper->Insert($cls, $objectArray, $cls::$tableName);
     $url = $this->get('router')->pathFor('getUserDevice', ['userDeviceId' => $id]);
 	return $response->withStatus(303)->withHeader('Location', $url);
-})->setName("postUserDevice")->add( new AuthMiddleware($container));
+})->setName("postUserDevice")->add($authMiddleware);
 
 
 /**
@@ -1207,7 +1366,6 @@ $app->post('/api/v1/UserDevices', function (Request $request, Response $response
      *         required=true,
      *         type="integer"
      *     ),
-     *     produces={"application/json"},
      *     @SWG\Response(
      *         response=204,
      *         description="deleted",
@@ -1218,7 +1376,10 @@ $app->post('/api/v1/UserDevices', function (Request $request, Response $response
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->delete('/api/v1/UserDevices/{userDeviceId}', function (Request $request, Response $response) {
@@ -1226,7 +1387,7 @@ $app->delete('/api/v1/UserDevices/{userDeviceId}', function (Request $request, R
     $cls = UserDevice::class;
     $this->helper->Delete($id, $cls::$tableName);
 	return $response->withStatus(204);
-})->setName("deleteUserDevice")->add( new AuthMiddleware($container));
+})->setName("deleteUserDevice")->add($authMiddleware);
 
 
 /**
@@ -1242,7 +1403,6 @@ $app->delete('/api/v1/UserDevices/{userDeviceId}', function (Request $request, R
      *         required=true,
      *         type="integer"
      *     ),
-     *     produces={"application/json"},
      *     @SWG\Response(
      *         response=204,
      *         description="deleted",
@@ -1253,7 +1413,10 @@ $app->delete('/api/v1/UserDevices/{userDeviceId}', function (Request $request, R
      *         @SWG\Schema(
      *             ref="#/definitions/ErrorModel"
      *         )
-     *     )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
      * )
      */
 $app->delete('/api/v1/Devices/{deviceId}/UserDevices', function (Request $request, Response $response) {
@@ -1264,28 +1427,7 @@ $app->delete('/api/v1/Devices/{deviceId}/UserDevices', function (Request $reques
 	$values = ['deviceId'=>$deviceId, 'userId'=>$user->id];
     $this->helper->DeleteBySql($sql, $values);
 	return $response->withStatus(204);
-})->setName("deleteUserDeviceByDevice")->add( new AuthMiddleware($container));
-
-/* match everything */
-#$app->get('/[{path:.*}]', function($method) use ($app) {
-	#return $response->withStatus(303)->withHeader('Location', 'zyro.php');
-    #echo 'hej';
-#});
-
-#$app->get('/', function($request, $response, $args) use ($app) {
-#	include(dirname(__FILE__).'/zyro/index.php');
-	#echo('root');
-#})->setName("root");
-
-
-#$app->get('/[{path:.+}]', function($request, $response, $path = null) {
-#	if ($path == null) {
-#		#return $response->withStatus(303)->withHeader('Location', 'zyro.php');
-#		#include(dirname(__FILE__).'/zyro/index.php'
-#	}
- #   //return $response->write($path ? 'subroute' : 'index');
-  #  return $response;
-#});
+})->setName("deleteUserDeviceByDevice")->add($authMiddleware);
 
 $app->run();
 

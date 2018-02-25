@@ -313,9 +313,63 @@ $app->get('/api/v1/Devices/{deviceId}', function (Request $request, Response $re
     return $response->withJson($this->helper->Get($cls, $cls::$tableName, $id));
 })->setName('getDevice')->add($authMiddleware);
 
+
 /**
      * @SWG\Get(
-     *     path="/api/v1/Devices/DeleteByDeviceId/{deviceId}",
+     *     path="/api/v1/Devices/{deviceId}/UpdateDeviceName/{deviceName}",
+     *     description="Returns a device",
+     *     operationId="getDeviceUpdateDeviceName",
+     *     @SWG\Parameter(
+     *         description="ID of device to fetch",
+     *         format="int64",
+     *         in="path",
+     *         name="deviceId",
+     *         required=true,
+     *         type="integer"
+     *     ),
+     *     @SWG\Parameter(
+     *         description="Name",
+     *         in="path",
+     *         name="deviceName",
+     *         required=true,
+     *         type="string"
+     *     ), 
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=200,
+     *         description="device response",
+     *         @SWG\Schema(
+     *             ref="#/definitions/Device"
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+$app->get('/api/v1/Devices/{deviceId}/UpdateDeviceName/{deviceName}', function (Request $request, Response $response) {
+    $id = $request->getAttribute('deviceId');
+    $name = $request->getAttribute('deviceName');
+	$cls = Device::class;
+    $device = $this->helper->Get($cls, $cls::$tableName, $id);
+    $objectArray = json_decode(json_encode($device), true);
+    $objectArray['name'] = $name;
+    $this->helper->Update($cls, $objectArray, $cls::$tableName, $id);
+    $url = $this->get('router')->pathFor('getDevice', ['deviceId' => $id]);
+	return $response->withStatus(303)->withHeader('Location', $url);
+})->setName('getDeviceUpdateDeviceName')->add($authMiddleware);
+
+
+/**
+     * @SWG\Delete(
+     *     path="/api/v1/Devices/{deviceId}",
      *     description="Deletes a device",
      *     operationId="deleteDevice",
      *     @SWG\Parameter(
@@ -343,7 +397,7 @@ $app->get('/api/v1/Devices/{deviceId}', function (Request $request, Response $re
      *     }
      * )
      */
-$app->get('/api/v1/Devices/DeleteByDeviceId/{deviceId}', function (Request $request, Response $response) {
+$app->delete('/api/v1/Devices/{deviceId}', function (Request $request, Response $response) {
     $id = $request->getAttribute('deviceId');
     $cls = Device::class;
     $this->helper->Delete($id, $cls::$tableName);
@@ -954,16 +1008,15 @@ $app->post('/api/v1/SubDeviceStatuses', function (Request $request, Response $re
 # MESSAGESTATS
 /**
      * @SWG\Get(
-     *     path="/api/v1/Devices/{deviceId}/MessageStats?sort={sort}&limit={limit}&outputType={outputType}",
+     *     path="/api/v1/Devices/{BTAddress}/MessageStats?sort={sort}&limit={limit}&outputType={outputType}",
      *     description="Returns MessageStats",
      *     operationId="getMessageStats",
      *     @SWG\Parameter(
-     *         description="ID of device to get stats for",
-     *         format="int64",
+     *         description="BTAddress of device to get stats for",
      *         in="path",
-     *         name="deviceId",
+     *         name="BTAddress",
      *         required=true,
-     *         type="integer"
+     *         type="string"
      *     ), 
      *     @SWG\Parameter(
      *         description="columns to sort on",
@@ -1007,24 +1060,24 @@ $app->post('/api/v1/SubDeviceStatuses', function (Request $request, Response $re
      *     }
      * )
      */
-$app->get('/api/v1/Devices/{deviceId}/MessageStats', function (Request $request, Response $response) {
+$app->get('/api/v1/Devices/{BTAddress}/MessageStats', function (Request $request, Response $response) {
 	$cls = MessageStat::class;
-    $deviceId = $request->getAttribute('deviceId');
+    $BTAddress = $request->getAttribute('BTAddress');
     $sort = $this->helper->getSort($cls, $request);
     $limit = $this->helper->getLimit($request);
     $outputType = $request->getQueryParam('outputType');
     $sql = '';
     if (strtolower($outputType) == 'aggregated') {
-		$sql = "SELECT MessageStats.deviceId, MessageStats.adapterInstance, MessageStats.messageType, 
-			(SELECT MessageStats.status FROM MessageStats ims WHERE ims.deviceId = MessageStats.deviceId 
+		$sql = "SELECT MessageStats.BTAddress, MessageStats.adapterInstance, MessageStats.messageType, 
+			(SELECT MessageStats.status FROM MessageStats ims WHERE ims.BTAddress = MessageStats.BTAddress 
 			and ims.adapterInstance = MessageStats.adapterInstance and ims.messageType = MessageStats.messageType ORDER BY ims.createdTime desc LIMIT 1) as status, 
 			sum(MessageStats.noOfMessages) as noOfMessages, max(MessageStats.updateTime) as updateTime, max(MessageStats.createdTime) as createdTime 
-			FROM MessageStats WHERE MessageStats.deviceId = :deviceId GROUP BY MessageStats.deviceId, MessageStats.adapterInstance, 
+			FROM MessageStats WHERE MessageStats.BTAddress = :BTAddress GROUP BY MessageStats.BTAddress, MessageStats.adapterInstance, 
 			MessageStats.messageType, status " . $sort . " " . $limit;
 	} else {
-		$sql = "SELECT MessageStats.* FROM MessageStats WHERE MessageStats.DeviceId = :deviceId " . $sort . " " . $limit;
+		$sql = "SELECT MessageStats.* FROM MessageStats WHERE MessageStats.BTAddress = :BTAddress " . $sort . " " . $limit;
 	}
-    $deviceStats = $this->helper->GetAllBySql($cls, $sql, ['deviceId'=>$deviceId], $request);
+    $deviceStats = $this->helper->GetAllBySql($cls, $sql, ['BTAddress'=>$BTAddress], $request);
     return $response->withJson($deviceStats);
 })->setName("getMessageStatsOfADevice")->add($authMiddleware);
 
@@ -1064,7 +1117,6 @@ $app->get('/api/v1/Devices/{deviceId}/MessageStats', function (Request $request,
      * )
      */
 $app->get('/api/v1/MessageStats', function (Request $request, Response $response) {
-    #sort=created&dir=asc&limit=1&DeviceId=1
 	$cls = MessageStat::class;
     return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
 })->setName("getMessageStats")->add($authMiddleware);
@@ -1148,54 +1200,6 @@ $app->post('/api/v1/MessageStats', function (Request $request, Response $respons
 	return $response->withStatus(303)->withHeader('Location', $url);
 })->setName("postMessageStat")->add($authMiddleware);
 
-/**
-     * @SWG\Post(
-     *     path="/api/v1/Devices/ByBTAddress/{BTAddress}/MessageStats",
-     *     description="Adds a new MessageStat",
-     *     operationId="postMessageStatByBTAddress",
-     *     @SWG\Parameter(
-     *         description="bt address",
-     *         in="path",
-     *         name="btAddress",
-     *         required=true,
-     *         type="string"
-     *     ),
-     *     @SWG\Parameter(
-     *         name="MessageStat",
-     *         in="body",
-     *         description="MessageStat to add to the store",
-     *         required=true,
-     *         @SWG\Schema(ref="#/definitions/NewMessageStat"),
-     *     ),
-     *     produces={"application/json"},
-     *     @SWG\Response(
-     *         response=200,
-     *         description="MessageStat response",
-     *         @SWG\Schema(
-     *             ref="#/definitions/MessageStat"
-     *         ),
-     *     ),
-     *     @SWG\Response(
-     *         response="default",
-     *         description="unexpected error",
-     *         @SWG\Schema(
-     *             ref="#/definitions/ErrorModel"
-     *         )
-     *     ),
-     *     security={
-     *       {"api_key": {}}
-     *     }
-     * )
-     */
-$app->post('/api/v1/Devices/ByBTAddress/{BTAddress}/MessageStats', function (Request $request, Response $response) {
-	$BTAddress = $request->getAttribute('BTAddress');
-	$objectArray = json_decode($request->getBody(), true);
-	$objectArray['BTAddress'] = $BTAddress;
-	$cls2 = MessageStat::class;
-    $id = $this->helper->Insert($cls2, $objectArray, $cls2::$tableName);
-    $url = $this->get('router')->pathFor('getMessageStat', ['statId' => $id]);
-	return $response->withStatus(303)->withHeader('Location', $url);
-})->setName("postMessageStatByBTAddress")->add($authMiddleware);
 
 /**
      * @SWG\Delete(

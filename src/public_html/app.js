@@ -4,7 +4,7 @@ app.ui = {};
 app.loggedIn = false;
 app.ui.usersDeviceList = null;
 app.ui.addDeviceList = null;
-app.userDeviceFn = doT.template('<div class="device-item"><span class="device-header">{{=it.name}}</span><dl class="table-display"><dt>Description</dt><dd>{{= app.ui.formatText(it.description)}}</dd>{{~it.MessageStats :messageStat:index}}<dt>Received {{=messageStat.messageType}}</dt><dd>{{=messageStat.noOfMessages}} ({{=messageStat.createdTime}})</dd>{{~}}</dl>{{~it.SubDevices :subDevice:index}}<div class="subdevice-item"><ul class="subdevice-item-desc-list"><li>{{=subDevice.distanceToHead}} ({{=app.ui.getSubDeviceStatusCreateDate(subDevice)}}){{ for (var i = 0; i < subDevice.SubDeviceStatuses.length; i++) { }}<li>Batt: {{=subDevice.SubDeviceStatuses[i].batteryLevel}}%</li>{{ }}}</ul></div>{{~}}<img class="flag" src="../res/flag.jpg"/></div>');
+app.userDeviceFn = doT.template('<div class="device-item"><span class="device-header">{{=it.name}}</span><a href="#" onclick="app.clearStats(it.BTAddress)" class="ui-btn ui-corner-all clear-stats-button">Clear stats</a><dl class="table-display"><dt>Description</dt><dd>{{= app.ui.formatText(it.description)}}</dd>{{~it.MessageStats :messageStat:index}}<dt>{{=app.ui.GetMessageTypeHeader(messageStat)}}</dt><dd>{{=messageStat.noOfMessages}} ({{=messageStat.createdTime}})</dd>{{~}}</dl>{{~it.SubDevices :subDevice:index}}<div class="subdevice-item"><ul class="subdevice-item-desc-list"><li>{{=subDevice.distanceToHead}} ({{=app.ui.getSubDeviceStatusCreateDate(subDevice)}}){{ for (var i = 0; i < subDevice.SubDeviceStatuses.length; i++) { }}<li>Batt: {{=app.ui.formatBatteryPercent(subDevice.SubDeviceStatuses[i].batteryLevel,subDevice.SubDeviceStatuses[i].batteryLevelPrecision)}}</li>{{ }}}</ul></div>{{~}}<img class="flag" src="../res/flag.jpg"/></div>');
 app.addDeviceListFn = doT.template('<li data-checked="{{=it.connectedToUser}}" data-deviceid="{{=it.id}}"><input type="checkbox" name="checkbox{{=it.id}}" id="checkbox{{=it.id}}" class="css-checkbox" {{? it.connectedToUser==="1" }}checked="checked"{{?}}/><label class="css-label" for="checkbox{{=it.id}}"><span class="add-device-header">{{=it.name}}</span><dl class="table-display add-device-desc"><dt>Description</dt><dd>{{=app.ui.formatText(it.description)}}</dd></dl></label></li>');
 
 
@@ -29,11 +29,47 @@ function onSignIn(googleUser) {
 	xhr.send('idtoken=' + id_token);
 };
 
+app.ui.GetMessageTypeHeader = function(messageStat) {
+	var header = '';
+	if (messageStat.status == 'Received') {
+		header = 'Rcv ';
+	} else {
+		header = 'Snd ';
+	}
+	if (messageStat.adapterInstance.startsWith('reclora')) {
+		header = header + 'Radio ';
+	} else if (messageStat.adapterInstance.startsWith('si')) {
+		header = header + 'USB ';
+	} else if (messageStat.adapterInstance.startsWith('meos')) {
+		header = header +'SIRAP ';
+	}
+	if (messageStat.messageType == 'SIMessage') {
+		header = header + 'Punch';
+	} else if (messageStat.messageType == 'meos1') {
+		header = header + 'MEOS';
+	} else {
+		header = header + messageStat.messageType;
+	}
+	return header;
+};
+
 app.ui.formatText = function(txt) {
 	if (txt == null) {
 		return "";
 	}
 	return txt;
+};
+
+app.ui.formatBatteryPercent = function(batteryLevel, batteryPrecision) {
+	if (batteryLevel == null) {
+		return "";
+	}
+	if (batteryPrecision == 101) {
+		batteryPercentage = batteryLevel;
+	} else {
+		batteryPercentage = ((100 * batteryLevel) / (batteryPrecision-1)).toFixed(0);
+	}
+	return batteryPercentage+'%';
 };
 
 app.ui.getSubDeviceStatusCreateDate = function(device) {
@@ -69,7 +105,7 @@ app.fillDevicesWithSubDeviceStatuses = function(devices) {
 
 app.fillDevicesWithMessageStats = function(devices) {
 	var promises = devices.map((device)=>{
-		return fetch("/api/v1/Devices/" + device.id + "/MessageStats?outputType=aggregated&sort=adapterInstance asc,messageType asc", {
+		return fetch("/api/v1/Devices/" + device.BTAddress + "/MessageStats?outputType=aggregated&sort=adapterInstance asc,messageType asc", {
 				credentials: 'same-origin',
 				headers: {
 				  'Accept': 'application/json'
@@ -187,7 +223,7 @@ app.addDeviceToUser = function(deviceId) {
 };
 
 app.removeDeviceFromUser = function(deviceId) {
-	fetch("/api/v1/Devices/" + deviceId + "/DeleteUserDevices", {
+	fetch("/api/v1/Devices/" + deviceId + "/UserDevices", {
 		credentials: 'same-origin',
 		headers: {
 		  'Accept': 'application/json'
@@ -220,4 +256,7 @@ app.addDevicesToUser = function() {
 	}
 };
 
+app.clearStats = function(BTAddress) {
+	console.log(BTAddress);
+}
 

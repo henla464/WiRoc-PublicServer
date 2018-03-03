@@ -2,7 +2,7 @@
 use Swagger\Annotations as SWG;
 
 /**
- * @SWG\Definition(definition="NewSubDeviceStatus", type="object", required={"subDeviceId", "batteryLevel", "batteryLevelPrecision"})
+ * @SWG\Definition(definition="NewSubDeviceStatus", type="object", required={"subDeviceId", "batteryLevel", "batteryLevelPrecision", "siStationNumber"})
  */
 class SubDeviceStatus
 {
@@ -24,6 +24,11 @@ class SubDeviceStatus
      * @SWG\Property()
      */
     public $batteryLevelPrecision;
+    /**
+     * @var integer
+     * @SWG\Property()
+     */
+    public $siStationNumber;
 
 	public $updateTime;
     public $createdTime;

@@ -26,6 +26,8 @@ class Device
     public $description;
     
     public $connectedToUser;
+    public $batteryIsLow;
+    public $batteryIsLowTime;
 	public $updateTime;
     public $createdTime;
 }
@@ -40,6 +42,8 @@ class Device
  *           required={"id"},
  *           @SWG\Property(property="id", format="int64", type="integer"),
  * 			 @SWG\Property(property="connectedToUser", type="boolean"),
+ * 			 @SWG\Property(property="batteryIsLow", type="boolean"),
+* 			 @SWG\Property(property="batteryIsLowTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="updateTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="createdTime", format="date-time", type="string")
  *       )

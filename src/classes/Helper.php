@@ -122,6 +122,12 @@ class Helper
 		$stmt->execute($values);
 	}
 	
+	public function RunSql($sql, $values) {
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute($values);
+	}
+	
+	
 	public function Delete($id, $tableName) {
 		$stmt = $this->db->prepare("DELETE FROM $tableName WHERE id = :id");
 		$stmt->execute(['id'=>$id]);

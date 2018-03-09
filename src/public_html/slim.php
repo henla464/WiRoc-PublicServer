@@ -317,7 +317,7 @@ $app->get('/api/v1/Devices/{deviceId}', function (Request $request, Response $re
 /**
      * @SWG\Get(
      *     path="/api/v1/Devices/{deviceId}/UpdateDeviceName/{deviceName}",
-     *     description="Returns a device",
+     *     description="Update deviceName, returns the device",
      *     operationId="getDeviceUpdateDeviceName",
      *     @SWG\Parameter(
      *         description="ID of device to fetch",
@@ -365,6 +365,131 @@ $app->get('/api/v1/Devices/{deviceId}/UpdateDeviceName/{deviceName}', function (
     $url = $this->get('router')->pathFor('getDevice', ['deviceId' => $id]);
 	return $response->withStatus(303)->withHeader('Location', $url);
 })->setName('getDeviceUpdateDeviceName')->add($authMiddleware);
+
+/**
+     * @SWG\Get(
+     *     path="/api/v1/Devices/{deviceId}/SetBatteryIsLow",
+     *     description="Updates IsBatteryLow, returns the device",
+     *     operationId="getDeviceSetBatteryIsLow",
+     *     @SWG\Parameter(
+     *         description="ID of device to fetch",
+     *         format="int64",
+     *         in="path",
+     *         name="deviceId",
+     *         required=true,
+     *         type="integer"
+     *     ),
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=200,
+     *         description="device response",
+     *         @SWG\Schema(
+     *             ref="#/definitions/Device"
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+$app->get('/api/v1/Devices/{deviceId}/SetBatteryIsLow', function (Request $request, Response $response) {
+    $id = $request->getAttribute('deviceId');
+	$this->helper->RunSql("UPDATE Devices SET `batteryIsLow` = 1, `batteryIsLowTime` = NOW() WHERE id = :id AND batteryIsLow = 0", ['id'=>$id]);
+    $url = $this->get('router')->pathFor('getDevice', ['deviceId' => $id]);
+	return $response->withStatus(303)->withHeader('Location', $url);
+})->setName('getDeviceSetBatteryIsLow')->add($authMiddleware);
+
+/**
+     * @SWG\Get(
+     *     path="/api/v1/Devices/{deviceId}/ClearBatteryIsLow",
+     *     description="Clear IsBatteryLow, returns the device",
+     *     operationId="getDeviceClearBatteryIsLow",
+     *     @SWG\Parameter(
+     *         description="ID of device to update",
+     *         format="int64",
+     *         in="path",
+     *         name="deviceId",
+     *         required=true,
+     *         type="integer"
+     *     ),
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=200,
+     *         description="device response",
+     *         @SWG\Schema(
+     *             ref="#/definitions/Device"
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+$app->get('/api/v1/Devices/{deviceId}/ClearBatteryIsLow', function (Request $request, Response $response) {
+    $id = $request->getAttribute('deviceId');
+	$this->helper->RunSql("UPDATE Devices SET `batteryIsLow` = 0, `batteryIsLowTime` = NULL WHERE id = :id", ['id'=>$id]);
+    $url = $this->get('router')->pathFor('getDevice', ['deviceId' => $id]);
+	return $response->withStatus(303)->withHeader('Location', $url);
+})->setName('getDeviceClearBatteryIsLow')->add($authMiddleware);
+
+/**
+     * @SWG\Get(
+     *     path="/api/v1/Devices/{btAddress}/ClearBatteryIsLowByBTAddress",
+     *     description="Clear IsBatteryLow, returns the device",
+     *     operationId="getDeviceClearBatteryIsLow",
+     *     @SWG\Parameter(
+     *         description="BT Address of the Device",
+     *         in="path",
+     *         name="BTAddress",
+     *         required=true,
+     *         type="string"
+     *     ),
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=200,
+     *         description="device response",
+     *         @SWG\Schema(
+     *             ref="#/definitions/Device"
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+$app->get('/api/v1/Devices/{btAddress}/ClearBatteryIsLowByBTAddress', function (Request $request, Response $response) {
+    $btAddress = $request->getAttribute('btAddress');
+	$cls = Device::class;
+    $sql = "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress";
+    $device = $this->helper->GetBySql($cls, $sql, ['BTAddress'=>$btAddress]);
+    if ($device) {
+		$url = $this->get('router')->pathFor('getDeviceClearBatteryIsLow', ['deviceId' => $device->id]);
+		return $response->withStatus(303)->withHeader('Location', $url);
+	} else {
+		return $response->withStatus(404);
+	}
+})->setName('getDeviceClearBatteryIsLow')->add($authMiddleware);
 
 
 /**
@@ -546,9 +671,16 @@ $app->get('/api/v1/Devices/LookupDeviceByBTAddress/{BTAddress}', function (Reque
 #SUBDEVICE
 /**
      * @SWG\Get(
-     *     path="/api/v1/Devices/{deviceId}/SubDevices",
+     *     path="/api/v1/Devices/{deviceId}/SubDevices?sort={sort}",
      *     description="Returns all subDevices of a device",
      *     operationId="getSubDevicesOfADevice",
+     *     @SWG\Parameter(
+     *         description="columns to sort on",
+     *         in="path",
+     *         name="sort",
+     *         required=false,
+     *         type="string"
+     *     ),
      *     @SWG\Parameter(
      *         description="ID of device to get subDevices for",
      *         format="int64",
@@ -581,7 +713,8 @@ $app->get('/api/v1/Devices/LookupDeviceByBTAddress/{BTAddress}', function (Reque
 $app->get('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, Response $response) {
     $deviceId = $request->getAttribute('deviceId');
     $cls = SubDevice::class;
-    $sql = "SELECT SubDevices.* FROM SubDevices JOIN Devices ON SubDevices.HeadBTAddress = Devices.BTAddress WHERE Devices.id = :deviceId";
+    $sort = $this->helper->getSort($cls, $request);
+    $sql = "SELECT SubDevices.* FROM SubDevices JOIN Devices ON SubDevices.HeadBTAddress = Devices.BTAddress WHERE Devices.id = :deviceId " . $sort;
     $subDevices = $this->helper->GetAllBySql($cls, $sql, ['deviceId'=>$deviceId], $request);
     return $response->withJson($subDevices);
 })->setName("getSubDevicesOfADevice")->add($authMiddleware);
@@ -814,13 +947,49 @@ $app->post('/api/v1/Devices/{deviceId}/SubDevices', function (Request $request, 
 	return $response->withStatus(303)->withHeader('Location', $url);
 })->setName("postSubDevice")->add($authMiddleware);
 
+/**
+     * @SWG\Delete(
+     *     path="/api/v1/SubDevices/{subDeviceId}",
+     *     description="Delete a SubDevice",
+     *     operationId="deleteSubDevice",
+     *     @SWG\Parameter(
+     *         description="ID of the subDevice",
+     *         format="int64",
+     *         in="path",
+     *         name="subDeviceId",
+     *         required=true,
+     *         type="integer"
+     *     ),
+     *     @SWG\Response(
+     *         response=204,
+     *         description="deleted",
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+$app->delete('/api/v1/SubDevices/{subDeviceId}', function (Request $request, Response $response) {
+	$id = $request->getAttribute('subDeviceId');
+    $cls = SubDevice::class;
+    $this->helper->Delete($id, $cls::$tableName);
+	return $response->withStatus(204);
+})->setName("deleteSubDevice")->add($authMiddleware);
+
 
 # SUBDEVICESTATUS 
 /**
      * @SWG\Get(
      *     path="/api/v1/SubDevices/{subDeviceId}/SubDeviceStatuses?sort={sort}&limit={limit}",
-     *     description="Returns all statues of a subDevice",
-     *     operationId="getSubDeviceStatuesOfASubDevice",
+     *     description="Returns all statuses of a subDevice",
+     *     operationId="getSubDeviceStatusesOfASubDevice",
      *     @SWG\Parameter(
      *         description="ID of sub device to get statuses for",
      *         format="int64",
@@ -872,7 +1041,7 @@ $app->get('/api/v1/SubDevices/{subDeviceId}/SubDeviceStatuses', function (Reques
     $sql = "SELECT SubDeviceStatuses.* FROM SubDeviceStatuses WHERE SubDeviceStatuses.SubDeviceId = :subDeviceId " . $sort . " " . $limit;
     $subDeviceStatuses = $this->helper->GetAllBySql($cls, $sql, ['subDeviceId'=>$subDeviceId], $request);
     return $response->withJson($subDeviceStatuses);
-})->setName("getSubDeviceStatuesOfASubDevice")->add($authMiddleware);
+})->setName("getSubDeviceStatusesOfASubDevice")->add($authMiddleware);
 
 
 /**
@@ -917,7 +1086,6 @@ $app->get('/api/v1/SubDevices/{subDeviceId}/SubDeviceStatuses', function (Reques
      * )
      */
 $app->get('/api/v1/SubDeviceStatuses', function (Request $request, Response $response) {
-    #sort=created&dir=asc&limit=1
 	$cls = SubDeviceStatus::class;
     return $response->withJson($this->helper->GetAll($cls, $cls::$tableName, $request));
 })->setName("getSubDeviceStatuses")->add($authMiddleware);
@@ -1003,6 +1171,43 @@ $app->post('/api/v1/SubDeviceStatuses', function (Request $request, Response $re
 	return $response->withStatus(303)->withHeader('Location', $url);
 })->setName("postSubDeviceStatus")->add($authMiddleware);
 
+/**
+     * @SWG\Delete(
+     *     path="/api/v1/SubDeviceStatuses/DeleteByBTAddress/{btAddress}",
+     *     description="Deletes SubDeviceStatuses for a device",
+     *     operationId="deleteSubDeviceStatusesByBTAddress",
+     *     produces={"application/json"},
+     *     @SWG\Parameter(
+     *         description="bt address",
+     *         in="path",
+     *         name="btAddress",
+     *         required=true,
+     *         type="string"
+     *     ),
+     *     @SWG\Response(
+     *         response=204,
+     *         description="deleted",
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+$app->delete('/api/v1/SubDeviceStatuses/DeleteByBTAddress/{BTAddress}', function (Request $request, Response $response) {
+	$BTAddress = $request->getAttribute('BTAddress');
+    $cls = SubDevice::class;
+    $sql = "SELECT * FROM {$cls::$tableName} WHERE headBTAddress = :headBTAddress";
+    $subDevice = $this->helper->GetBySql($cls, $sql, ['headBTAddress'=>$BTAddress]);
+    $objectArray = [];
+    if ($BTAddress = 'all') {
+		$this->helper->DeleteBySql('DELETE FROM SubDeviceStatuses', $objectArray);
+	} else {
+		$objectArray = [];
+		$objectArray['subDeviceId'] = $subDevice->id;
+		$this->helper->DeleteBySql('DELETE FROM SubDeviceStatuses WHERE subDeviceId = :subDeviceId', $objectArray);
+	}
+    return $response->withStatus(204);
+})->setName("deleteSubDeviceStatusesByBTAddress")->add($authMiddleware);
 
 
 # MESSAGESTATS

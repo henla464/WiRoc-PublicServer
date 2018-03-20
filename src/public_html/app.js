@@ -4,7 +4,7 @@ app.ui = {};
 app.loggedIn = false;
 app.ui.usersDeviceList = null;
 app.ui.addDeviceList = null;
-app.userDeviceFn = doT.template('<div class="device-item"><span class="device-header">{{=it.name}}</span><a href="#" onclick="app.clearStats(\'{{=it.BTAddress}}\')" class="ui-btn ui-corner-all clear-stats-button">Clear stats</a><dl class="table-display"><dt>Description</dt><dd>{{= app.ui.formatText(it.description)}}</dd><dt>Battery low</dt><dd>{{= app.ui.formatBatteryLow(it.batteryIsLow)}} {{= app.ui.formatText(it.batteryIsLowTime)}}</dd>{{~it.MessageStats :messageStat:index}}<dt>{{=app.ui.GetMessageTypeHeader(messageStat)}}</dt><dd>{{=messageStat.noOfMessages}} ({{=messageStat.createdTime}})</dd>{{~}}</dl>{{~it.SubDevices :subDevice:index}}<div class="subdevice-item"><ul class="subdevice-item-desc-list"><li>{{=subDevice.distanceToHead}} ({{=app.ui.getSubDeviceStatusCreateDate(subDevice)}}){{ for (var i = 0; i < subDevice.SubDeviceStatuses.length; i++) { }}<li>Batt: {{=app.ui.formatBatteryPercent(subDevice.SubDeviceStatuses[i].batteryLevel,subDevice.SubDeviceStatuses[i].batteryLevelPrecision)}}</li><li>Control: {{=subDevice.SubDeviceStatuses[i].siStationNumber}}</li>{{ }}}</ul></div>{{~}}<img class="flag" src="../res/flag.jpg"/></div>');
+app.userDeviceFn = doT.template('<div class="device-item"><span class="device-header">{{=it.name}}</span><a href="#" onclick="app.clearStats(\'{{=it.BTAddress}}\')" class="ui-btn ui-corner-all clear-stats-button">Clear stats</a><dl class="table-display"><dt>Description</dt><dd>{{= app.ui.formatText(it.description)}}</dd><dt>Snd/Rpt battery low</dt><dd>{{= app.ui.formatBatteryLow(it.batteryIsLow)}} {{= app.ui.formatText(it.batteryIsLowTime)}}</dd>{{~it.MessageStats :messageStat:index}}<dt>{{=app.ui.GetMessageTypeHeader(messageStat)}}</dt><dd>{{=messageStat.noOfMessages}} ({{=messageStat.createdTime}})</dd>{{~}}</dl>{{~it.SubDevices :subDevice:index}}<div class="subdevice-item"><ul class="subdevice-item-desc-list"><li>{{=subDevice.distanceToHead}} ({{=app.ui.getSubDeviceStatusCreateDate(subDevice)}}){{ for (var i = 0; i < subDevice.SubDeviceStatuses.length; i++) { }}<li>Batt: {{=app.ui.formatBatteryPercent(subDevice.SubDeviceStatuses[i].batteryLevel,subDevice.SubDeviceStatuses[i].batteryLevelPrecision)}}</li><li>Control: {{=subDevice.SubDeviceStatuses[i].siStationNumber}}</li>{{ }}}</ul></div>{{~}}<img class="flag" src="../res/flag.jpg"/></div>');
 app.addDeviceListFn = doT.template('<li data-checked="{{=it.connectedToUser}}" data-deviceid="{{=it.id}}"><input type="checkbox" name="checkbox{{=it.id}}" id="checkbox{{=it.id}}" class="css-checkbox" {{? it.connectedToUser==="1" }}checked="checked"{{?}}/><label class="css-label" for="checkbox{{=it.id}}"><span class="add-device-header">{{=it.name}}</span><dl class="table-display add-device-desc"><dt>Description</dt><dd>{{=app.ui.formatText(it.description)}}</dd></dl></label></li>');
 
 
@@ -265,7 +265,7 @@ app.addDevicesToUser = function() {
 };
 
 app.deleteMessageStats = function(btAddress) {
-	fetch("/api/v1/MessageStats/DeleteByBTAddress/" + btAddress , {
+	fetch("/api/v1/Devices/" + btAddress + "/MessageStats/DeleteByBTAddress" , {
 		credentials: 'same-origin',
 		headers: {
 		  'Accept': 'application/json'
@@ -276,7 +276,19 @@ app.deleteMessageStats = function(btAddress) {
 };
 
 app.deleteSubDeviceStatuses = function(btAddress) {
-	fetch("/api/v1/SubDeviceStatuses/DeleteByBTAddress/" + btAddress , {
+	fetch("/api/v1/Devices/" + btAddress + "/SubDeviceStatuses/DeleteByBTAddress" , {
+		credentials: 'same-origin',
+		headers: {
+		  'Accept': 'application/json'
+		},
+		method: "DELETE"
+	})
+	.catch(function(res){ console.log(res) });
+};
+
+
+app.deleteSubDevices = function(btAddress) {
+	fetch("/api/v1/Devices/" + btAddress + "/SubDevices/DeleteByBTAddress" , {
 		credentials: 'same-origin',
 		headers: {
 		  'Accept': 'application/json'
@@ -297,10 +309,12 @@ app.clearDeviceBatteryIsLow = function(btAddress) {
 	.catch(function(res){ console.log(res) });
 };
 
+
 app.clearStats = function(BTAddress) {
 	console.log(BTAddress);
 	app.deleteMessageStats(BTAddress);
 	app.deleteSubDeviceStatuses(BTAddress);
+	app.deleteSubDevices(BTAddress);
 	app.clearDeviceBatteryIsLow(BTAddress);
 };
 

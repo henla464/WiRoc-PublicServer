@@ -20,6 +20,7 @@ $config['db']['host']   = $ini_array['database']['database_hostname'];
 $config['db']['user']   = $ini_array['database']['database_username'];
 $config['db']['pass']   = $ini_array['database']['database_password'];
 $config['db']['dbname'] = $ini_array['database']['database_name'];
+$config['upload']['log_archive_upload_directory'] = $ini_array['upload']['log_archive_upload_directory'];
 
 $app = new \Slim\App(["settings" => $config]);
 $container = $app->getContainer();
@@ -983,6 +984,42 @@ $app->delete('/api/v1/SubDevices/{subDeviceId}', function (Request $request, Res
 	return $response->withStatus(204);
 })->setName("deleteSubDevice")->add($authMiddleware);
 
+/**
+     * @SWG\Delete(
+     *     path="/api/v1/Devices/{btAddress}/SubDevices/DeleteByBTAddress",
+     *     description="Delete a subdevices of a device",
+     *     operationId="deleteDeviceSubDevices",
+     *     @SWG\Parameter(
+     *         description="bt address",
+     *         in="path",
+     *         name="btAddress",
+     *         required=true,
+     *         type="string"
+     *     ),
+     *     @SWG\Response(
+     *         response=204,
+     *         description="deleted",
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+$app->delete('/api/v1/Devices/{btAddress}/SubDevices/DeleteByBTAddress', function (Request $request, Response $response) {
+	$btAddress = $request->getAttribute('btAddress');
+    $objectArray = [];
+	$objectArray['headBTAddress'] = $btAddress;
+	$this->helper->DeleteBySql('DELETE FROM SubDevices WHERE headBTAddress = :headBTAddress', $objectArray);
+	return $response->withStatus(204);
+})->setName("deleteDeviceSubDevices")->add($authMiddleware);
+
 
 # SUBDEVICESTATUS 
 /**
@@ -1173,7 +1210,7 @@ $app->post('/api/v1/SubDeviceStatuses', function (Request $request, Response $re
 
 /**
      * @SWG\Delete(
-     *     path="/api/v1/SubDeviceStatuses/DeleteByBTAddress/{btAddress}",
+     *     path="/api/v1/Devices/{btAddress}/SubDeviceStatuses/DeleteByBTAddress",
      *     description="Deletes SubDeviceStatuses for a device",
      *     operationId="deleteSubDeviceStatusesByBTAddress",
      *     produces={"application/json"},
@@ -1193,18 +1230,20 @@ $app->post('/api/v1/SubDeviceStatuses', function (Request $request, Response $re
      *     }
      * )
      */
-$app->delete('/api/v1/SubDeviceStatuses/DeleteByBTAddress/{BTAddress}', function (Request $request, Response $response) {
-	$BTAddress = $request->getAttribute('BTAddress');
-    $cls = SubDevice::class;
-    $sql = "SELECT * FROM {$cls::$tableName} WHERE headBTAddress = :headBTAddress";
-    $subDevice = $this->helper->GetBySql($cls, $sql, ['headBTAddress'=>$BTAddress]);
+$app->delete('/api/v1/Devices/{btAddress}/SubDeviceStatuses/DeleteByBTAddress', function (Request $request, Response $response) {
+	$btAddress = $request->getAttribute('btAddress');
     $objectArray = [];
-    if ($BTAddress = 'all') {
+    if ($BTAddress == 'all') {
 		$this->helper->DeleteBySql('DELETE FROM SubDeviceStatuses', $objectArray);
 	} else {
-		$objectArray = [];
-		$objectArray['subDeviceId'] = $subDevice->id;
-		$this->helper->DeleteBySql('DELETE FROM SubDeviceStatuses WHERE subDeviceId = :subDeviceId', $objectArray);
+		$cls = SubDevice::class;
+		$sql = "SELECT * FROM {$cls::$tableName} WHERE headBTAddress = :headBTAddress";
+		$subDevices = $this->helper->GetAllBySql($cls, $sql, ['headBTAddress'=>$btAddress]);
+		foreach ($subDevices AS $subDevice) { 
+			$objectArray = [];
+			$objectArray['subDeviceId'] = $subDevice->id;
+			$this->helper->DeleteBySql('DELETE FROM SubDeviceStatuses WHERE subDeviceId = :subDeviceId', $objectArray);
+		}
 	}
     return $response->withStatus(204);
 })->setName("deleteSubDeviceStatusesByBTAddress")->add($authMiddleware);
@@ -1408,7 +1447,7 @@ $app->post('/api/v1/MessageStats', function (Request $request, Response $respons
 
 /**
      * @SWG\Delete(
-     *     path="/api/v1/MessageStats/DeleteByBTAddress/{btAddress}",
+     *     path="/api/v1/Devices/{btAddress}/MessageStats/DeleteByBTAddress",
      *     description="Deletes MessageStats for a device",
      *     operationId="deleteMessageStatsByBTAddress",
      *     produces={"application/json"},
@@ -1428,20 +1467,15 @@ $app->post('/api/v1/MessageStats', function (Request $request, Response $respons
      *     }
      * )
      */
-$app->delete('/api/v1/MessageStats/DeleteByBTAddress/{BTAddress}', function (Request $request, Response $response) {
-	$BTAddress = $request->getAttribute('BTAddress');
-    $cls = Device::class;
-    $sql = "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress";
-    $device = $this->helper->GetBySql($cls, $sql, ['BTAddress'=>$BTAddress]);
+$app->delete('/api/v1/Devices/{btAddress}/MessageStats/DeleteByBTAddress', function (Request $request, Response $response) {
+	$btAddress = $request->getAttribute('btAddress');
     $objectArray = [];
-    if ($BTAddress = 'all') {
+    if ($BTAddress == 'all') {
 		$this->helper->DeleteBySql('DELETE FROM MessageStats', $objectArray);
 	} else {
-		$objectArray = [];
-		$objectArray['deviceId'] = $device->id;
-		$this->helper->DeleteBySql('DELETE FROM MessageStats WHERE deviceId = :deviceId', $objectArray);
+		$objectArray['btAddress'] = $btAddress;
+		$this->helper->DeleteBySql('DELETE FROM MessageStats WHERE BTAddress = :btAddress', $objectArray);
 	}
-		#return $response->withJson($BTAddress, 204);
     return $response->withStatus(204);
 })->setName("deleteMessageStatsByBTAddress")->add($authMiddleware);
 
@@ -1637,6 +1671,44 @@ $app->delete('/api/v1/Devices/{deviceId}/UserDevices', function (Request $reques
     $this->helper->DeleteBySql($sql, $values);
 	return $response->withStatus(204);
 })->setName("deleteUserDeviceByDevice")->add($authMiddleware);
+
+
+/**
+     * @SWG\Post(
+     *     path="/api/v1/LogArchives",
+     *     description="Upload a logarchive (zip file with logs and database): curl -X POST ""http://wirelessradioonlinecontrol.tk/api/v1/LogArchives"" -H ""accept: application/json"" -H ""Authorization: <apikey>"" -F ""newfile=@/path/to/zipfile.zip""",
+     *     operationId="postLogArchives",
+     *     @SWG\Response(
+     *         response=200,
+     *         description="",
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+$app->post('/api/v1/LogArchives', function (Request $request, Response $response, $args) {
+    $files = $request->getUploadedFiles();
+    if (empty($files['newfile'])) {
+        throw new Exception('Expected a newfile');
+    }
+ 
+    $newfile = $files['newfile'];
+    $target_dir = $this->settings['upload']['log_archive_upload_directory'];
+    if ($newfile->getSize() > 5000000) {
+		throw new Exception('File is too large!');
+	}
+	$uploadFileName = $newfile->getClientFilename();
+	$imageFileType = strtolower(pathinfo($uploadFileName,PATHINFO_EXTENSION));
+	if ($imageFileType !== 'zip') {
+		throw new Exception('Not a zip file!');
+	}
+    if ($newfile->getError() === UPLOAD_ERR_OK) {
+		$newfile->moveTo("$target_dir$uploadFileName");
+	}
+})->setName("postLogArchives")->add($authMiddleware);
+
+
 
 $app->run();
 

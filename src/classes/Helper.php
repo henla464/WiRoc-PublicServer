@@ -9,7 +9,7 @@ class Helper
 	
 	function __construct($c) {
        $this->container = $c;
-       $this->db = $c->db;
+       $this->db = $c->get('db');
     }
     
     private function GetSetAndValues($objectName, $objectArray) {
@@ -24,8 +24,10 @@ class Helper
 		foreach ($allPropertiesOfObject AS $prop) {
 			$propertyAnnotations = $annotationReader->getPropertyAnnotations($prop);
 			if (sizeof($propertyAnnotations) > 0) {
-				$set.="`".str_replace("`", "``", $prop->name)."`". "=:$prop->name, ";
-				$values[$prop->name] = $objectArray[$prop->name];
+				if (array_key_exists($prop->name, $objectArray)) {
+					$set.="`".str_replace("`", "``", $prop->name)."`". "=:$prop->name, ";
+					$values[$prop->name] = $objectArray[$prop->name];
+				}
 			}
 		}
 		return array("set"=>$set, "values"=>$values);
@@ -33,7 +35,8 @@ class Helper
 	
 	public function getSort($objectName, $request) {
 		$returnSortString = '';
-		$sort = $request->getQueryParam('sort');
+		$queryParams = $request->getQueryParams();
+		$sort = $queryParams['sort'];
 		$columns = explode(",", trim($sort));
 		$properties = get_object_vars(new $objectName);
 		
@@ -55,7 +58,7 @@ class Helper
 	}
 	
 	public function getLimit($request) {
-		$limit = $request->getQueryParam('limit');
+		$limit = $request->getAttribute('limit');
 		if (trim($limit) != '' && ctype_digit($limit)) {
 			return "LIMIT " . $limit;
 		}
@@ -121,6 +124,7 @@ class Helper
 		$stmt = $this->db->prepare("UPDATE $tableName SET $set `updateTime` = NOW() WHERE id = :id");
 		$stmt->execute($values);
 	}
+
 	
 	public function RunSql($sql, $values) {
 		$stmt = $this->db->prepare($sql);
@@ -140,11 +144,12 @@ class Helper
 	
 	public function CreateTables() {
 		
-		$sql = 'CREATE TABLE IF NOT EXISTS Devices (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), name varchar(50), description varchar(255), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
+		$sql = 'CREATE TABLE IF NOT EXISTS Devices (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), headBTAddress varchar(50), description varchar(255), 
+				name varchar(50), nameUpdateTime datetime, relayPathNo int, connectedToUser boolean, batteryIsLow boolean, batteryIsLowTime datetime, 
+				wirocPythonVersion varchar(20), wirocBLEAPIVersion varchar(20), reportTime datetime, updateTime datetime, createdTime datetime, PRIMARY KEY (id))';
+
 		$stmt = $this->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS SubDevices (id int NOT NULL AUTO_INCREMENT, headBTAddress varchar(50), distanceToHead int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
-		$stmt = $this->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS SubDeviceStatuses (id int NOT NULL AUTO_INCREMENT, subDeviceId int, distanceToHead int, batteryLevel int, batteryLevelPrecision int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
+		$sql = 'CREATE TABLE IF NOT EXISTS DeviceStatuses (id int NOT NULL AUTO_INCREMENT, BTAddress nvarchar(50), batteryLevel int, siStationNumber int, updateTime datetime, createdTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
 		$sql = 'CREATE TABLE IF NOT EXISTS MessageStats (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), adapterInstance varchar(50), ';
 		$sql .= 'messageType varchar(50), status varchar(50), noOfMessages int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';

@@ -2,28 +2,23 @@
 use Swagger\Annotations as SWG;
 
 /**
- * @SWG\Definition(definition="NewSubDeviceStatus", type="object", required={"subDeviceId", "batteryLevel", "batteryLevelPrecision", "siStationNumber"})
+ * @SWG\Definition(definition="NewDeviceStatus", type="object", required={"BTAddress", "batteryLevel", "siStationNumber"})
  */
-class SubDeviceStatus
+class DeviceStatus
 {
-	public static $tableName = 'SubDeviceStatuses';
+	public static $tableName = 'DeviceStatuses';
 		
     public $id;
     /**
      * @SWG\Property()
-     * @var integer
+     * @var string
      */
-    public $subDeviceId;
+    public $BTAddress;
     /**
      * @var integer
      * @SWG\Property()
      */
     public $batteryLevel;
-    /**
-     * @var integer
-     * @SWG\Property()
-     */
-    public $batteryLevelPrecision;
     /**
      * @var integer
      * @SWG\Property()
@@ -36,10 +31,10 @@ class SubDeviceStatus
 
 /**
  *  @SWG\Definition(
- *   definition="SubDeviceStatus",
+ *   definition="DeviceStatus",
  *   type="object",
  *   allOf={
- *       @SWG\Schema(ref="#/definitions/NewSubDeviceStatus"),
+ *       @SWG\Schema(ref="#/definitions/NewDeviceStatus"),
  *       @SWG\Schema(
  *           required={"id", "createdTime"},
  *           @SWG\Property(property="id", format="int64", type="integer"),

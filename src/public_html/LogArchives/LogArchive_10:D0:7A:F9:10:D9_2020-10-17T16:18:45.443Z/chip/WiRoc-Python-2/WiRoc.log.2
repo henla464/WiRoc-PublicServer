@@ -1,0 +1,535 @@
+2020-09-06 13:01:26,529 WiRoc        INFO     Start
+2020-09-06 13:01:26,531 WiRoc.Display INFO     DisplayStateMachine::Init() start
+2020-09-06 13:01:26,705 WiRoc.Display INFO     DisplayStateMachine::Init() initialized the OLED
+2020-09-06 13:01:26,707 WiRoc        INFO     HardwareAbstraction::Init start
+2020-09-06 13:01:26,905 WiRoc        DEBUG    DatabaseHelper::ensure_tables_created()
+2020-09-06 13:01:26,962 WiRoc        DEBUG    CREATE TABLE IF NOT EXISTS SettingData(id INTEGER PRIMARY KEY AUTOINCREMENT, Key TEXT, Value TEXT)
+2020-09-06 13:01:26,964 WiRoc        DEBUG    CREATE TABLE IF NOT EXISTS ChannelData(id INTEGER PRIMARY KEY AUTOINCREMENT, Channel INT, DataRate INT, LoraRange TEXT, Frequency INT, SlopeCoefficient INT, M INT, RfFactor INT, RfBw INT, LoraModem TEXT)
+2020-09-06 13:01:26,967 WiRoc        DEBUG    CREATE TABLE IF NOT EXISTS MessageBoxData(id INTEGER PRIMARY KEY AUTOINCREMENT, MessageData BLOB, PowerCycleCreated INT, MessageTypeName TEXT, InstanceName TEXT, MessageSubTypeName TEXT, MemoryAddress INT, SICardNumber TEXT, SIStationSerialNumber TEXT, SportIdentHour TEXT, SportIdentMinute TEXT, SportIdentSecond TEXT, SIStationNumber TEXT, LowBattery TEXT, RSSIValue INT, ChecksumOK INT, CreatedDate TIMESTAMP)
+2020-09-06 13:01:26,969 WiRoc        DEBUG    CREATE TABLE IF NOT EXISTS MessageBoxArchiveData(id INTEGER PRIMARY KEY AUTOINCREMENT, OrigId INT, MessageData INT, PowerCycleCreated INT, MessageTypeName TEXT, InstanceName TEXT, MessageSubTypeName TEXT, MemoryAddress INT, SICardNumber TEXT, SIStationSerialNumber TEXT, SportIdentHour TEXT, SportIdentMinute TEXT, SportIdentSecond TEXT, SIStationNumber TEXT, LowBattery TEXT, RSSIValue INT, ChecksumOK INT, CreatedDate TIMESTAMP)
+2020-09-06 13:01:26,970 WiRoc        DEBUG    CREATE TABLE IF NOT EXISTS SubscriberData(id INTEGER PRIMARY KEY AUTOINCREMENT, TypeName TEXT, InstanceName TEXT)
+2020-09-06 13:01:26,972 WiRoc        DEBUG    CREATE TABLE IF NOT EXISTS MessageTypeData(id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT, MessageSubTypeName TEXT)
+2020-09-06 13:01:26,974 WiRoc        DEBUG    CREATE TABLE IF NOT EXISTS TransformData(id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT, InputMessageTypeId INT, OutputMessageTypeId INT, Enabled INT)
+2020-09-06 13:01:26,975 WiRoc        DEBUG    CREATE TABLE IF NOT EXISTS SubscriptionData(id INTEGER PRIMARY KEY AUTOINCREMENT, DeleteAfterSent INT, Enabled INT, SubscriberId INT, TransformId INT)
+2020-09-06 13:01:26,977 WiRoc        DEBUG    CREATE TABLE IF NOT EXISTS MessageSubscriptionData(id INTEGER PRIMARY KEY AUTOINCREMENT, MessageID INT, AckReceivedFromReceiver INT, MessageNumber INT, SentDate TIMESTAMP, SendFailedDate TIMESTAMP, FindAdapterTryDate TIMESTAMP, FindAdapterTries INT, NoOfSendTries INT, AckReceivedDate TIMESTAMP, Delay INT, RetryDelay INT, FindAdapterRetryDelay INT, MessageBoxId INT, SubscriptionId INT, FetchedForSending TIMESTAMP)
+2020-09-06 13:01:26,979 WiRoc        DEBUG    CREATE TABLE IF NOT EXISTS MessageSubscriptionArchiveData(id INTEGER PRIMARY KEY AUTOINCREMENT, OrigId INT, MessageID INT, MessageNumber INT, SentDate TIMESTAMP, SendFailedDate TIMESTAMP, FindAdapterTryDate TIMESTAMP, FindAdapterTries INT, NoOfSendTries INT, AckReceivedDate TIMESTAMP, Delay INT, RetryDelay INT, FindAdapterRetryDelay INT, MessageBoxId INT, SubscriptionId INT, AckRSSIValue INT, SubscriberTypeName TEXT, TransformName TEXT)
+2020-09-06 13:01:26,980 WiRoc        DEBUG    CREATE TABLE IF NOT EXISTS InputAdapterInstances(id INTEGER PRIMARY KEY AUTOINCREMENT, TypeName TEXT, InstanceName TEXT, ToBeDeleted INT)
+2020-09-06 13:01:26,982 WiRoc        DEBUG    CREATE TABLE IF NOT EXISTS BlenoPunchData(id INTEGER PRIMARY KEY AUTOINCREMENT, StationNumber INT, SICardNumber INT, TwentyFourHour INT, TwelveHourTimer INT, SubSecond INT)
+2020-09-06 13:01:26,984 WiRoc        DEBUG    CREATE TABLE IF NOT EXISTS TestPunchData(id INTEGER PRIMARY KEY AUTOINCREMENT, BatchGuid TEXT, MessageBoxId INT, TwentyFourHour INT, TwelveHourTimer INT, SICardNumber INT, AddedToMessageBox INT, Fetched INT)
+2020-09-06 13:01:26,985 WiRoc        DEBUG    CREATE TABLE IF NOT EXISTS RepeaterMessageBoxData(id INTEGER PRIMARY KEY AUTOINCREMENT, MessageData INT, MessageTypeName TEXT, PowerCycleCreated INT, InstanceName TEXT, MessageSubTypeName TEXT, ChecksumOK INT, MessageSource TEXT, SICardNumber INT, SportIdentHour INT, SportIdentMinute INT, SportIdentSecond INT, MessageID INT, AckRequested INT, MemoryAddress INT, SIStationNumber INT, RepeaterRequested INT, NoOfTimesSeen INT, NoOfTimesAckSeen INT, Acked INT, AckedTime TIMESTAMP, MessageBoxId INT, RSSIValue INT, AckRSSIValue INT, LastSeenTime TIMESTAMP, CreatedDate TIMESTAMP)
+2020-09-06 13:01:26,988 WiRoc        DEBUG    CREATE TABLE IF NOT EXISTS RepeaterMessageBoxArchiveData(id INTEGER PRIMARY KEY AUTOINCREMENT, OrigId INT, MessageData INT, MessageTypeName TEXT, PowerCycleCreated INT, InstanceName TEXT, MessageSubTypeName TEXT, ChecksumOK INT, MessageSource TEXT, SICardNumber INT, SportIdentHour INT, SportIdentMinute INT, SportIdentSecond INT, MessageID INT, AckRequested INT, RepeaterRequested INT, NoOfTimesSeen INT, NoOfTimesAckSeen INT, Acked INT, AckedTime TIMESTAMP, MessageBoxId INT, RSSIValue INT, AckRSSIValue INT, AddedToMessageBoxTime TIMESTAMP, LastSeenTime TIMESTAMP, OrigCreatedDate TIMESTAMP, CreatedDate TIMESTAMP)
+2020-09-06 13:01:26,990 WiRoc        DEBUG    CREATE TABLE IF NOT EXISTS MessageStatsData(id INTEGER PRIMARY KEY AUTOINCREMENT, AdapterInstanceName TEXT, MessageSubTypeName TEXT, Status TEXT, NoOfMessages INT, Uploaded INT, FetchedForUpload TIMESTAMP, CreatedDate TIMESTAMP)
+2020-09-06 13:01:26,991 WiRoc        DEBUG    DatabaseHelper::truncate_setup_tables()
+2020-09-06 13:01:27,243 WiRoc.Output DEBUG    SendLoraAdapter::AddSentWithoutRepeaterBit() Add sent without repeater bit, queue length: 1
+2020-09-06 13:01:27,245 WiRoc.Output DEBUG    SendLoraAdapter::AddSentWithRepeaterBit() Add sent with repeater bit, queue length: 1
+2020-09-06 13:01:27,246 WiRoc.Output DEBUG    SendLoraAdapter::AddSuccessWithoutRepeaterBit() Add success without repeater bit, queue length: 1
+2020-09-06 13:01:27,248 WiRoc.Output DEBUG    SendLoraAdapter::AddSuccessWithRepeaterBit() Add success with repeater bit, queue length: 1
+2020-09-06 13:01:27,328 WiRoc        DEBUG    Loader::ImportModule() transforms.sisimessagetoloratransform
+2020-09-06 13:01:27,340 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: Battery doesn't end in Transform
+2020-09-06 13:01:27,343 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraRadioMessage doesn't end in Transform
+2020-09-06 13:01:27,344 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: SIMessage doesn't end in Transform
+2020-09-06 13:01:27,346 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: SISIMessageToLoraTransform
+2020-09-06 13:01:27,359 WiRoc        DEBUG    Loader::ImportModule() transforms.sitesttesttoloratransform
+2020-09-06 13:01:27,366 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: Battery doesn't end in Transform
+2020-09-06 13:01:27,367 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraRadioMessage doesn't end in Transform
+2020-09-06 13:01:27,368 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: SIMessage doesn't end in Transform
+2020-09-06 13:01:27,369 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: SITestTestToLoraTransform
+2020-09-06 13:01:27,377 WiRoc        DEBUG    Loader::ImportModule() transforms.statusstatustoloratransform
+2020-09-06 13:01:27,382 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: Battery doesn't end in Transform
+2020-09-06 13:01:27,384 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraRadioMessage doesn't end in Transform
+2020-09-06 13:01:27,385 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: SettingsClass doesn't end in Transform
+2020-09-06 13:01:27,386 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: StatusStatusToLoraTransform
+2020-09-06 13:01:27,395 WiRoc        DEBUG    Loader::ImportModule() transforms.siloraradiomessagetoloratransform
+2020-09-06 13:01:27,402 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: Battery doesn't end in Transform
+2020-09-06 13:01:27,404 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraRadioMessage doesn't end in Transform
+2020-09-06 13:01:27,405 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: SILoraRadioMessageToLoraTransform
+2020-09-06 13:01:27,415 WiRoc        DEBUG    Loader::ImportModule() transforms.repeatersimessagetoloraacktransform
+2020-09-06 13:01:27,422 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraRadioMessage doesn't end in Transform
+2020-09-06 13:01:27,424 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: RepeaterSIMessageToLoraAckTransform
+2020-09-06 13:01:27,435 WiRoc        DEBUG    Loader::ImportModule() transforms.repeatersimessagetoloratransform
+2020-09-06 13:01:27,442 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: Battery doesn't end in Transform
+2020-09-06 13:01:27,444 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraRadioMessage doesn't end in Transform
+2020-09-06 13:01:27,446 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: RepeaterSIMessageToLoraTransform
+2020-09-06 13:01:27,465 WiRoc        DEBUG    Loader::ImportModule() transforms.repeaterstatustoloraacktransform
+2020-09-06 13:01:27,472 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraRadioMessage doesn't end in Transform
+2020-09-06 13:01:27,475 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: RepeaterStatusToLoraAckTransform
+2020-09-06 13:01:27,487 WiRoc        DEBUG    Loader::ImportModule() transforms.repeaterstatustoloratransform
+2020-09-06 13:01:27,494 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: Battery doesn't end in Transform
+2020-09-06 13:01:27,498 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraRadioMessage doesn't end in Transform
+2020-09-06 13:01:27,501 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: RepeaterStatusToLoraTransform
+2020-09-06 13:01:27,512 WiRoc        DEBUG    Loader::ImportModule() transforms.lorasimessagetoloraacktransform
+2020-09-06 13:01:27,520 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: Battery doesn't end in Transform
+2020-09-06 13:01:27,524 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraRadioMessage doesn't end in Transform
+2020-09-06 13:01:27,527 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraSIMessageToLoraAckTransform
+2020-09-06 13:01:27,537 WiRoc        DEBUG    Loader::ImportModule() transforms.lorastatustoloraacktransform
+2020-09-06 13:01:27,547 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraRadioMessage doesn't end in Transform
+2020-09-06 13:01:27,550 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraStatusToLoraAckTransform
+2020-09-06 13:01:27,562 WiRoc        DEBUG    Loader::ImportModule() transforms.sisimessagetositransform
+2020-09-06 13:01:27,568 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: SIMessage doesn't end in Transform
+2020-09-06 13:01:27,571 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: SISIMessageToSITransform
+2020-09-06 13:01:27,604 WiRoc        DEBUG    Loader::ImportModule() transforms.lorasimessagetositransform
+2020-09-06 13:01:27,624 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraRadioMessage doesn't end in Transform
+2020-09-06 13:01:27,628 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraSIMessageToSITransform
+2020-09-06 13:01:27,642 WiRoc        DEBUG    Loader::ImportModule() transforms.lorasimessagetosiraptransform
+2020-09-06 13:01:27,648 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraRadioMessage doesn't end in Transform
+2020-09-06 13:01:27,649 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraSIMessageToSirapTransform
+2020-09-06 13:01:27,658 WiRoc        DEBUG    Loader::ImportModule() transforms.sisimessagetosiraptransform
+2020-09-06 13:01:27,663 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: SIMessage doesn't end in Transform
+2020-09-06 13:01:27,665 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: SISIMessageToSirapTransform
+2020-09-06 13:01:27,672 WiRoc        DEBUG    Loader::ImportModule() transforms.sitesttesttosiraptransform
+2020-09-06 13:01:27,677 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: SIMessage doesn't end in Transform
+2020-09-06 13:01:27,678 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: SITestTestToSirapTransform
+2020-09-06 13:01:27,688 WiRoc        DEBUG    Loader::ImportModule() transforms.lorastatustostatustransform
+2020-09-06 13:01:27,703 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: Battery doesn't end in Transform
+2020-09-06 13:01:27,706 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraRadioMessage doesn't end in Transform
+2020-09-06 13:01:27,707 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraStatusToStatusTransform
+2020-09-06 13:01:27,717 WiRoc        DEBUG    Loader::ImportModule() transforms.statusstatustostatustransform
+2020-09-06 13:01:27,723 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: Battery doesn't end in Transform
+2020-09-06 13:01:27,724 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: LoraRadioMessage doesn't end in Transform
+2020-09-06 13:01:27,726 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: SettingsClass doesn't end in Transform
+2020-09-06 13:01:27,727 WiRoc        DEBUG    Loader::GetFirstClassFromModule() Class name: StatusStatusToStatusTransform
+2020-09-06 13:01:27,735 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: sndlora1
+2020-09-06 13:01:27,738 WiRoc        INFO     LoraRadioDRF1268DS::Init() Port name: /dev/ttyS1 Channel: 4 LoraRange: L LoraPower: 22
+2020-09-06 13:01:27,887 WiRoc        DEBUG    LoraRadioDRF1268DS::enterATMode() Enter
+2020-09-06 13:01:28,099 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() Enter
+2020-09-06 13:01:28,100 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() Byte
+2020-09-06 13:01:28,103 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() response: ffff021c1e
+2020-09-06 13:01:28,104 WiRoc        DEBUG    LoraRadioDRF1268DS::getParameters(): Enter, read parameters
+2020-09-06 13:01:28,315 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() Enter
+2020-09-06 13:01:28,316 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() Byte
+2020-09-06 13:01:28,321 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() response: ffff2302000104030000000a050116e4c4371ae4c4371a810101000000001101000100ff01db
+2020-09-06 13:01:28,322 WiRoc        DEBUG    LoraRadioDRF1268DS::getParameters(): got: 38 bytes, expected: 38
+2020-09-06 13:01:28,332 WiRoc        INFO     LoraRadioDRF1268DS::Init() Already correct parameters
+2020-09-06 13:01:28,333 WiRoc        DEBUG    LoraRadioDRF1268DS::exitATMode() Enter
+2020-09-06 13:01:28,543 WiRoc        DEBUG    LoraRadioDRF1268DS::exitATMode() correct resp: ffff021e20
+2020-09-06 13:01:28,544 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() Enter
+2020-09-06 13:01:28,545 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() Byte
+2020-09-06 13:01:28,547 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() response: ffff021e20
+2020-09-06 13:01:28,548 WiRoc        DEBUG    LoraRadioDRF1268DS::exitATMode() resp: ffff021e20
+2020-09-06 13:01:28,549 WiRoc.Output INFO     SendLoraAdapter::EnableDisableSubscription() subscription set enabled: True
+2020-09-06 13:01:28,553 WiRoc.Output INFO     SendLoraAdapter::EnableDisableSubscription() subscription set enabled: True
+2020-09-06 13:01:28,556 WiRoc.Output INFO     SendLoraAdapter::EnableDisableSubscription() subscription set enabled: True
+2020-09-06 13:01:28,559 WiRoc.Output INFO     SendLoraAdapter::EnableDisableSubscription() subscription set enabled: True
+2020-09-06 13:01:28,562 WiRoc.Output INFO     SendLoraAdapter::EnableDisableSubscription() subscription set enabled: True
+2020-09-06 13:01:28,565 WiRoc.Output INFO     SendLoraAdapter::EnableDisableSubscription() subscription set enabled: True
+2020-09-06 13:01:28,568 WiRoc.Output INFO     SendLoraAdapter::EnableDisableSubscription() subscription set enabled: True
+2020-09-06 13:01:28,570 WiRoc.Output INFO     SendLoraAdapter::EnableDisableSubscription() subscription set enabled: True
+2020-09-06 13:01:28,573 WiRoc.Output INFO     SendLoraAdapter::EnableDisableSubscription() subscription set enabled: True
+2020-09-06 13:01:28,576 WiRoc.Output INFO     SendLoraAdapter::EnableDisableSubscription() subscription set enabled: True
+2020-09-06 13:01:28,580 WiRoc        DEBUG    UPDATE TransformData SET Enabled = 1 WHERE TransformData.Name = 'SISIMessageToLoraTransform'
+2020-09-06 13:01:28,582 WiRoc        DEBUG    UPDATE TransformData SET Enabled = 1 WHERE TransformData.Name = 'SITestTestToLoraTransform'
+2020-09-06 13:01:28,584 WiRoc        DEBUG    UPDATE TransformData SET Enabled = 1 WHERE TransformData.Name = 'StatusStatusToLoraTransform'
+2020-09-06 13:01:28,585 WiRoc        DEBUG    UPDATE TransformData SET Enabled = 1 WHERE TransformData.Name = 'SILoraRadioMessageToLoraTransform'
+2020-09-06 13:01:28,586 WiRoc        DEBUG    UPDATE TransformData SET Enabled = 0 WHERE TransformData.Name = 'LoraSIMessageToLoraAckTransform'
+2020-09-06 13:01:28,588 WiRoc        DEBUG    UPDATE TransformData SET Enabled = 0 WHERE TransformData.Name = 'LoraStatusToLoraAckTransform'
+2020-09-06 13:01:28,591 WiRoc        DEBUG    UPDATE TransformData SET Enabled = 1 WHERE TransformData.Name = 'RepeaterSIMessageToLoraAckTransform'
+2020-09-06 13:01:28,592 WiRoc        DEBUG    UPDATE TransformData SET Enabled = 1 WHERE TransformData.Name = 'RepeaterSIMessageToLoraTransform'
+2020-09-06 13:01:28,593 WiRoc        DEBUG    UPDATE TransformData SET Enabled = 1 WHERE TransformData.Name = 'RepeaterStatusToLoraAckTransform'
+2020-09-06 13:01:28,595 WiRoc        DEBUG    UPDATE TransformData SET Enabled = 1 WHERE TransformData.Name = 'RepeaterStatusToLoraTransform'
+2020-09-06 13:01:28,596 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: bleno1
+2020-09-06 13:01:28,598 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: sirap1
+2020-09-06 13:01:28,599 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: status1
+2020-09-06 13:01:28,602 WiRoc.Output ERROR    SendStatusAdapter::TestConnection() No webserverurl available (yet)
+2020-09-06 13:01:28,603 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: status1
+2020-09-06 13:01:28,603 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: reclora1
+2020-09-06 13:01:28,604 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: test1
+2020-09-06 13:01:28,605 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: rcvRepeater1
+2020-09-06 13:01:28,637 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-09-06 13:01:28.637168
+2020-09-06 13:01:34,964 WiRoc.Display DEBUG    OledStartup::Draw imagechanged
+2020-09-06 13:01:39,283 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: sndlora1
+2020-09-06 13:01:39,285 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: bleno1
+2020-09-06 13:01:39,286 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: sirap1
+2020-09-06 13:01:39,287 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: status1
+2020-09-06 13:01:39,288 WiRoc.Output ERROR    SendStatusAdapter::TestConnection() No webserverurl available (yet)
+2020-09-06 13:01:39,289 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: status1
+2020-09-06 13:01:39,290 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: reclora1
+2020-09-06 13:01:39,291 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: test1
+2020-09-06 13:01:39,292 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: rcvRepeater1
+2020-09-06 13:01:39,299 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-09-06 13:01:39.298835
+2020-09-06 13:01:41,262 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-09-06 13:01:41,280 WiRoc        DEBUG    HardwareAbstraction::ClearShortKeyPress
+2020-09-06 13:01:41,319 WiRoc.Display DEBUG    OledNormal::DrawOled channel imagechanged
+2020-09-06 13:01:41,322 WiRoc.Display DEBUG    OledNormal::DrawOled wirocMode imagechanged
+2020-09-06 13:01:41,325 WiRoc.Display DEBUG    OledNormal::DrawOled ackRequested imagechanged
+2020-09-06 13:01:41,326 WiRoc.Display DEBUG    OledNormal::DrawOledRange imagechanged
+2020-09-06 13:01:41,500 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-09-06 13:01:41,517 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 0 batteryWidth: 19 prev batteryWidth: 0
+2020-09-06 13:01:41,519 WiRoc.Display DEBUG    OledNormal::DrawOledBattery imagechanged
+2020-09-06 13:01:41,535 WiRoc.Display DEBUG    OledNormal::DrawIsCharging imagechanged
+2020-09-06 13:01:44,318 WiRoc.Output ERROR    SendStatusAdapter::TestConnection() No webserverurl available (yet)
+2020-09-06 13:01:44,319 WiRoc        INFO     Start::updateWifiPowerSaving() Enable WiFi power saving
+2020-09-06 13:01:47,518 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-09-06 13:01:47,834 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-09-06 13:01:47,850 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-09-06 13:01:49,894 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: sndlora1
+2020-09-06 13:01:49,898 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: bleno1
+2020-09-06 13:01:49,900 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: sirap1
+2020-09-06 13:01:49,902 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: status1
+2020-09-06 13:01:49,904 WiRoc.Output ERROR    SendStatusAdapter::TestConnection() No webserverurl available (yet)
+2020-09-06 13:01:49,906 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: status1
+2020-09-06 13:01:49,907 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: reclora1
+2020-09-06 13:01:49,909 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: test1
+2020-09-06 13:01:49,911 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: rcvRepeater1
+2020-09-06 13:01:49,921 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-09-06 13:01:49.921395
+2020-09-06 13:01:49,933 WiRoc.Output ERROR    SendStatusAdapter::TestConnection() No webserverurl available (yet)
+2020-09-06 13:01:53,848 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-09-06 13:01:54,807 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-09-06 13:01:54,823 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-09-06 13:02:00,121 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-09-06 13:02:00,290 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-09-06 13:02:00,307 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-09-06 13:02:00,490 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: sndlora1
+2020-09-06 13:02:00,493 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: bleno1
+2020-09-06 13:02:00,495 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: sirap1
+2020-09-06 13:02:00,497 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: status1
+2020-09-06 13:02:00,498 WiRoc.Output ERROR    SendStatusAdapter::TestConnection() No webserverurl available (yet)
+2020-09-06 13:02:00,500 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: status1
+2020-09-06 13:02:00,501 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: reclora1
+2020-09-06 13:02:00,502 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: test1
+2020-09-06 13:02:00,503 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: rcvRepeater1
+2020-09-06 13:02:00,509 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-09-06 13:02:00.509587
+2020-09-06 13:02:00,520 WiRoc.Output ERROR    SendStatusAdapter::TestConnection() No webserverurl available (yet)
+2020-09-06 13:02:06,434 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-09-06 13:02:06,611 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-09-06 13:02:06,628 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-09-06 13:02:17,255 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-09-06 13:02:17,425 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-09-06 13:02:17,441 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-09-06 13:02:21,581 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: sndlora1
+2020-09-06 13:02:21,583 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: bleno1
+2020-09-06 13:02:21,585 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: sirap1
+2020-09-06 13:02:21,586 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: status1
+2020-09-06 13:02:21,587 WiRoc.Output ERROR    SendStatusAdapter::TestConnection() No webserverurl available (yet)
+2020-09-06 13:02:21,588 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: status1
+2020-09-06 13:02:21,589 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: reclora1
+2020-09-06 13:02:21,590 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: test1
+2020-09-06 13:02:21,591 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: rcvRepeater1
+2020-09-06 13:02:21,598 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-09-06 13:02:21.598583
+2020-09-06 13:02:21,610 WiRoc.Output ERROR    SendStatusAdapter::TestConnection() No webserverurl available (yet)
+2020-09-06 13:02:23,563 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-09-06 13:02:23,732 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-09-06 13:02:23,747 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-09-06 13:02:29,841 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-09-06 13:02:30,823 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-09-06 13:02:30,842 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-09-06 13:02:32,252 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: sndlora1
+2020-09-06 13:02:32,256 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: bleno1
+2020-09-06 13:02:32,259 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: sirap1
+2020-09-06 13:02:32,261 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: status1
+2020-09-06 13:02:32,263 WiRoc.Output ERROR    SendStatusAdapter::TestConnection() No webserverurl available (yet)
+2020-09-06 13:02:32,265 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: status1
+2020-09-06 13:02:32,266 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: reclora1
+2020-09-06 13:02:32,268 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: test1
+2020-09-06 13:02:32,270 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: rcvRepeater1
+2020-09-06 13:02:32,281 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-09-06 13:02:32.281344
+2020-09-06 13:02:32,295 WiRoc.Output ERROR    SendStatusAdapter::TestConnection() No webserverurl available (yet)
+2020-10-14 21:40:35,218 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:40:35,474 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:40:35,505 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:40:41,504 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:40:41,735 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:40:41,754 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:40:41,889 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: sndlora1
+2020-10-14 21:40:41,892 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: bleno1
+2020-10-14 21:40:41,894 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: sirap1
+2020-10-14 21:40:41,895 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: status1
+2020-10-14 21:40:41,897 WiRoc.Output ERROR    SendStatusAdapter::TestConnection() No webserverurl available (yet)
+2020-10-14 21:40:41,898 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: status1
+2020-10-14 21:40:41,899 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: reclora1
+2020-10-14 21:40:41,901 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: test1
+2020-10-14 21:40:41,902 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: rcvRepeater1
+2020-10-14 21:40:41,909 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:40:41.909401
+2020-10-14 21:40:41,919 WiRoc.Output ERROR    SendStatusAdapter::TestConnection() No webserverurl available (yet)
+2020-10-14 21:40:47,833 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:40:48,002 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:40:48,019 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:40:58,683 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:40:58,707 WiRoc.Display DEBUG    OledNormal::DrawOled channel imagechanged
+2020-10-14 21:40:58,712 WiRoc.Display DEBUG    OledNormal::DrawOledRange imagechanged
+2020-10-14 21:40:59,009 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:40:59,026 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:41:03,011 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: sndlora1
+2020-10-14 21:41:03,013 WiRoc        INFO     LoraRadioDRF1268DS::Init() Port name: /dev/ttyS1 Channel: 6 LoraRange: S LoraPower: 22
+2020-10-14 21:41:03,151 WiRoc        DEBUG    LoraRadioDRF1268DS::enterATMode() Enter
+2020-10-14 21:41:03,365 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() Enter
+2020-10-14 21:41:03,367 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() Byte
+2020-10-14 21:41:03,371 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() response: ffff021c1e
+2020-10-14 21:41:03,372 WiRoc        DEBUG    LoraRadioDRF1268DS::getParameters(): Enter, read parameters
+2020-10-14 21:41:03,585 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() Enter
+2020-10-14 21:41:03,588 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() Byte
+2020-10-14 21:41:03,600 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() response: ffff2302000104030000000a050116e4c4371ae4c4371a810101000000001101000100ff01db
+2020-10-14 21:41:03,602 WiRoc        DEBUG    LoraRadioDRF1268DS::getParameters(): got: 38 bytes, expected: 38
+2020-10-14 21:41:03,621 WiRoc        INFO     LoraRadioDRF1268DS::Init() frequency439962500
+2020-10-14 21:41:03,623 WiRoc        DEBUG    LoraRadioDRF1268DS::setParameters(): Enter, read parameters
+2020-10-14 21:41:03,833 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() Enter
+2020-10-14 21:41:03,835 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() Byte
+2020-10-14 21:41:03,839 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() response: ffff2302000104030000000a050116e4c4371ae4c4371a810101000000001101000100ff01db
+2020-10-14 21:41:03,840 WiRoc        DEBUG    LoraRadioDRF1268DS::setParameters(): Write new parameters: ffff23030001060300000007050116844b391a844b391a810101000000001101000100ff012d
+2020-10-14 21:41:04,389 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() Enter
+2020-10-14 21:41:04,390 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() Byte
+2020-10-14 21:41:04,392 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioSettingsReply() response: ffff020406
+2020-10-14 21:41:04,393 WiRoc        INFO     LoraRadioDRF1268DS::Init() Parameters set
+2020-10-14 21:41:04,395 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: bleno1
+2020-10-14 21:41:04,396 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: sirap1
+2020-10-14 21:41:04,397 WiRoc        DEBUG    Setup::SetupSubscribers() Before Init() subscriber adapter: status1
+2020-10-14 21:41:05,434 WiRoc.Output INFO     SendStatusAdapter::EnableDisableSubscription() subscription set enabled: True
+2020-10-14 21:41:05,437 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: status1
+2020-10-14 21:41:05,438 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: reclora1
+2020-10-14 21:41:05,439 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: test1
+2020-10-14 21:41:05,440 WiRoc        DEBUG    Setup::SetupInputAdapters() Before Init() input adapter: rcvRepeater1
+2020-10-14 21:41:05,447 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:41:05.447795
+2020-10-14 21:41:05,449 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() data to fetch
+2020-10-14 21:41:05,451 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() start not found
+2020-10-14 21:41:05,452 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() received data, got: 00
+2020-10-14 21:41:05,453 WiRoc        ERROR    LoraRadioDRF1268DS::GetRadioData() received incorrect data
+2020-10-14 21:41:07,437 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:41:08,409 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:41:08,427 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:41:14,042 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:41:14,239 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:41:14,259 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:41:16,480 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:41:16.480515
+2020-10-14 21:41:20,607 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:41:20,779 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:41:20,794 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:41:27,202 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:41:27,395 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:41:27,411 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:41:27,591 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:41:27.591235
+2020-10-14 21:41:33,784 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:41:33,956 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:41:33,972 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:41:45,160 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:41:46,123 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:41:46,140 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:41:49,704 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:41:49.704638
+2020-10-14 21:41:51,754 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:41:51,950 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:41:51,967 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:41:58,343 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:41:58,514 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:41:58,530 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:42:00,770 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:42:00.770455
+2020-10-14 21:42:04,908 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:42:05,081 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:42:05,096 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:42:11,461 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:42:11,728 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:42:11,761 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:42:11,885 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:42:11.884987
+2020-10-14 21:42:18,077 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:42:19,036 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:42:19,052 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:42:29,450 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:42:29,639 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:42:29,656 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:42:33,993 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:42:33.993298
+2020-10-14 21:42:36,062 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:42:36,234 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:42:36,249 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:42:42,636 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:42:42,808 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:42:42,823 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:42:45,063 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:42:45.063076
+2020-10-14 21:42:49,167 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:42:50,228 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:42:50,243 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:42:55,751 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:42:55,925 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:42:55,941 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:42:56,211 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:42:56.211338
+2020-10-14 21:43:02,418 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:43:02,591 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:43:02,607 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:43:13,764 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:43:13,975 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:43:13,991 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:43:18,309 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:43:18.309212
+2020-10-14 21:43:20,380 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:43:21,327 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:43:21,345 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:43:26,980 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:43:27,171 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:43:27,186 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:43:29,417 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:43:29.417643
+2020-10-14 21:43:33,535 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:43:33,839 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:43:33,857 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:43:40,124 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:43:40,296 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:43:40,311 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:43:40,504 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:43:40.504623
+2020-10-14 21:43:46,714 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:43:46,910 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:43:46,927 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:43:58,068 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:43:59,011 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:43:59,027 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:44:02,612 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:44:02.612219
+2020-10-14 21:44:04,654 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:44:04,827 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:44:04,842 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:44:11,216 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:44:11,526 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:44:11,543 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:44:13,704 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:44:13.703770
+2020-10-14 21:44:17,814 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:44:18,066 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:44:18,098 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:44:24,402 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:44:24,574 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:44:24,589 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:44:24,780 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:44:24.780055
+2020-10-14 21:44:30,316 WiRoc        DEBUG    Battery::GetIsBatteryLow
+2020-10-14 21:44:30,332 WiRoc.Input  DEBUG    CreateStatusAdapter::GetData() Data to fetch
+2020-10-14 21:44:30,334 WiRoc        INFO     Start::handleInput() Received data from status1
+2020-10-14 21:44:30,340 WiRoc        DEBUG    Start::handleInput() Subscription: LORA StatusStatusToLoraTransform
+2020-10-14 21:44:30,341 WiRoc        DEBUG    Start::handleInput() Delay: 0
+2020-10-14 21:44:30,344 WiRoc        DEBUG    Start::handleInput() Subscription: STATUS StatusStatusToStatusTransform
+2020-10-14 21:44:30,345 WiRoc        DEBUG    Start::handleInput() Delay: 0
+2020-10-14 21:44:30,383 WiRoc        DEBUG    Battery::GetBatteryPercent4Bits
+2020-10-14 21:44:30,413 WiRoc        DEBUG    In loop: subadapter: <class 'subscriberadapters.sendloraadapter.SendLoraAdapter'> DelayAfterMessageSent: 0.93034
+2020-10-14 21:44:30,417 WiRoc        DEBUG    LoraRadioDRF1268DS::SendData() send data: 02028201a1f000
+2020-10-14 21:44:30,470 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioReply() Enter
+2020-10-14 21:44:30,471 WiRoc        DEBUG    LoraRadioDRF1268DS::getRadioReply() response: 6f6b0d0a
+2020-10-14 21:44:30,472 WiRoc        DEBUG    LoraRadioDRF1268DS::SendData() Module returned ok
+2020-10-14 21:44:30,473 WiRoc.Output DEBUG    SendLoraAdapter::AddSentWithoutRepeaterBit() Add sent without repeater bit, queue length: 2
+2020-10-14 21:44:30,474 WiRoc        DEBUG    arg: <function Main.handleOutput.<locals>.createSuccessCB.<locals>.successCB at 0xb5226810>
+2020-10-14 21:44:30,475 WiRoc        INFO     Start::Run() successCB() Message sent to sndlora1 LORA Trans:StatusStatusToLoraTransform
+2020-10-14 21:44:30,485 WiRoc        DEBUG    Start::Run() successCB() Subadapter: <class 'subscriberadapters.sendloraadapter.SendLoraAdapter'> Increment send tries, NoOfSendTries: 0 retryDelay: 1798203.5653351252
+2020-10-14 21:44:30,533 WiRoc        DEBUG    Battery::GetBatteryPercent4Bits
+2020-10-14 21:44:30,549 WiRoc        DEBUG    In loop: subadapter: <class 'subscriberadapters.sendstatusadapter.SendStatusAdapter'> DeleteAfterSent
+2020-10-14 21:44:30,999 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:44:31,226 WiRoc        DEBUG    arg: <function Main.handleOutput.<locals>.createSuccessCB.<locals>.successCB at 0xb52268a0>
+2020-10-14 21:44:31,227 WiRoc        INFO     Start::Run() successCB() Message sent to status1 STATUS Trans:StatusStatusToStatusTransform
+2020-10-14 21:44:31,274 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() data to fetch
+2020-10-14 21:44:31,276 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() received data, got: 0200810122a5
+2020-10-14 21:44:31,277 WiRoc        INFO     LoraRadioDRF1268DS::GetRadioData() received message!
+2020-10-14 21:44:31,278 WiRoc        DEBUG    Start::handleInput() Received ack, for status message number: 1
+2020-10-14 21:44:31,282 WiRoc        DEBUG    DatabaseHelper::archive_message_subscription_after_ack(): Archive message
+2020-10-14 21:44:31,289 WiRoc.Output DEBUG    SendLoraAdapter::AddSuccessWithoutRepeaterBit() Add success without repeater bit, queue length: 2
+2020-10-14 21:44:31,915 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:44:33,004 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:44:33,022 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:44:43,277 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:44:43,450 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:44:43,466 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:44:47,815 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:44:47.815500
+2020-10-14 21:44:49,880 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:44:50,053 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:44:50,068 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:44:56,447 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:44:56,641 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:44:56,659 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:44:58,878 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:44:58.877992
+2020-10-14 21:45:03,011 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:45:03,958 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:45:03,975 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:45:09,594 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:45:09,841 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:45:09,856 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:45:10,004 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:45:10.004026
+2020-10-14 21:45:16,192 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:45:16,365 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:45:16,381 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:45:27,556 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:45:27,729 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:45:27,744 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:45:32,108 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:45:32.108389
+2020-10-14 21:45:34,163 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:45:35,108 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:45:35,124 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:45:39,616 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() data to fetch
+2020-10-14 21:45:39,620 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() received data, got: 021380044002d30d0078001f158e07a562f6000100c6c103aa
+2020-10-14 21:45:39,621 WiRoc        INFO     LoraRadioDRF1268DS::GetRadioData() received message!
+2020-10-14 21:45:39,626 WiRoc        INFO     Start::handleInput() Received data from reclora1
+2020-10-14 21:45:39,627 WiRoc        INFO     Start::handleInput() In repeater mode
+2020-10-14 21:45:39,863 WiRoc        DEBUG    arg: <bound method DatabaseHelper.set_message_stat_uploaded of <class 'datamodel.db_helper.DatabaseHelper'>>
+2020-10-14 21:45:39,906 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() data to fetch
+2020-10-14 21:45:39,908 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() received data, got: 020581047478001f158ea4
+2020-10-14 21:45:39,909 WiRoc        INFO     LoraRadioDRF1268DS::GetRadioData() received message!
+2020-10-14 21:45:39,911 WiRoc        DEBUG    Start::handleInput() Received ack, for repeater message number: 4 sicardno: 2037134
+2020-10-14 21:45:39,914 WiRoc        DEBUG    DatabaseHelper::repeater_message_acked(): Marking RepeaterMessageBoxData message as acked
+2020-10-14 21:45:39,919 WiRoc.Output DEBUG    SendLoraAdapter::AddSuccessWithoutRepeaterBit() Add success without repeater bit, queue length: 3
+2020-10-14 21:45:40,799 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:45:40,972 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:45:40,987 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:45:43,204 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:45:43.204669
+2020-10-14 21:45:47,365 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:45:47,580 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:45:47,596 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:45:53,923 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:45:54,227 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:45:54,244 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:45:54,329 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:45:54.329273
+2020-10-14 21:45:54,680 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() data to fetch
+2020-10-14 21:45:54,684 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() received data, got: 021380056602d30d00780000636707a57124000108fc3a03aa
+2020-10-14 21:45:54,685 WiRoc        INFO     LoraRadioDRF1268DS::GetRadioData() received message!
+2020-10-14 21:45:54,689 WiRoc        INFO     Start::handleInput() Received data from reclora1
+2020-10-14 21:45:54,690 WiRoc        INFO     Start::handleInput() In repeater mode
+2020-10-14 21:45:54,838 WiRoc        DEBUG    arg: <bound method DatabaseHelper.set_message_stat_uploaded of <class 'datamodel.db_helper.DatabaseHelper'>>
+2020-10-14 21:45:54,968 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() data to fetch
+2020-10-14 21:45:54,971 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() received data, got: 020581052d7800006367a4
+2020-10-14 21:45:54,972 WiRoc        INFO     LoraRadioDRF1268DS::GetRadioData() received message!
+2020-10-14 21:45:54,973 WiRoc        DEBUG    Start::handleInput() Received ack, for repeater message number: 5 sicardno: 25447
+2020-10-14 21:45:54,976 WiRoc        DEBUG    DatabaseHelper::repeater_message_acked(): Marking RepeaterMessageBoxData message as acked
+2020-10-14 21:45:54,981 WiRoc.Output DEBUG    SendLoraAdapter::AddSuccessWithoutRepeaterBit() Add success without repeater bit, queue length: 4
+2020-10-14 21:45:57,550 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() data to fetch
+2020-10-14 21:45:57,554 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() received data, got: 021380066a02d30d0078001f158e07a574f10001106ea803aa
+2020-10-14 21:45:57,555 WiRoc        INFO     LoraRadioDRF1268DS::GetRadioData() received message!
+2020-10-14 21:45:57,559 WiRoc        INFO     Start::handleInput() Received data from reclora1
+2020-10-14 21:45:57,560 WiRoc        INFO     Start::handleInput() In repeater mode
+2020-10-14 21:45:57,712 WiRoc        DEBUG    arg: <bound method DatabaseHelper.set_message_stat_uploaded of <class 'datamodel.db_helper.DatabaseHelper'>>
+2020-10-14 21:45:57,846 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() data to fetch
+2020-10-14 21:45:57,848 WiRoc        DEBUG    LoraRadioDRF1268DS::GetRadioData() received data, got: 02058106d578001f158ea4
+2020-10-14 21:45:57,849 WiRoc        INFO     LoraRadioDRF1268DS::GetRadioData() received message!
+2020-10-14 21:45:57,851 WiRoc        DEBUG    Start::handleInput() Received ack, for repeater message number: 6 sicardno: 2037134
+2020-10-14 21:45:57,854 WiRoc        DEBUG    DatabaseHelper::repeater_message_acked(): Marking RepeaterMessageBoxData message as acked
+2020-10-14 21:45:57,859 WiRoc.Output DEBUG    SendLoraAdapter::AddSuccessWithoutRepeaterBit() Add success without repeater bit, queue length: 5
+2020-10-14 21:46:00,607 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:46:00,779 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:46:00,795 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:46:11,973 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:46:12,990 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:46:13,022 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:46:16,545 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:46:16.545697
+2020-10-14 21:46:18,609 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:46:18,781 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:46:18,797 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:46:25,190 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:46:25,361 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:46:25,377 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:46:27,601 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:46:27.601187
+2020-10-14 21:46:31,747 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:46:32,008 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:46:32,024 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:46:38,314 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:46:38,525 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:46:38,555 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:46:38,747 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:46:38.747048
+2020-10-14 21:46:44,944 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:46:45,921 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:46:45,938 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:46:56,324 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:46:56,520 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:46:56,538 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:47:00,889 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:47:00.888965
+2020-10-14 21:47:02,932 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:47:03,103 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:47:03,119 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:47:09,524 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:47:09,696 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:47:09,712 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:47:11,953 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:47:11.953479
+2020-10-14 21:47:16,068 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:47:17,075 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:47:17,090 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:47:22,658 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:47:22,830 WiRoc        DEBUG    Battery::GetBatteryPercent
+2020-10-14 21:47:22,846 WiRoc.Display DEBUG    OledNormal::DrawOledBattery percent: 100 prev battery: 100 batteryWidth: 19 prev batteryWidth: 19
+2020-10-14 21:47:23,038 WiRoc        DEBUG    Start::updateWebserverIPBackground 2020-10-14 21:47:23.037929
+2020-10-14 21:47:29,234 WiRoc        DEBUG    HardwareAbstraction::GetIsShortKeyPress
+2020-10-14 21:47:29,253 WiRoc        DEBUG    HardwareAbstraction::ClearShortKeyPress
+2020-10-14 21:47:29,293 WiRoc.Display DEBUG    OledStartup::Draw sirapTCPEnabled changed
+2020-10-14 21:47:29,295 WiRoc.Display DEBUG    OledStartup::Draw sendSerialActive changed
+2020-10-14 21:47:29,297 WiRoc.Display DEBUG    OledStartup::Draw not serial and not sirap

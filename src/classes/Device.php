@@ -38,6 +38,7 @@ class Device
     public $wirocPythonVersion;
     public $wirocBLEAPIVersion;
     public $reportTime;
+    public $connectedToInternetTime;
 	public $updateTime;
     public $createdTime;
 }
@@ -59,6 +60,7 @@ class Device
  * 			 @SWG\Property(property="wirocPythonVersion", type="string"),
  * 			 @SWG\Property(property="wirocBLEAPIVersion", type="string"),
  * 			 @SWG\Property(property="reportTime", format="date-time", type="string"),
+ * 			 @SWG\Property(property="connectedToInternetTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="updateTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="createdTime", format="date-time", type="string")
  *       )

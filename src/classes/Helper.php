@@ -124,6 +124,15 @@ class Helper
 		$stmt = $this->db->prepare("UPDATE $tableName SET $set `updateTime` = NOW() WHERE id = :id");
 		$stmt->execute($values);
 	}
+	
+	public function UpdateByBTAddress($objectName, $objectArray, $tableName, $btAddress) {
+		$setAndValues = $this->GetSetAndValues($objectName, $objectArray);
+		$set = $setAndValues["set"];
+		$values = $setAndValues["values"];
+		$values['btAddress'] = $btAddress;
+		$stmt = $this->db->prepare("UPDATE $tableName SET $set `updateTime` = NOW() WHERE BTAddress = :btAddress");
+		$stmt->execute($values);
+	}
 
 	
 	public function RunSql($sql, $values) {
@@ -146,7 +155,7 @@ class Helper
 		
 		$sql = 'CREATE TABLE IF NOT EXISTS Devices (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), headBTAddress varchar(50), description varchar(255), 
 				name varchar(50), nameUpdateTime datetime, relayPathNo int, connectedToUser boolean, batteryIsLow boolean, batteryIsLowTime datetime, 
-				wirocPythonVersion varchar(20), wirocBLEAPIVersion varchar(20), reportTime datetime, updateTime datetime, createdTime datetime, PRIMARY KEY (id))';
+				wirocPythonVersion varchar(20), wirocBLEAPIVersion varchar(20), reportTime datetime, connectedToInternetTime datetime, updateTime datetime, createdTime datetime, PRIMARY KEY (id))';
 
 		$stmt = $this->db->query($sql);
 		$sql = 'CREATE TABLE IF NOT EXISTS DeviceStatuses (id int NOT NULL AUTO_INCREMENT, BTAddress nvarchar(50), batteryLevel int, siStationNumber int, updateTime datetime, createdTime datetime, PRIMARY KEY (id))';

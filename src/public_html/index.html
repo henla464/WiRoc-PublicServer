@@ -63,7 +63,7 @@
 						const devices = JSON.parse(data);
 						$.each(devices, function() {
 							
-							$('#WiRocDevices tbody').append('<tr><td>' + this.recentlyReported + '</td><td>internet</td><td>' + this.name + '</td><td>' + this.BTAddress + '</td><td>' + this.reportTime + '</td></tr>');
+							$('#WiRocDevices tbody').append('<tr><td>' + this.recentlyReported + '</td><td>' + this.connectedToInternet + '</td><td>' + this.name + '</td><td>' + this.BTAddress + '</td><td>' + this.reportTime + '</td></tr>');
 						});
 						
 					});

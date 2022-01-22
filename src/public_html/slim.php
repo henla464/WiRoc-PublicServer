@@ -364,11 +364,15 @@ $app->get('/api/v1/DevicesView', function ($request, $response) use ($app) {
 	$userId = 0; //$user->id;
 	$queryParams = $request->getQueryParams();
 	if ($queryParams['limitToUser'] == 'true') {
-		$sql = 'SELECT CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -5 MINUTE) THEN true ELSE false END recentlyReported, Devices.* FROM Devices JOIN UserDevices ON Devices.id = UserDevices.deviceId WHERE UserDevices.userId = :userId';
+		$sql = 'SELECT CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -5 MINUTE) THEN true ELSE false END recentlyReported, 
+		CASE WHEN Devices.connectedToInternetTime > DATE_ADD(SYSDATE(), INTERVAL -5 MINUTE) THEN true ELSE false END connectedToInternet, 
+		Devices.* FROM Devices JOIN UserDevices ON Devices.id = UserDevices.deviceId WHERE UserDevices.userId = :userId';
 		$response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, ['userId'=>$userId], $request)));
 		return $response;
 	} else {
-		$sql = 'SELECT CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -5 MINUTE) THEN true ELSE false END recentlyReported, Devices.*, CASE WHEN UserDevices.id IS NOT NULL THEN true ELSE false END AS connectedToUser FROM Devices LEFT JOIN UserDevices ON Devices.id = UserDevices.deviceId and UserDevices.userId = :userId';
+		$sql = 'SELECT CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -5 MINUTE) THEN true ELSE false END recentlyReported, 
+			CASE WHEN Devices.connectedToInternetTime > DATE_ADD(SYSDATE(), INTERVAL -5 MINUTE) THEN true ELSE false END connectedToInternet, 
+			Devices.*, CASE WHEN UserDevices.id IS NOT NULL THEN true ELSE false END AS connectedToUser FROM Devices LEFT JOIN UserDevices ON Devices.id = UserDevices.deviceId and UserDevices.userId = :userId';
 		$response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, ['userId'=>$userId], $request)));
 		return $response;
 	}
@@ -557,6 +561,53 @@ $app->post('/api/v1/Devices', function (Request $request, Response $response) {
     $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $objectArray['BTAddress']]);
 	return $response->withStatus(303)->withHeader('Location', $url);
 })->setName("postDevices");
+
+/**
+     * @SWG\Post(
+     *     path="/api/v1/Devices/{BTAddress}/SetConnectedToInternetTime",
+     *     description="Set the connectedToInternetTime property to sysdate",
+     *     operationId="postDeviceSetConnectedToInternetTime",
+     *     produces={"application/json"},
+     *     @SWG\Parameter(
+     *         description="BT Address of device to update",
+     *         in="path",
+     *         name="BTAddress",
+     *         required=true,
+     *         type="string"
+     *     ),
+     *     @SWG\Response(
+     *         response=200,
+     *         description="device response",
+     *         @SWG\Schema(
+     *             ref="#/definitions/Device"
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+$app->post('/api/v1/Devices/{BTAddress}/SetConnectedToInternetTime', function (Request $request, Response $response) {
+    $BTAddress = $request->getAttribute('BTAddress');
+    $cls = Device::class;
+    
+	$objectArray = [];
+	$objectArray['BTAddress'] = $BTAddress;
+	$sql = "UPDATE {$cls::$tableName} SET `connectedToInternetTime` = NOW(), `updateTime` = NOW() WHERE BTAddress = :BTAddress";
+    $this->get('helper')->RunSql($sql, $objectArray);
+  	
+    $routeContext = RouteContext::fromRequest($request);
+    $routeParser = $routeContext->getRouteParser();
+    $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $objectArray['BTAddress']]);
+	return $response->withStatus(303)->withHeader('Location', $url);
+})->setName("postDeviceSetConnectedToInternetTime");
 
 
 
@@ -749,6 +800,13 @@ $app->post('/api/v1/DeviceStatuses', function (Request $request, Response $respo
 	$cls = DeviceStatus::class;
     $id = $this->get('helper')->Insert($cls, $objectArray, $cls::$tableName);
     
+    $objectArray2 = [];
+	$objectArray2['BTAddress'] = $objectArray['BTAddress'];
+	$clsDevice = Device::class;
+	$sql = "UPDATE {$clsDevice::$tableName} SET `reportTime` = NOW(), `updateTime` = NOW() WHERE BTAddress = :BTAddress";
+    $this->get('helper')->RunSql($sql, $objectArray2);
+    
+   
     $routeContext = RouteContext::fromRequest($request);
     $routeParser = $routeContext->getRouteParser();
     $url = $routeParser->relativeUrlFor('getDeviceStatus', ['deviceStatusId' => $id]);

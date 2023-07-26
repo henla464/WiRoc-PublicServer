@@ -32,10 +32,10 @@ window.picnet.ui.filter = window.picnet.ui.filter || {};
             setup: function() {
                 var jqSelf = $(this);
                 var tableFilterObj = jqSelf.data('tableFilter');
-                //if (tableFilterObj === undefined || tableFilterObj === null) {
+                if (tableFilterObj === undefined || tableFilterObj === null) {
                     var tableFilterObj = new picnet.ui.filter.TableFilter(this, settings);
                     jqSelf.data('tableFilter', tableFilterObj);  
-                //}
+                }
                 return this;
             },
 

@@ -1,0 +1,42 @@
+<div class="modal fade" id="signup" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+        <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                        <h5 class="modal-title" id="modalTitle">Sign Up</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"/>
+                  </div>
+                  <div class="modal-body signup-form">
+                        <form id="signupForm">
+                                <p>Please fill in this form to create an account!</p>
+                                <div class="form-group">
+                                        <div class="input-group">
+                                                <span class="input-group-addon"><i class="fa fa-paper-plane"></i></span>
+                                                <input type="email" class="form-control" id="signUpEmailInput" name="email" placeholder="Email Address" required="required">
+                                        </div>
+                                </div>
+                                <div class="form-group">
+                                        <div class="input-group">
+                                                <span class="input-group-addon"><i class="fa fa-lock"></i></span>
+                                                <input type="password" class="form-control" name="password" placeholder="Password" pattern="^\S{4,}$" onchange="this.setCustomValidity(this.validity.patternMismatch ? 'Must have at least 5 characters' : ''); if(this.checkValidity()) form.confirmPassword.pattern = this.value.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&');" required="required">
+                                        </div>
+                                </div>
+                                <div class="form-group">
+                                        <div class="input-group">
+                                                <span class="input-group-addon">
+                                                        <i class="fa fa-lock"></i>
+                                                        <i class="fa fa-check"></i>
+                                                </span>
+                                                <input type="password" id="confirmPassword" class="form-control" name="confirm_password" pattern="^\S{4,}$" onchange="this.setCustomValidity(this.validity.patternMismatch ? 'Please enter the same Password as above' : '');" placeholder="Confirm Password" required="required">
+                                        </div>
+                                </div>
+                                <div class="alert alert-danger collapse" id="signUpEmailExistsAlert" role="alert">The email already exists in the database!</div>
+                                <div class="alert alert-danger collapse" id="signUpOtherExistsAlert" role="alert">The email already exists in the database!</div>
+                                <div class="form-group d-flex">
+                                        <button type="button" id="buttonSignUp" class="btn btn-primary btn-lg ms-auto">Sign Up</button>
+                                </div>
+
+                        </form>
+                  </div>
+                </div>
+        </div>
+</div>

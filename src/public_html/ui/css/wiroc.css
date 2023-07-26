@@ -1,0 +1,66 @@
+.signup-form form {
+	color: #999;
+}
+.signup-form .form-group {
+	margin-bottom: 20px;
+}
+.signup-form .input-group-addon {
+	width: 30px;
+}
+.signup-form input[type="checkbox"] {
+	margin-top: 2px;
+}   
+.signup-form .fa {
+	font-size: 21px;
+	margin-top: 10px;
+}
+.signup-form .fa-paper-plane {
+	font-size: 18px;
+}
+.signup-form .fa-check {
+	color: #fff;
+	left: 5px;
+	top: 10px;
+	font-size: 7px;
+	position: absolute;
+}
+
+
+.additem-form form {
+	color: #999;
+}
+.additem-form .form-group {
+	margin-bottom: 20px;
+}
+.additem-form .input-group-addon {
+	width: 30px;
+}
+.additem-form input[type="checkbox"] {
+	margin-top: 2px;
+}   
+.additem-form .fa {
+	font-size: 21px;
+	margin-top: 10px;
+}
+.additemform .fa-paper-plane {
+	font-size: 18px;
+}
+.additem-form .fa-check {
+	color: #fff;
+	left: 5px;
+	top: 10px;
+	font-size: 7px;
+	position: absolute;
+}
+
+
+.close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 1.25rem 1.25rem;
+}
+
+.bg-top {
+ background-color: darkgrey;
+}

@@ -1,0 +1,50 @@
+<div class="modal fade" id="additem" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+        <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                        <h5 class="modal-title" id="modalTitle">Add Upgrade script</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"/>
+                  </div>
+                  <div class="modal-body additem-form">
+                        <form id="addItemForm" class="needs-validation" novalidate>
+                                <p>Please fill in this form to add a release upgrade script!</p>
+                                <div class="form-group">
+                                        <div class="input-group">
+                                                <span class="input-group-addon"><i class="fa fa-pencil"></i></span>
+                                                <select class="form-select" id="releaseInput" aria-label="Select release" required>
+                                                        <option disabled selected value="">Select release</option>
+                                                </select>
+                                                <div class="invalid-feedback">
+                                                        Please select a release.
+                                                </div>
+                                        </div>
+                                </div>
+                                <div class="form-group">
+                                        <div class="input-group">
+                                                <span class="input-group-addon"><i class="fa fa-comment"></i></span>
+                                                <input type="text" class="form-control" id="scriptTextInput" name="scriptText" placeholder="Script text" required="required">
+                                                <div class="invalid-feedback">
+                                                        Please enter a script text.
+                                                </div>
+                                        </div>
+                                </div>
+                                <div class="form-group">
+                                        <div class="input-group">
+                                                <span class="input-group-addon"><i class="fa fa-comment"></i></span>
+                                                <input type="text" class="form-control" id="scriptNoteInput" name="scriptNote" placeholder="Script Note" required="required">
+                                                <div class="invalid-feedback">
+                                                        Please enter a script note.
+                                                </div>
+                                        </div>
+                                </div>
+                                <div class="alert alert-danger collapse" id="errorAlert" role="alert">Could not save, error while saving to database</div>
+                                
+                                <div class="form-group d-flex">
+                                        <button type="button" id="buttonAddItem" class="submit btn btn-primary btn-lg ms-auto">Add Script</button>
+                                </div>
+
+                        </form>
+                  </div>
+                </div>
+        </div>
+</div>

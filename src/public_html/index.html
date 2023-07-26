@@ -9,85 +9,135 @@
 	<link href="libs/TableSorter/css/theme.bootstrap_4.min.css" rel="stylesheet" crossorigin="anonymous">
 
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link href="libs/bootstrap-5.0.2-dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="ui/css/wiroc.css" />
+    
     <title>WiRoc Monitor</title>
   </head>
   <body>
-	<div id="nav-placeholder"></div>
-	<h1>WiRoc Devices</h1>
-
-	<div class="table-responsive">
-		<table class="table table-striped table-hover table-sm" id="WiRocDevices">
-		  <caption>List of WiRoc devices, sorted by Last contact</caption>
-		  <thead>
-			<tr>
-			  <th scope="col">Alive</th>
-			  <th scope="col">Internet</th>
-			  <th scope="col">Name</th>
-			  <th scope="col">BT Address</th>
-			  <th scope="col">Last contact</th>
-			</tr>
-		  </thead>
-		  <tbody>
-		  </tbody>
-		</table>
+        <div id="accountCreatedAlert" class="alert alert-success alert-dismissible collapse" style="margin-bottom:0;" role="alert">
+	  <strong>The user account was created, please log in</strong>
+	  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 	</div>
-    <!-- Optional JavaScript; choose one of the two! -->
-	<script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
-    <!-- Option 1: Bootstrap Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
-    <script src="libs/TableFilter/TableFilter.js" type="text/javascript"></script>
-    <script src="libs/TableSorter/js/jquery.tablesorter.min.js" type="text/javascript"></script>
-    <script src="libs/TableSorter/js/jquery.tablesorter.widgets.min.js" type="text/javascript"></script>
+	<div id="nav-placeholder"></div>
+        <div class="container-fluid">
+                <h1>WiRoc Devices</h1>
 
-    <!-- Option 2: Separate Popper and Bootstrap JS -->
-    <!--
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js" integrity="sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" crossorigin="anonymous"></script>
-    -->
-    <script>
-		$(document).ready(function() {
-			$(function(){
-			  $("#nav-placeholder").load("navigation.html", function() {
-				console.log("adfs");
-				$.each($('.navbar').find('.nav-link'), function() {
-					console.log($(this).attr('href'));
-					console.log(window.location.pathname);
-					$(this).toggleClass('active', 
-						window.location.pathname.indexOf($(this).attr('href')) > -1);
-					});
-				  
-					$.ajax({
-						url: "/api/v1/DevicesView?sort=dfgh&limit=100&limitToUser=false"
-					}).then(function(data) {
-						const devices = JSON.parse(data);
-						$.each(devices, function() {
-							
-							$('#WiRocDevices tbody').append('<tr><td>' + this.recentlyReported + '</td><td>' + this.connectedToInternet + '</td><td>' + this.name + '</td><td>' + this.BTAddress + '</td><td>' + this.reportTime + '</td></tr>');
-						});
-						
-					});
-				  
-			  });
-			});
-		
-			$("#WiRocDevices").tablesorter({ theme: 'bootstrap'});
-			
-			var tooltip = 'Quotes (\") match phrases. (not) excludes a match from the results. (or) can be used to do Or searches. I.e. [red or blue] will match either red or blue. Numeric values support >=, >, <=, <, = and != operators.';
-			// Initialise Plugin
-			var optionsbasic = {
-			columnFilters: [   
-				{ columnName: 'Alive', inputType: 'None'},
-				{ columnName: 'Internet', inputType: 'None'},
-				{ columnName: 'Name', inputType: 'text', toolTipMessage: tooltip},
-				{ columnName: 'BT Address', inputType: 'text', toolTipMessage: tooltip},
-				{ columnName: 'Last contact', inputType: 'text', toolTipMessage: tooltip}
-			]
-			};
+                <div class="table-responsive">
+                        <table class="table table-striped table-hover table-sm" id="WiRocDevices">
+                        <caption>List of WiRoc devices, sorted by Last contact</caption>
+                        <thead>
+                                <tr>
+                                <th scope="col">Alive</th>
+                                <th scope="col">Internet</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">BT Address</th>
+                                <th scope="col">Last contact</th>
+                                </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                        </table>
+                </div>
+                
+                <div id="signup-modal-placeholder"></div>
+                
+        <!-- Optional JavaScript; choose one of the two! -->
+                <script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+        <!-- Option 1: Bootstrap Bundle with Popper -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+        <script src="libs/TableFilter/TableFilter.js" type="text/javascript"></script>
+        <script src="libs/TableSorter/js/jquery.tablesorter.min.js" type="text/javascript"></script>
+        <script src="libs/TableSorter/js/jquery.tablesorter.widgets.min.js" type="text/javascript"></script>
 
-			$("#WiRocDevices").tableFilter(optionsbasic);
-	
-		});
-    </script>
+        <!-- Option 2: Separate Popper and Bootstrap JS -->
+        <!--
+        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js" integrity="sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" crossorigin="anonymous"></script>
+        -->
+        <script>
+                $(document).ready(function() {
+                $(function(){
+                        $("#signup-modal-placeholder").load("signupmodal.html", function() {
+                        $('#signup').on('shown.bs.modal', function () {
+                                $('#signUpEmailInput').trigger('focus');
+                        });
+
+                        var signUpForm = $('#signupForm');
+                        $('#buttonSignUp').click(function() {
+                        if (signUpForm[0].checkValidity()) {
+                                var email = $('#signUpEmailInput').val();
+                                var pw = $('#confirmPassword').val();
+                                var postUserData = JSON.stringify({
+                                                "email": email,
+                                                "password": pw
+                                        });
+                                $.ajax({
+                                        url: "/api/v1/User",
+                                        type: "POST",
+                                        data: postUserData,
+                                        dataType: "json"
+                                }).then(function(cmdResponse) {
+                                        if (cmdResponse.code == "0") {
+                                                $('#signUpEmailExistsAlert').addClass('collapse');
+                                                var signUpModalElement = document.querySelector('#signup');
+                                                var signUpModal = bootstrap.Modal.getOrCreateInstance(signUpModalElement);
+                                                signUpModal.hide();
+                                                $('#accountCreatedAlert').removeClass('collapse');
+                                                $('#loginUsername').val($('#signUpEmailInput').val());
+                                        } else if (cmdResponse.code == "1") {
+                                                $('#signUpEmailExistsAlert').removeClass('collapse');
+                                        } else {
+                                                $('#signUpOtherExistsAlert').text(cmdResponse.message);
+                                                $('#signUpOtherExistsAlert').removeClass('collapse');
+                                        }
+                                });
+                        } else {
+                                //Validate Form
+                                signUpForm[0].reportValidity();
+                        }
+                        });
+                });
+
+                $("#nav-placeholder").load("navigation.html", function() {
+                        console.log("adfs");
+                        $.each($('.navbar').find('.nav-link'), function() {
+                        console.log($(this).attr('href'));
+                        console.log(window.location.pathname);
+                        $(this).toggleClass('active', 
+                                window.location.pathname.indexOf($(this).attr('href')) > -1);
+                        });
+
+                        $.ajax({
+                                url: "/api/v1/DevicesView?sort=dfgh&limit=100&limitToUser=false"
+                        }).then(function(data) {
+                                const devices = JSON.parse(data);
+                                $.each(devices, function() {
+                                        $('#WiRocDevices tbody').append('<tr><td>' + this.recentlyReported + '</td><td>' + this.connectedToInternet + '</td><td><a href="device.html?devicebt=' + this.BTAddress + '">' + this.name + '</a></td><td>' + this.BTAddress + '</td><td>' + this.reportTime + '</td></tr>');
+                                });
+
+                                $("#WiRocDevices").tablesorter({ theme: 'bootstrap'});
+
+                                var tooltip = 'Quotes (\") match phrases. (not) excludes a match from the results. (or) can be used to do Or searches. I.e. [red or blue] will match either red or blue. Numeric values support >=, >, <=, <, = and != operators.';
+                                // Initialise Plugin
+                                var optionsbasic = {
+                                        columnFilters: [   
+                                                { columnName: 'Alive', inputType: 'None'},
+                                                { columnName: 'Internet', inputType: 'None'},
+                                                { columnName: 'Name', inputType: 'text', toolTipMessage: tooltip},
+                                                { columnName: 'BT Address', inputType: 'text', toolTipMessage: tooltip},
+                                                { columnName: 'Last contact', inputType: 'text', toolTipMessage: tooltip}
+                                        ],
+                                        enableCookies: false
+                                };
+
+                                $("#WiRocDevices").tableFilter(optionsbasic);
+                        });
+                        });
+                });
+                });
+                </script>
+        </div>
   </body>
 </html>

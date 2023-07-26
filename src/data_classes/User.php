@@ -2,7 +2,7 @@
 use Swagger\Annotations as SWG;
 
 /**
- * @SWG\Definition(definition="NewUser", type="object", required={"oauthProvider", "oauthUserId", "email"})
+ * @SWG\Definition(definition="NewUser", type="object", required={"email", "hashedPassword"})
  */
 class User
 {
@@ -10,21 +10,17 @@ class User
 	
     public $id;
     /**
-     * @SWG\Property()
-     * @var string
-     */
-    public $oauthProvider;
-    /**
-     * @var string
-     * @SWG\Property()
-     */
-    public $oauthUserId;
-    /**
      * @var string
      * @SWG\Property()
      */
     public $email;
+    /**
+     * @var string
+     * @SWG\Property()
+     */
+    public $hashedPassword;
     
+    public $isAdmin;
 	public $updateTime;
     public $createdTime;
 }
@@ -38,6 +34,7 @@ class User
  *       @SWG\Schema(
  *           required={"id"},
  *           @SWG\Property(property="id", format="int64", type="integer"),
+ *           @SWG\Property(property="isAdmin", type="boolean"),
  * 			 @SWG\Property(property="updateTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="createdTime", format="date-time", type="string")
  *       )

@@ -1,0 +1,90 @@
+<div class="modal fade" id="additem" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+        <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                        <h5 class="modal-title" id="addItemTitle">Add release</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"/>
+                  </div>
+                  <div class="modal-body additem-form">
+                        <form id="addItemForm" class="needs-validation" novalidate>
+                                <p id="addItemDescription">Please fill in this form to add a release!</p>
+                                <div class="form-group">
+                                        <div class="input-group">
+                                                <span class="input-group-addon"><i class="fa fa-pencil"></i></span>
+                                                <input type="text" class="form-control" id="releaseNameInput" name="Release Name" placeholder="Release Name" required="required">
+                                                <div class="invalid-feedback">
+                                                        Please enter the release version from GitHub.
+                                                </div>
+                                        </div>
+                                </div>
+                                <div class="form-group">
+                                        <div class="input-group">
+                                                <span class="input-group-addon"><i class="fa fa-comment"></i></span>
+                                                <input type="text" class="form-control" id="releaseNoteInput" name="releaseNote" placeholder="Release Note" required="required">
+                                                <div class="invalid-feedback">
+                                                        Please enter a release note.
+                                                </div>
+                                        </div>
+                                </div>
+                                <div class="form-group">
+                                        <div class="input-group">
+                                                <span class="input-group-addon"><i class="fa fa-hashtag"></i></span>
+                                                <input type="number" class="form-control" min="1" id="minHWVersionInput" name="minHWVersion" placeholder="Minimum HW Version" required="required">
+                                                <div class="invalid-feedback">
+                                                        Please a positive integer.
+                                                </div>
+                                         </div>
+                                </div>
+                                <div class="form-group">
+                                        <div class="input-group">
+                                                <span class="input-group-addon"><i class="fa fa-hashtag"></i></span>
+                                                <input type="number" class="form-control" min="1" id="minHWRevisionInput" id="minHWRevisionInput" name="minHWRevision" placeholder="Minimum HW Revision" required="required">
+                                                <div class="invalid-feedback">
+                                                        Please a positive integer.
+                                                </div>
+                                        </div>
+                                </div>
+                                <div class="form-group">
+                                        <div class="input-group">
+                                                <span class="input-group-addon"><i class="fa fa-hashtag"></i></span>
+                                                <input type="number" class="form-control" min="1" id="maxHWVersionInput" name="maxHWVersion" placeholder="Maximum HW Version" required="required">
+                                                <div class="invalid-feedback">
+                                                        Please a positive integer.
+                                                </div>
+                                        </div>
+                                </div>
+                                <div class="form-group">
+                                        <div class="input-group">
+                                                <span class="input-group-addon"><i class="fa fa-hashtag"></i></span>
+                                                <input type="number" class="form-control" min="1" id="maxHWRevisionInput" name="maxHWRevision" placeholder="Maximum HW Revision" required="required">
+                                                <div class="invalid-feedback">
+                                                        Please a positive integer.
+                                                </div>
+                                        </div>
+                                </div>
+                                <div class="form-group">
+                                        <div class="input-group">
+                                                <span class="input-group-addon"><i class="fa fa-server"></i></span>
+                                                <select class="form-select" id="releaseStatus" aria-label="Select release status" required>
+                                                        <option disabled selected value="">Select release status</option>
+                                                        <option value="1">Development release</option>
+                                                        <option value="2">Test release</option>
+                                                        <option value="3">Beta release</option>
+                                                        <option value="4">Production release</option>
+                                                </select>
+                                                <div class="invalid-feedback">
+                                                        Please select a release status.
+                                                </div>
+                                        </div>
+                                </div>
+                                <div class="alert alert-danger collapse" id="errorAlert" role="alert">Could not save, error while saving to database</div>
+                                
+                                <div class="form-group d-flex">
+                                        <button type="button" id="buttonAddItem" class="submit btn btn-primary btn-lg ms-auto">Add release</button>
+                                </div>
+
+                        </form>
+                  </div>
+                </div>
+        </div>
+</div>

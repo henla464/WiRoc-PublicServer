@@ -1,0 +1,31 @@
+<div class="modal fade" id="additem" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+        <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                        <h5 class="modal-title" id="modalTitle">Add competition</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"/>
+                  </div>
+                  <div class="modal-body additem-form">
+                        <form id="addItemForm" class="needs-validation" novalidate>
+                                <p>Please fill in this form to add a competition!</p>
+                                <div class="form-group">
+                                        <div class="input-group">
+                                                <span class="input-group-addon"><i class="fa fa-pencil"></i></span>
+                                                <input type="text" class="form-control" id="competitionNameInput" name="CompetitionName" placeholder="Competition Name" required="required">
+                                                <div class="invalid-feedback">
+                                                        Please enter the competition name.
+                                                </div>
+                                        </div>
+                                </div>
+                                
+                                <div class="alert alert-danger collapse" id="errorAlert" role="alert">Could not save, error while saving to database</div>
+                                
+                                <div class="form-group d-flex">
+                                        <button type="button" id="buttonAddItem" class="submit btn btn-primary btn-lg ms-auto">Add competition</button>
+                                </div>
+
+                        </form>
+                  </div>
+                </div>
+        </div>
+</div>

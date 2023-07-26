@@ -32,7 +32,7 @@ class UserDevice
  *       @SWG\Schema(
  *           required={"id"},
  *           @SWG\Property(property="id", format="int64", type="integer"),
-  * 			 @SWG\Property(property="createdTime", format="date-time", type="string")
+ * 			 @SWG\Property(property="createdTime", format="date-time", type="string")
  *       )
  *   }
  * )

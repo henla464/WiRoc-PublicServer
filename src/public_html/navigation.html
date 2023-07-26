@@ -1,6 +1,24 @@
-<nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top">
+<div class="alert alert-danger collapse" id="logInErrorAlert" role="alert">
+	<strong>Could not login</strong>
+	<button type="button" class="btn-close close" aria-label="Close"></button>
+</div>
+<div class="alert alert-danger collapse" id="logOutErrorAlert" role="alert">
+	<strong>Could not log out</strong>
+	<button type="button" class="btn-close close" aria-label="Close"></button>
+</div>
+<div id="accountCreatedAlert" class="alert alert-success alert-dismissible collapse" style="margin-bottom:0;" role="alert">
+	<strong>The user account was created, please log in</strong>
+	<button type="button" class="btn-close close" aria-label="Close"></button>
+</div>
+<div id="logInAlert" class="alert alert-success alert-dismissible collapse" style="margin-bottom:0;" role="alert">
+		<strong>Logged in</strong>
+		<button type="button" class="btn-close close" aria-label="Close"></button>
+</div>
+
+
+<nav class="navbar navbar-expand-lg navbar-light bg-top sticky-top">
   <div class="container-fluid">
-	<a class="navbar-brand" href="#"><img src="res/logo.png" height="50" alt=""><span class="h1" style="vertical-align:middle"> Monitor</span></a>
+	<a class="navbar-brand" href="#"><img src="res/logotransparent.png" height="50" alt=""><span class="h1" style="vertical-align:middle"> Monitor</span></a>
 	<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
 	  <span class="navbar-toggler-icon"></span>
 	</button>
@@ -14,29 +32,173 @@
 		</li>
 	  </ul>
 	  <form class="d-flex navbar-nav">
-		<div class="container-fluid">
-			  <div class="row">
-				<div class="col-5 ml-auto">
-					<input class="form-control me-2" type="search" placeholder="Username" aria-label="Username">
-				</div><div class="col-5">
-					<input class="form-control me-2" type="password" placeholder="Password" aria-label="Password">
-				</div><div class="col-2">
-					<button class="btn btn-outline-success" type="submit">Log&nbsp;in</button>
-				</div>
-			  </div>
-			  <div class="row">
-				<div class="col-5">
-					<a class="nav-link small" href="create_account.html">Create account</a>
-				</div>
-				<div class="col-5">
-					<a class="nav-link small" href="forgot_password.html">Forgot password</a>
-				</div>
-				<div class="col-2"></div>
-			  </div>
-			
+		<div class="container-fluid" id="loginDiv" style="display:none">
+		  <div class="row">
+			<div class="col-5 ml-auto">
+				<input class="form-control me-2" type="email" id="loginUsername" placeholder="Username" aria-label="Username">
+			</div><div class="col-5">
+				<input class="form-control me-2" type="password" id="loginPassword" placeholder="Password" aria-label="Password">
+			</div><div class="col-2">
+				<button class="btn btn-outline-success" id="btnlogin" type="button">Log&nbsp;in</button>
+			</div>
+		  </div>
+		  <div class="row">
+			<div class="col-5">
+				<button type="button" class="btn btn-link small" style="padding-left:0px;text-decoration:none;color:rgba(0,0,0,.55)" data-bs-toggle="modal" data-bs-target="#signup">Create account</button>
+			</div>
+			<div class="col-5">
+				<button type="button" class="btn btn-link small" style="padding-left:0px;text-decoration:none;color:rgba(0,0,0,.55)" data-bs-toggle="modal" data-bs-target="#forgotpw">Forgot password</button>
+			</div>
+		  </div>
 		</div>
+		<div class="container-fluid" id="loggedInDiv" style="display:none">
+			<div class="row">
+			  <div class="col-5 ml-auto">
+				<button type="button" id="btnLogout"class="btn btn-link small" style="padding-left:0px;text-decoration:none;color:rgba(0,0,0,.55)">Log&nbsp;out</button>
+		      </div><div class="col-5">
+			  </div><div class="col-2">
+			  </div>
+			</div>
+			<div class="row">
+			  <div class="col-5">
+			  </div>
+			  <div class="col-5">
+			  </div>
+			</div>
+		  </div>
 	  </form>
 	</div>
 	
   </div>
 </nav>
+
+
+<script>
+  	$(function(){
+		$("#signup-modal-placeholder").load("signupmodal.html", function() {
+				$('#signup').on('shown.bs.modal', function () {
+						$('#signUpEmailInput').trigger('focus');
+				});
+
+				var signUpForm = $('#signupForm');
+				$('#buttonSignUp').click(function() {
+						if (signUpForm[0].checkValidity()) {
+								var email = $('#signUpEmailInput').val();
+								var pw = $('#confirmPassword').val();
+								var postUserData = JSON.stringify({
+												"email": email,
+												"password": pw
+										});
+								$.ajax({
+										url: "/api/v1/User",
+										type: "POST",
+										data: postUserData,
+										dataType: "json"
+								}).then(function(cmdResponse) {
+										if (cmdResponse.code == "0") {
+												$('#signUpEmailExistsAlert').addClass('collapse');
+												var signUpModalElement = document.querySelector('#signup');
+												var signUpModal = bootstrap.Modal.getOrCreateInstance(signUpModalElement);
+												signUpModal.hide();
+												$('#accountCreatedAlert').removeClass('collapse');
+												$('#loginUsername').val($('#signUpEmailInput').val());
+										} else if (cmdResponse.code == "1") {
+												$('#signUpEmailExistsAlert').removeClass('collapse');
+										} else {
+												$('#signUpOtherExistsAlert').text(cmdResponse.message);
+												$('#signUpOtherExistsAlert').removeClass('collapse');
+										}
+								});
+						} else {
+								//Validate Form
+								signUpForm[0].reportValidity();
+						}
+				});
+
+
+				$.ajax({
+						url: "/api/v1/login",
+						type: "GET",
+						dataType: "json"
+				}).then(function(cmdResponse) {
+						if (cmdResponse.code == "0") {
+							$('#loginDiv').hide();
+							$('#loggedInDiv').show();
+							
+						} else {
+							$('#loginDiv').show();
+							$('#loggedInDiv').hide();
+						}
+				}, function(fail) {
+					$('#loginDiv').show();
+					$('#loggedInDiv').hide();
+				});
+
+				
+
+				$.each($('.navbar').find('.nav-link'), function() {
+						console.log($(this).attr('href'));
+						console.log(window.location.pathname);
+						$(this).toggleClass('active', 
+								window.location.pathname.indexOf($(this).attr('href')) > -1);
+				});
+
+
+				
+				$('#btnLogout').click(function() {
+					$.ajax({
+							url: "/api/v1/logout",
+							method: "GET",
+							dataType: "json"
+					}).then(function(cmdResponse) {
+							if (cmdResponse.code == "0") {
+									$('#loginDiv').show();
+									$('#loggedInDiv').hide();
+							} else {
+									$('#logOutErrorAlert').text(cmdResponse.message);
+									$('#logOutErrorAlert').removeClass('collapse');
+							}
+					}, function(fail) {
+							var respText = fail.responseText;
+							//var respTextObj = JSON.parse(respText);
+							$('#logOutErrorAlert>strong').text(respText);
+							$('#logOutErrorAlert').removeClass('collapse');
+					});
+				});
+
+				$('#btnlogin').click(function() {
+						var email = $('#loginUsername').val();
+						var pw = $('#loginPassword').val();
+						var postLoginData = JSON.stringify({
+								"email": email,
+								"password": pw
+						});
+						$.ajax({
+								url: "/api/v1/login",
+								method: "POST",
+								data: postLoginData,
+								dataType: "json"
+						}).then(function(cmdResponse) {
+								if (cmdResponse.code == "0") {
+										$('#errorAlert').addClass('collapse');
+										$('#logInAlert').removeClass('collapse');
+										$('#loginDiv').hide();
+										$('#loggedInDiv').show();
+								} else if (cmdResponse.code == "1") {
+										$('#logInErrorAlert').removeClass('collapse');
+								} else {
+										$('#logInErrorAlert').text(cmdResponse.message);
+										$('#logInErrorAlert').removeClass('collapse');
+								}
+						}, function(fail) {
+								var respText = fail.responseText;
+								//var respTextObj = JSON.parse(respText);
+								$('#logInErrorAlert>strong').text(respText);
+								$('#logInErrorAlert').removeClass('collapse');
+							
+						});
+				});
+		});
+  	});
+
+</script>

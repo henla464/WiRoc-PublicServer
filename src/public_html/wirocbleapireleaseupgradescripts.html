@@ -115,7 +115,11 @@
                                 jqTable.tableFilter(optionsbasic);
                                 jqTable.tableFilter('reload');
                         });
+                }
 
+
+
+                $(document).ready(function() {
                         $.ajax({
                                 url: "/api/v1/" + releaseTableName + "?sort=CreatedDate&limit=100",
                                 dataType: "json"
@@ -125,11 +129,7 @@
                                         $('#releaseInput').append('<option value="' + this.id + '">' + this.releaseName + '</option>');
                                 });
                         });
-                }
-
-                $(document).ready(function() {
-                $(function(){
-
+                                
                         $("#addnewitem-modal-placeholder").load(modalHtmlFileName, function() {
                                 $('#btnAddItem').click(function() {
                                         $('#addItemDescription').text('Please fill in the form to add a new script');
@@ -255,7 +255,6 @@
                                 $('#confirm-delete').data('id', itemId);
                         });
 
-                });
                 });
         </script>
     </div>

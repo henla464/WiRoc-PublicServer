@@ -86,7 +86,7 @@
                 function loadTable() {
                         var jqTable = $("#" + tableName);
                         var jqTableTBody = $("#" + tableName + " tbody");
-                $.ajax({
+                        $.ajax({
                                 url: "/api/v1/" + tableName + "?sort=CreatedDate&limit=100",
                                 dataType: "json"
                         }).then(function(items) {
@@ -115,7 +115,10 @@
                                 jqTable.tableFilter(optionsbasic);
                                 jqTable.tableFilter('reload');
                         });
+                }
 
+                $(document).ready(function() {
+       
                         $.ajax({
                                 url: "/api/v1/" + releaseTableName + "?sort=CreatedDate&limit=100",
                                 dataType: "json"
@@ -125,10 +128,6 @@
                                         $('#releaseInput').append('<option value="' + this.id + '">' + this.releaseName + '</option>');
                                 });
                         });
-                }
-
-                $(document).ready(function() {
-                $(function(){
 
                         $("#addnewitem-modal-placeholder").load(modalHtmlFileName, function() {
                                 $('#btnAddItem').click(function() {
@@ -250,9 +249,6 @@
                                 var itemId = $(e.relatedTarget).data('id');
                                 $('#confirm-delete').data('id', itemId);
                         });
-
-
-                });
                 });
         </script>
      </div>

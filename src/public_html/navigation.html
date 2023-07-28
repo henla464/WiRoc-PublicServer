@@ -74,6 +74,43 @@
 
 
 <script>
+	var isLoggedIn = null;
+	var isAdmin = null;
+
+	function checkLoggedIn(callback) {
+		$.ajax({
+				url: "/api/v1/login",
+				type: "GET",
+				dataType: "json"
+		}).then(function(loginResponse) {
+				callback(loginResponse);
+		}, function(fail) {
+			loginResponse = { code: 1, message:"Error, Not Logged In", isLoggedIn:false, isAdmin:false};
+			callback(loginResponse);
+		});
+	}
+
+	function getIsLoggedIn(callback) {
+		
+		if (isLoggedIn === null)
+		{
+			checkLoggedIn(function(loginResponse) {
+				isLoggedIn = loginResponse.isLoggedIn;
+				callback(isLoggedIn);
+			});
+		}
+	}
+
+	function getIsAdmin(callback) {
+		if (isAdmin === null)
+		{
+			checkLoggedIn(function(loginResponse) {
+				isAdmin = loginResponse.isAdmin;
+				callback(isAdmin);
+			});
+		}
+	}
+
   	$(function(){
 		$("#signup-modal-placeholder").load("signupmodal.html", function() {
 				$('#signup').on('shown.bs.modal', function () {
@@ -116,12 +153,28 @@
 				});
 
 
-				$.ajax({
+				checkLoggedIn(function(loginResponse) {
+					isLoggedIn = loginResponse.isLoggedIn;
+					isAdmin = loginResponse.isAdmin;
+					
+					if (isLoggedIn) {
+						$('#loginDiv').hide();
+						$('#loggedInDiv').show();
+						
+					} else {
+						$('#loginDiv').show();
+						$('#loggedInDiv').hide();
+					}
+				});
+
+				/*$.ajax({
 						url: "/api/v1/login",
 						type: "GET",
 						dataType: "json"
-				}).then(function(cmdResponse) {
-						if (cmdResponse.code == "0") {
+				}).then(function(loginResponse) {
+						isLoggedIn = loginResponse.isLoggedIn;
+						isAdmin = loginResponse.isAdmin;
+						if (isLoggedIn) {
 							$('#loginDiv').hide();
 							$('#loggedInDiv').show();
 							
@@ -132,7 +185,7 @@
 				}, function(fail) {
 					$('#loginDiv').show();
 					$('#loggedInDiv').hide();
-				});
+				});*/
 
 				
 
@@ -152,6 +205,7 @@
 							dataType: "json"
 					}).then(function(cmdResponse) {
 							if (cmdResponse.code == "0") {
+
 									$('#loginDiv').show();
 									$('#loggedInDiv').hide();
 							} else {

@@ -64,6 +64,15 @@ class Helper
 		}
 		return '';
 	}
+
+	public function getCreatedTimeLimit($request) {
+		$limitSeconds = $request->getQueryParams()['limitToCreatedTimeWithinSeconds'] ?? '';
+		if (trim($limitSeconds) != '' && ctype_digit($limitSeconds)) {
+			return "createdTime >= NOW() - INTERVAL " . $limitSeconds . " SECOND";
+		}
+		return '';
+	}
+	
 	
     
     public function GetAll($objectName, $tableName, $request) {
@@ -152,10 +161,35 @@ class Helper
 	}
 	
 	public function CreateTables() {
-		
+		//$sql = 'DROP TABLE Devices';
+		//$stmt = $this->db->query($sql);
+		//$sql = 'DROP TABLE DeviceStatuses';
+		//$stmt = $this->db->query($sql);
+		//$sql = 'DROP TABLE MessageStats';
+		//$stmt = $this->db->query($sql);
+		//$sql = 'DROP TABLE Users';
+		//$stmt = $this->db->query($sql);
+		//$sql = 'DROP TABLE UserDevices';
+		//$stmt = $this->db->query($sql);
+		//$sql = 'DROP TABLE ReleaseStatuses';
+		//$stmt = $this->db->query($sql);
+		//$sql = 'DROP TABLE WiRocPython2Releases';
+		//$stmt = $this->db->query($sql);
+		//$sql = 'DROP TABLE WiRocBLEAPIReleases';
+		//$stmt = $this->db->query($sql);
+		$sql = 'DROP TABLE WiRocBLEAPIReleaseUpgradeScripts';
+		$stmt = $this->db->query($sql);
+		$sql = 'DROP TABLE WiRocPython2ReleaseUpgradeScripts';
+		$stmt = $this->db->query($sql);
+		$sql = 'DROP TABLE Competitions';
+		$stmt = $this->db->query($sql);
+
+
 		$sql = 'CREATE TABLE IF NOT EXISTS Devices (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), headBTAddress varchar(50), description varchar(255), 
-				name varchar(50), nameUpdateTime datetime, relayPathNo int, connectedToUser boolean, batteryIsLow boolean, batteryIsLowTime datetime, 
-				wirocPythonVersion varchar(20), wirocBLEAPIVersion varchar(20), reportTime datetime, connectedToInternetTime datetime, updateTime datetime, createdTime datetime, PRIMARY KEY (id))';
+				name varchar(50), nameUpdateTime datetime, relayPathNo int, competitionId int, competitionIdSetByUserId int,
+				connectedToUser boolean, batteryIsLow boolean, batteryIsLowTime datetime, 
+				wirocPythonVersion varchar(20), wirocBLEAPIVersion varchar(20), reportTime datetime, connectedToInternetTime datetime, updateTime datetime, 
+				createdTime datetime, PRIMARY KEY (id))';
 
 		$stmt = $this->db->query($sql);
 		$sql = 'CREATE TABLE IF NOT EXISTS DeviceStatuses (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), batteryLevel int, siStationNumber int, updateTime datetime, createdTime datetime, PRIMARY KEY (id))';
@@ -163,8 +197,7 @@ class Helper
 		$sql = 'CREATE TABLE IF NOT EXISTS MessageStats (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), adapterInstance varchar(50), ';
 		$sql .= 'messageType varchar(50), status varchar(50), noOfMessages int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
-		#$sql = 'DROP TABLE WiRocPython2';
-		#$stmt = $this->db->query($sql);
+
 	
 		$sql = 'CREATE TABLE IF NOT EXISTS Users (id int NOT NULL AUTO_INCREMENT, email varchar(255) UNIQUE NOT NULL, hashedPassword varchar(255), createdTime datetime, updateTime datetime, isAdmin boolean, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);

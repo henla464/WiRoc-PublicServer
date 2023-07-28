@@ -6,7 +6,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-	<link href="libs/TableSorter/css/theme.bootstrap_4.min.css" rel="stylesheet" crossorigin="anonymous">
+	  <link href="libs/TableSorter/css/theme.bootstrap_4.min.css" rel="stylesheet" crossorigin="anonymous">
 
     <!-- Bootstrap CSS -->
     <link href="libs/bootstrap-5.0.2-dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
@@ -16,20 +16,37 @@
     <title>WiRoc Monitor</title>
   </head>
   <body>
-    <div id="accountCreatedAlert" class="alert alert-success alert-dismissible collapse" style="margin-bottom:0;" role="alert">
-	  <strong>The user account was created, please log in</strong>
-	  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-	</div>
-	<div id="nav-placeholder"></div>
-  <div class="container-fluid">
-    <h1 id="deviceName">WiRoc Device</h1>
-          Battery: [Battery is low! (datetime)] precentage (datetime) (graph link/popup)
-          Controls:
+    <div id="itemCreatedAlert" class="alert alert-success alert-dismissible collapse" style="margin-bottom:0;" role="alert">
+      <strong>The -- was created!</strong>
+      <button type="button" class="btn-close close" aria-label="Close"></button>
+    </div>
+    <div id="itemUpdatedAlert" class="alert alert-success alert-dismissible collapse" style="margin-bottom:0;" role="alert">
+          <strong>The device was added to competition!</strong>
+          <button type="button" class="btn-close close" aria-label="Close"></button>
+    </div>
 
-      <h2 id="deviceName">Number of messages received</h2>
+	  <div id="nav-placeholder"></div>
+    <div class="container-fluid gx-2">
+      <h1 id="deviceName">WiRoc Device</h1>
+      <h4 id="deviceBTAddress">()</h4>
+      Competition: <span id="competitionName"></span><button class="btn fa fa-pencil edititem" data-bs-toggle="modal" data-bs-target="#additem"></button>
+      <br />
+      Battery: <i class="fa fa-exclamation-triangle" style="display:none" id="batteryIsLowWarning"> Battery is LOW!</i><span id="batteryIsLowWarningTime"></span><span id="deviceBattery"></span>
+      <button class="btn fa fa-area-chart" data-bs-toggle="modal" data-bs-target="#batteryChartModal"></button>
+      <br />
+      Control numbers: <span id="deviceSIStationNumber"></span>
+      <br/>
+      
+      <br/>
+    </div>
+
+    <div class="d-flex flex-wrap">
+
+      <div class="container col-md-6 gx-2">
+      <h2>Number of messages received</h2>
       <div class="table-responsive">
       <table class="table table-striped table-hover table-sm" id="ReceivedMessagesAggregated">
-        <caption>Number received messages per type</caption>
+        <caption></caption>
         <thead>
         <tr>
           <th scope="col">Adapter instance</th>
@@ -40,62 +57,88 @@
         <tbody>
         </tbody>
       </table>
-    </div>
+      </div>
+      </div>
     
-    <h2 id="deviceName">Number of messages sent</h2>
-    <div class="table-responsive">
-      <table class="table table-striped table-hover table-sm" id="SentMessagesAggregated">
-        <caption>Number of messages sent per type</caption>
-        <thead>
-        <tr>
-          <th scope="col">Adapter instance</th>
-          <th scope="col">Message type</th>
-          <th scope="col">Number of messages</th>
-        </tr>
-        </thead>
-        <tbody>
-        </tbody>
-      </table>
-    </div>
-        
-    <h2 id="deviceName">Messages received</h2>
-    <div class="table-responsive">
-      <table class="table table-striped table-hover table-sm" id="ReceivedMessages">
-        <caption>Received messages, sorted by date/time descending</caption>
-        <thead>
-        <tr>
-          <th scope="col">Adapter instance</th>
-          <th scope="col">Message type</th>
-          <th scope="col">Date/time</th>
-        </tr>
-        </thead>
-        <tbody>
-        </tbody>
-      </table>
-    </div>
-          
-    <h2 id="deviceName">Messages sent</h2>
-    <div class="table-responsive">
-      <table class="table table-striped table-hover table-sm" id="SentMessages">
-        <caption>Sent messages, sorted by date/time descending</caption>
-        <thead>
-        <tr>
-          <th scope="col">Adapter instance</th>
-          <th scope="col">Message type</th>
-          <th scope="col">Date/time</th>
-        </tr>
-        </thead>
-        <tbody>
-        </tbody>
-      </table>
-    </div>
-    
-    <div id="signup-modal-placeholder"></div>
+      <div class="container col-md-6 gx-2">
+      <h2>Number of messages sent</h2>
+      <div class="table-responsive">
+        <table class="table table-striped table-hover table-sm" id="SentMessagesAggregated">
+          <caption></caption>
+          <thead>
+          <tr>
+            <th scope="col">Adapter instance</th>
+            <th scope="col">Message type</th>
+            <th scope="col">Number of messages</th>
+          </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+      </div>
 
+      <div class="container col-md-6 gx-2">
+      <h2>Messages received</h2>
+      <div class="table-responsive">
+        <table class="table table-striped table-hover table-sm" id="ReceivedMessages">
+          <caption></caption>
+          <thead>
+          <tr>
+            <th scope="col">Adapter instance</th>
+            <th scope="col">Message type</th>
+            <th scope="col">Date/time</th>
+          </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+      </div>
+         
+      <div class="container col-md-6 gx-2">
+      <h2>Messages sent</h2>
+      <div class="table-responsive">
+        <table class="table table-striped table-hover table-sm" id="SentMessages">
+          <caption></caption>
+          <thead>
+          <tr>
+            <th scope="col">Adapter instance</th>
+            <th scope="col">Message type</th>
+            <th scope="col">Date/time</th>
+          </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+      </div>
+
+      <div class="modal fade" id="batteryChartModal" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                  <div class="modal-header">
+                        <h5 class="modal-title" id="modalTitle">Battery chart</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"/>
+                  </div>
+                  <div class="modal-body">
+                      <div>
+                        <canvas id="batteryChart"></canvas>
+                      </div>     
+                      <div class="form-group d-flex">
+                              <button type="button" id="btnCloseChart" class="btn btn-primary btn-lg ms-auto" data-bs-dismiss="modal" >Close</button>
+                      </div>
+                  </div>
+                </div>
+          </div>
+      </div>
+
+      <div id="signup-modal-placeholder"></div>
+      <div id="addnewitem-modal-placeholder"></div>
     
     
       <!-- Optional JavaScript; choose one of the two! -->
-    <script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+      <script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
       <!-- Option 1: Bootstrap Bundle with Popper -->
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
       <script src="libs/TableFilter/TableFilter.js" type="text/javascript"></script>
@@ -107,6 +150,10 @@
       <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js" integrity="sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB" crossorigin="anonymous"></script>
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" crossorigin="anonymous"></script>
       -->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.3.2/chart.umd.js" integrity="sha512-KIq/d78rZMlPa/mMe2W/QkRgg+l0/GAAu4mGBacU0OQyPV/7EPoGQChDb269GigVoPQit5CqbNRFbgTjXHHrQg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!--    <script src="https://cdn.jsdelivr.net/npm/luxon@^2"></script>
+      <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1"></script>-->
+      <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
       <script>
           $.urlParam = function (name) {
               var results = new RegExp('[\?&]' + name + '=([^&#]*)')
@@ -114,121 +161,369 @@
 
               return (results !== null) ? results[1] || 0 : false;
           }
-          
-          $(document).ready(function() {
-              $(function(){
-                  $("#signup-modal-placeholder").load("signupmodal.html", function() {
-                      $('#signup').on('shown.bs.modal', function () {
-                          $('#signUpEmailInput').trigger('focus');
-                  });
 
-                  var signUpForm = $('#signupForm');
-                  $('#buttonSignUp').click(function() {
-                      if (signUpForm[0].checkValidity()) {
-                              var email = $('#signUpEmailInput').val();
-                              var pw = $('#confirmPassword').val();
-                              var postUserData = JSON.stringify({
-                                              "email": email,
-                                              "password": pw
-                                      });
-                              $.ajax({
-                                      url: "/api/v1/User",
-                                      type: "POST",
-                                      data: postUserData,
-                                      dataType: "json"
-                              }).then(function(cmdResponse) {
-                                      if (cmdResponse.code == "0") {
-                                              $('#signUpEmailExistsAlert').addClass('collapse');
-                                              var signUpModalElement = document.querySelector('#signup');
-                                              var signUpModal = bootstrap.Modal.getOrCreateInstance(signUpModalElement);
-                                              signUpModal.hide();
-                                              $('#accountCreatedAlert').removeClass('collapse');
-                                              $('#loginUsername').val($('#signUpEmailInput').val());
-                                      } else if (cmdResponse.code == "1") {
-                                              $('#signUpEmailExistsAlert').removeClass('collapse');
-                                      } else {
-                                              $('#signUpOtherExistsAlert').text(cmdResponse.message);
-                                              $('#signUpOtherExistsAlert').removeClass('collapse');
-                                      }
-                              });
-                      } else {
-                              //Validate Form
-                              signUpForm[0].reportValidity();
+          var btAddressOfDevice = $.urlParam('devicebt');
+          var modalHtmlFileName = "connecttocompetitionmodal.html";
+          var competitionTableName = "Competitions";
+          var tableName = "Devices";
+
+          function loadBatteryChart(latestStatuses)
+          {
+            // Battery chart
+            //let minCreateDate = Math.min.apply(null, latestStatuses.map(function (s) { return s.createdTime; }));
+            const minCreateDateStatusObj = latestStatuses.reduce(
+              (acc, loc) =>
+                acc.createdTime < loc.createdTime
+                  ? acc
+                  : loc
+            )
+            let minCreateDateTimeStr = minCreateDateStatusObj.createdTime;
+
+            const ctx = document.getElementById('batteryChart');            
+            let todayDateTime = new Date();
+            const yesterdayDateTime = new Date();
+            yesterdayDateTime.setDate(yesterdayDateTime.getDate() - 1);
+            yesterdayDateOnly = new Date(yesterdayDateTime.toDateString());
+            
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() - 1);
+            tomorrowDateOnly = new Date(tomorrow.toDateString());
+            
+            let todayDateOnly = new Date(todayDateTime.toDateString());
+            
+            var maxDateTime = new Date();
+            
+
+            var minDateTimeStr = "";
+            var minCreateDateTime = new Date(minCreateDateTimeStr)
+            if (yesterdayDateTime > minCreateDateTime) {
+              minDateTimeStr = yesterdayDateTime.toLocaleString('sv-SE');
+              maxDateTime.setHours(todayDateTime.getHours()+1);
+            } else {
+              minDateTimeStr = minCreateDateTimeStr;
+              maxDateTime = new Date(minCreateDateTimeStr);
+              console.log(maxDateTime.toLocaleString('sv-SE'));
+              maxDateTime.setDate(new Date(minCreateDateTimeStr).getDate()+1);
+            }
+            let maxDateTimeStr = maxDateTime.toLocaleString('sv-SE').slice(0,23);
+
+            console.log(minCreateDateTimeStr),
+            console.log(minDateTimeStr),
+            console.log(maxDateTimeStr);
+            console.log(yesterdayDateOnly),
+            console.log(todayDateOnly);
+            const data = {
+              labels: [yesterdayDateOnly, todayDateOnly, tomorrowDateOnly],
+              datasets: [
+                {
+                  label: '',
+                  data: latestStatuses,
+                  borderColor: '#00FF00',
+                  fill: false,
+                  cubicInterpolationMode: 'monotone',
+                  tension: 0.4
+                }
+              ]
+            };
+
+            const configBatteryChart = {
+              type: 'line',
+              data: data,
+              options: {
+                parsing: {
+                  xAxisKey: 'createdTime',
+                  yAxisKey: 'batteryLevel'
+                },
+                responsive: true,
+                plugins: {
+                  title: {
+                    display: true,
+                    text: 'Battery level'
+                  },
+                },
+                interaction: {
+                  intersect: false,
+                },
+                scales: {
+                  x: {
+                    display: true,
+                    title: {
+                      display: true,
+                      text: 'Time'
+                    },
+                    min: minDateTimeStr,
+                    max: maxDateTimeStr,
+                    type: 'time',
+                    time: {
+                      unit: 'hour',
+                      unitStepSize: 1,
+                      displayFormats: {
+                        hour: 'HH:mm'
                       }
-                  });
-              });
+                    },
+                    ticks: {
+                      stepSize: 1,
+                      major: {
+                        enabled: true
+                      },
+                      font: (context) => {
+                        const boldedTicks = context.tick && context.tick.major ? 'bold': '';
+                        return { weight: boldedTicks };
+                      }
+                    }
+                  },
+                  y: {
+                    display: true,
+                    title: {
+                      display: true,
+                      text: 'Percentage'
+                    },
+                    suggestedMin: 0,
+                    suggestedMax: 100
+                  }
+                }
+              },
+            };
 
-              $("#nav-placeholder").load("navigation.html", function() {
-                  console.log("adfs");
+            new Chart(ctx, configBatteryChart);
+          };
+
+          function loadCompetition(compId) {
+            $.ajax({
+              url: "/api/v1/" + competitionTableName + "/" + compId,
+              dataType: "json"
+            }).then(function(comp) {
+              $('#competitionName').text(comp.name);
+            });
+          }
+
+          function loadDeviceStatuses() {
+            $.ajax({
+              url: "/api/v1/Devices/" + btAddressOfDevice + "/DeviceStatuses?sort=createdTime desc&limitToCreatedTimeWithinSeconds=86400",
+              dataType: "json"
+            }).then(function(latestStatuses) {
+              if (latestStatuses.length > 0) {
+                $('#deviceBattery').text(latestStatuses[0].batteryLevel + "%");
+                const uniqueSIStationNumber = [...new Set(latestStatuses.map(stat => stat.siStationNumber))];
+                var uniqueSIStationNumberString = uniqueSIStationNumber.join(', ');
+                $('#deviceSIStationNumber').text(uniqueSIStationNumberString);
+
+                loadBatteryChart(latestStatuses);
+              }
+            });
+          }
+
+          function loadDevice() {
+            $.ajax({
+                url: "/api/v1/" + tableName + "/" + btAddressOfDevice,
+                dataType: "json"
+            }).then(function(device) {
+              $('#competitionInput').val(device.competitionId);
+              $('#deviceName').text(device.name);
+              $('#deviceBTAddress').text("(" + btAddressOfDevice + ")");
+              if (device.batteryIsLow == true) {
+                $('#batteryIsLowWarning').show();
+                $('batteryIsLowWarningTime').text('[' + device.batteryIsLowTime + ']');
+                $('batteryIsLowWarningTime').show();
+              } else {
+                $('#batteryIsLowWarning').hide();
+                $('batteryIsLowWarningTime').hide();
+              }
+              
+              loadCompetition(device.competitionId);
+              loadDeviceStatuses();
+            });
+          }
+          
+          function loadAggregated() {
+            $.ajax({
+                    url: "/api/v1/Devices/" + btAddressOfDevice +"/MessageStats?sort=adapterInstance,messageType&outputType=aggregated"
+            }).then(function(data) {
+                    const devices = JSON.parse(data);
+                    $.each(devices, function() {
+                        if (this.status == 'Received') {
+                            $('#ReceivedMessagesAggregated tbody').append('<tr><td>' + this.adapterInstance + '</td><td>' + this.messageType + '</td><td>' + this.noOfMessages + '</td></tr>');
+                        } else if (this.status == 'Sent') {
+                            $('#SentMessagesAggregated tbody').append('<tr><td>' + this.adapterInstance + '</td><td>' + this.messageType + '</td><td>' + this.noOfMessages + '</td></tr>');
+                        };
+                    });
+
+                    $("#ReceivedMessagesAggregated").tablesorter({ theme: 'bootstrap'});
+                    $("#SentMessagesAggregated").tablesorter({ theme: 'bootstrap'});
+
+                    var tooltip = 'Quotes (\") match phrases. (not) excludes a match from the results. (or) can be used to do Or searches. I.e. [red or blue] will match either red or blue. Numeric values support >=, >, <=, <, = and != operators.';
+                    // Initialise Plugin
+                    var optionsbasic = {
+                            columnFilters: [   
+                                    { columnName: 'Adapter instance', inputType: 'text'},
+                                    { columnName: 'Message type', inputType: 'text'},
+                                    { columnName: 'Number of messages', inputType: 'text'}
+                            ],
+                            enableCookies: false
+                    };
+
+                    $("#ReceivedMessagesAggregated").tableFilter(optionsbasic);
+                    $("#SentMessagesAggregated").tableFilter(optionsbasic);
+            });
+          }
+
+          function loadMessages() {
+            $.ajax({
+                url: "/api/v1/Devices/" + btAddressOfDevice +"/MessageStats?sort=createdTime desc&outputType=normal"
+            }).then(function(data) {
+                const devices = JSON.parse(data);
+                $.each(devices, function() {
+                    if (this.status == 'Received') {
+                        $('#ReceivedMessages tbody').append('<tr><td>' + this.adapterInstance + '</td><td>' + this.messageType + '</td><td>' + this.createdTime + '</td></tr>');
+                    } else if (this.status == 'Sent') {
+                        $('#SentMessages tbody').append('<tr><td>' + this.adapterInstance + '</td><td>' + this.messageType + '</td><td>' + this.createdTime + '</td></tr>');
+                    };
+                });
+
+                $("#ReceivedMessages").tablesorter({ theme: 'bootstrap'});
+                $("#SentMessages").tablesorter({ theme: 'bootstrap'});
+
+                var tooltip = 'Quotes (\") match phrases. (not) excludes a match from the results. (or) can be used to do Or searches. I.e. [red or blue] will match either red or blue. Numeric values support >=, >, <=, <, = and != operators.';
+                // Initialise Plugin
+                var optionsbasic = {
+                        columnFilters: [   
+                                { columnName: 'Adapter instance', inputType: 'text'},
+                                { columnName: 'Message type', inputType: 'text'},
+                                { columnName: 'Date/Time', inputType: 'text'}
+                        ],
+                        enableCookies: false
+                };
+
+                $("#ReceivedMessages").tableFilter(optionsbasic);
+                $("#SentMessages").tableFilter(optionsbasic);
+            });
+          }
+
+          function setupAddItem() {
+            var addItemForm = $('#addItemForm');
+            $('#buttonAddItem').click(function() {
+              if (addItemForm[0].checkValidity()) {
+                      var competitionId = $('#competitionInput').val();
+                      
+                      var postItemData = "";
+                      if (id == null) {
+                        postItemData = JSON.stringify({
+                          "competitionId": competitionId
+                                
+                        });
+                      } else {
+                        postItemData = JSON.stringify({
+                          "btAddress": btAddressOfDevice,
+                          "competitionId": competitionId
+                        });   
+                      }
+
+                      $.ajax({
+                              url: "/api/v1/" + tableName + "/SetCompetition",
+                              method: "POST",
+                              data: postItemData,
+                              dataType: "json"
+                      }).then(function(item) {
+                              $('#errorAlert').addClass('collapse');
+                              var itemModalElement = document.querySelector('#additem');
+                              var itemModal = bootstrap.Modal.getOrCreateInstance(itemModalElement);
+                              itemModal.hide();
+                              $('#itemUpdatedAlert').removeClass('collapse');
+                              $('#itemUpdatedAlert').removeClass('collapse');
+                              //loadTable();
+                      }, function(fail) {
+                              $('#errorAlert').text(JSON.stringify(fail));
+                              $('#errorAlert').removeClass('collapse');     
+                      });
+              } else {
+                      addItemForm[0].classList.add('was-validated');
+              }
+            });
+          }
+
+          $(document).ready(function() {
+            $("#nav-placeholder").load("navigation.html", function() {
                   $.each($('.navbar').find('.nav-link'), function() {
                       console.log($(this).attr('href'));
                       console.log(window.location.pathname);
-                      $(this).toggleClass('active', 
-                              window.location.pathname.indexOf($(this).attr('href')) > -1);
-                      });
-
-                      var btAddressOfDevice = $.urlParam('devicebt')
-                      $.ajax({
-                              url: "/api/v1/Devices/" + btAddressOfDevice +"/MessageStats?sort=adapterInstance,messageType&outputType=aggregated"
-                      }).then(function(data) {
-                              const devices = JSON.parse(data);
-                              $.each(devices, function() {
-                                  if (this.status == 'Received') {
-                                      $('#ReceivedMessagesAggregated tbody').append('<tr><td>' + this.adapterInstance + '</td><td>' + this.messageType + '</td><td>' + this.noOfMessages + '</td></tr>');
-                                  } else if (this.status == 'Sent') {
-                                      $('#SentMessagesAggregated tbody').append('<tr><td>' + this.adapterInstance + '</td><td>' + this.messageType + '</td><td>' + this.noOfMessages + '</td></tr>');
-                                  };
-                              });
-
-                              $("#ReceivedMessagesAggregated").tablesorter({ theme: 'bootstrap'});
-                              $("#SentMessagesAggregated").tablesorter({ theme: 'bootstrap'});
-
-                              var tooltip = 'Quotes (\") match phrases. (not) excludes a match from the results. (or) can be used to do Or searches. I.e. [red or blue] will match either red or blue. Numeric values support >=, >, <=, <, = and != operators.';
-                              // Initialise Plugin
-                              var optionsbasic = {
-                                      columnFilters: [   
-                                              { columnName: 'Adapter instance', inputType: 'text'},
-                                              { columnName: 'Message type', inputType: 'text'},
-                                              { columnName: 'Number of messages', inputType: 'text'}
-                                      ],
-                                      enableCookies: false
-                              };
-
-                              $("#ReceivedMessagesAggregated").tableFilter(optionsbasic);
-                              $("#SentMessagesAggregated").tableFilter(optionsbasic);
-                      });
-                      
-                      $.ajax({
-                              url: "/api/v1/Devices/" + btAddressOfDevice +"/MessageStats?sort=createdTime desc&outputType=normal"
-                      }).then(function(data) {
-                              const devices = JSON.parse(data);
-                              $.each(devices, function() {
-                                  if (this.status == 'Received') {
-                                      $('#ReceivedMessages tbody').append('<tr><td>' + this.adapterInstance + '</td><td>' + this.messageType + '</td><td>' + this.createdTime + '</td></tr>');
-                                  } else if (this.status == 'Sent') {
-                                      $('#SentMessages tbody').append('<tr><td>' + this.adapterInstance + '</td><td>' + this.messageType + '</td><td>' + this.createdTime + '</td></tr>');
-                                  };
-                              });
-
-                              $("#ReceivedMessages").tablesorter({ theme: 'bootstrap'});
-                              $("#SentMessages").tablesorter({ theme: 'bootstrap'});
-
-                              var tooltip = 'Quotes (\") match phrases. (not) excludes a match from the results. (or) can be used to do Or searches. I.e. [red or blue] will match either red or blue. Numeric values support >=, >, <=, <, = and != operators.';
-                              // Initialise Plugin
-                              var optionsbasic = {
-                                      columnFilters: [   
-                                              { columnName: 'Adapter instance', inputType: 'text'},
-                                              { columnName: 'Message type', inputType: 'text'},
-                                              { columnName: 'Date/Time', inputType: 'text'}
-                                      ],
-                                      enableCookies: false
-                              };
-
-                              $("#ReceivedMessages").tableFilter(optionsbasic);
-                              $("#SentMessages").tableFilter(optionsbasic);
-                      });
+                      $(this).toggleClass('active', window.location.pathname.indexOf($(this).attr('href')) > -1);
                   });
-              });
+
+                  loadAggregated();
+                  loadMessages();
+                  setupAddItem();
+                  
+                  getIsLoggedIn(function(isLoggedIn) {
+                    if (isLoggedIn) {
+                      $('.edititem').show();
+                    } else {
+                      $('.edititem').hide();
+                    }
+                  });
+
+            });
+          
+
+            $("#signup-modal-placeholder").load("signupmodal.html", function() {
+                $('#signup').on('shown.bs.modal', function () {
+                    $('#signUpEmailInput').trigger('focus');
+                });
+            });
+            
+
+            $("#addnewitem-modal-placeholder").load(modalHtmlFileName, function() {
+                $('#additem').on('shown.bs.modal', function () {
+                        $('#competitionInput').trigger('focus');
+                });
+
+                loadDevice();
+                
+                var addItemForm = $('#addItemForm');
+                $('#buttonAddItem').click(function() {
+                        if (addItemForm[0].checkValidity()) {
+                                var competitionId = $('#competitionInput').val();
+                                
+                                var postItemData = JSON.stringify({
+                                        "competitionId": competitionId
+                                })
+
+                                $.ajax({
+                                        url: "/api/v1/" + tableName + "/" + btAddressOfDevice + "/SetCompetition",
+                                        method: "POST",
+                                        data: postItemData,
+                                        dataType: "json"
+                                }).then(function(item) {
+                                        $('#errorAlert').addClass('collapse');
+                                        var itemModalElement = document.querySelector('#additem');
+                                        var itemModal = bootstrap.Modal.getOrCreateInstance(itemModalElement);
+                                        itemModal.hide();
+                                        $('#itemUpdatedAlert').removeClass('collapse');
+                                        var compName= $('#competitionInput').find(":selected").text();
+                                        $('#competitionName').text(compName);
+                                        //loadTable();
+                                }, function(fail) {
+                                        $('#errorAlert').text(JSON.stringify(fail));
+                                        $('#errorAlert').removeClass('collapse');     
+                                });
+                        } else {
+                                addItemForm[0].classList.add('was-validated');
+                        }
+                });
+            });
+
+            $.ajax({
+                    url: "/api/v1/" + competitionTableName + "?sort=CreatedDate&limit=100",
+                    dataType: "json"
+            }).then(function(items) {
+                    $.each(items, function() {
+                            $('#competitionInput').append('<option value="' + this.id + '">' + this.name + '</option>');
+                    });
+            });
+
+
+            $(document).on("click", ".close", function(){
+                      $(this).parent().addClass('collapse');
+            });
           });
       </script>
     </div>

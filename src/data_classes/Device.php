@@ -36,6 +36,7 @@ class Device
      */
     public $relayPathNo;
     public $competitionId;
+    public $competitionIdSetByUserId;
     public $connectedToUser;
     public $batteryIsLow;
     public $batteryIsLowTime;
@@ -59,6 +60,7 @@ class Device
  * 			 @SWG\Property(property="name", type="string"),
  * 			 @SWG\Property(property="nameUpdateTime", format="date-time", type="string"),
  *           @SWG\Property(property="competitionId", type="int64"),
+ *           @SWG\Property(property="competitionIdSetByUserId", type="int64"),
  * 			 @SWG\Property(property="connectedToUser", type="boolean"),
  * 			 @SWG\Property(property="batteryIsLow", type="boolean"),
  * 			 @SWG\Property(property="batteryIsLowTime", format="date-time", type="string"),
@@ -68,6 +70,20 @@ class Device
  * 			 @SWG\Property(property="connectedToInternetTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="updateTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="createdTime", format="date-time", type="string")
+ *       )
+ *   }
+ * )
+ */
+
+
+/**
+ *  @SWG\Definition(
+ *   definition="DeviceAddToCompetition",
+ *   type="object",
+ *   allOf={
+ *       @SWG\Schema(
+ *           required={"competitionId"},
+ *           @SWG\Property(property="competitionId", type="integer")
  *       )
  *   }
  * )

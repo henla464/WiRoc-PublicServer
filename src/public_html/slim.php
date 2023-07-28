@@ -60,31 +60,7 @@ $container->set('config', function () {
 $authMap = new AuthorizationMap($app);
 $authMiddleware = new AuthorizationMiddleware($authMap);
 
-/*
-$LoginauthMiddleware = function($request, $handler) use ($app): Response {
-    $routeContext = RouteContext::fromRequest($request);
-    $route = $routeContext->getRoute();
-    if(empty($route)) { 
-        $response = $app->getResponseFactory()->createResponse(404);
-        throw new NotFoundException($request, $response); 
-    }
-    $routeName = $route->getName();
-    $groups = $route->getGroups();
-    $methods = $route->getMethods();
-    $arguments = $route->getArguments();
-    $publicRoutesArray = array('postLogin', 'getDevicesView', 'getMessageStats', 'getMessageStatsOfADevice', 'ApiV1', 'postUser');
-    
-    if(empty($_SESSION['user']) && (!in_array($routeName, $publicRoutesArray))) {
-		$response = $app->getResponseFactory()->createResponse(401);
-		$response->getBody()->write($routeName);
-		return $response;
-    } else { 
-		$response = $handler->handle($request); 
-		return $response;
-	}
-};*/
 
-//$app->add($LoginauthMiddleware);
 $app->add($authMiddleware);
 $app->addRoutingMiddleware();
 $app->addErrorMiddleware(true, true, true);
@@ -177,18 +153,27 @@ $app->get('/api/v1/ping', function($request, $response, $args) use ($app) {
  *         response="200", 
  *         description="CommandResponse code=0 is success",
  *         @SWG\Schema(
- *             ref="#/definitions/CommandResponse"
+ *             ref="#/definitions/LoginResponse"
  *         )
  *     )
  * )
  */
 $app->get('/api/v1/login', function($request, $response, $args) use ($app) {
-    $res = new CommandResponse();
-	$res->code = 0;
-	$res->message = "Login OK";
+    $res = new LoginResponse();
+    if (!isset($_SESSION['userId'])) {
+        $res->code = 1;
+        $res->message = "Not logged in";
+        $res->isLoggedIn = false;
+        $res->isAdmin = false;
+    } else {
+        $res->code = 0;
+	    $res->message = "Login OK";
+        $res->isLoggedIn = true;
+        $res->isAdmin = $_SESSION['userIsAdmin'];
+    }
 	$response->getBody()->write(json_encode($res));
     return $response;
-})->setName("login");
+})->setName("getLogin");
 
 
 /**
@@ -207,7 +192,7 @@ $app->get('/api/v1/login', function($request, $response, $args) use ($app) {
  *         response="200", 
  *         description="CommandResponse code=0 is success",
  *         @SWG\Schema(
- *             ref="#/definitions/CommandResponse"
+ *             ref="#/definitions/LoginResponse"
  *         )
  *     )
  * )
@@ -223,18 +208,24 @@ $app->post('/api/v1/login', function($request, $response, $args) use ($app) {
 	$user = $this->get('helper')->GetBySql($cls, $sql, ['Email'=>$objectArray['email']]);
 	
 	if ($user != null && password_verify($pwd_peppered, $user->hashedPassword)) {
-		$_SESSION['user'] = $objectArray['email'];
-		$res = new CommandResponse();
+		$_SESSION['userId'] = $user->id;
+        $_SESSION['userEmail'] = $user->email;
+        $_SESSION['userIsAdmin'] = $user->isAdmin;
+     	$res = new LoginResponse();
 		$res->code = 0;
 		$res->message = "Login OK";
-		$response->getBody()->write(json_encode($res));
+        $res->isLoggedIn = true;
+        $res->isAdmin = $user->isAdmin;
+  		$response->getBody()->write(json_encode($res));
 		return $response;
 	}
 	else {
-		$res = new CommandResponse();
+		$res = new LoginResponse();
 		$res->code = 1;
 		$res->message = "Login failed";
-		$response->getBody()->write(json_encode($res));
+        $res->isLoggedIn = false;
+        $res->isAdmin = false;
+ 		$response->getBody()->write(json_encode($res));
 		return $response;
 	}
 })->setName("postLogin");
@@ -254,7 +245,8 @@ $app->post('/api/v1/login', function($request, $response, $args) use ($app) {
  * )
  */
 $app->get('/api/v1/logout', function($request, $response, $args) use ($app) {
-    $_SESSION['user'] = null;
+    $_SESSION['userId'] = null;
+    $_SESSION['userEmail'] = null;
     $res = new CommandResponse();
     $res->code = 0;
     $res->message = "Logout OK";
@@ -518,7 +510,7 @@ $app->post('/api/v1/User', function (Request $request, Response $response) {
      */
 $app->get('/api/v1/Devices', function ($request, $response) use ($app) {
 	$cls = Device::class;
-	$user = $request->getAttribute('user'); //todo:
+	//$userId = $_SESSION['userId'];
 	$userId = 0; //$user->id;
 	$queryParams = $request->getQueryParams();
 	if ($queryParams['limitToUser'] == 'true') {
@@ -582,7 +574,7 @@ $app->get('/api/v1/Devices', function ($request, $response) use ($app) {
      */
 $app->get('/api/v1/DevicesView', function ($request, $response) use ($app) {
 	$cls = DeviceView::class;
-	$user = $request->getAttribute('user'); //todo:
+	//$userId = $_SESSION['userId'];
 	$userId = 0; //$user->id;
 	$queryParams = $request->getQueryParams();
 	if ($queryParams['limitToUser'] == 'true') {
@@ -885,11 +877,75 @@ $app->post('/api/v1/Devices/{BTAddress}/SetConnectedToInternetTime', function (R
 })->setName("postDeviceSetConnectedToInternetTime");
 
 
+/**
+     * @SWG\Post(
+     *     path="/api/v1/Devices/{BTAddress}/SetCompetition",
+     *     description="Set the competitionId property",
+     *     operationId="postDeviceSetCompetition",
+     *     produces={"application/json"},
+     *     @SWG\Parameter(
+     *         name="device",
+     *         in="body",
+     *         description="CompetitionId to add to the device",
+     *         required=true,
+     *         @SWG\Schema(ref="#/definitions/DeviceAddToCompetition"),
+     *     ),
+     *     @SWG\Parameter(
+     *         description="BT Address of device to update",
+     *         in="path",
+     *         name="BTAddress",
+     *         required=true,
+     *         type="string"
+     *     ),
+     *     @SWG\Response(
+     *         response=200,
+     *         description="device response",
+     *         @SWG\Schema(
+     *             ref="#/definitions/Device"
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+    $app->post('/api/v1/Devices/{BTAddress}/SetCompetition', function (Request $request, Response $response) {
+        $objectArray = json_decode($request->getBody(), true);
+        $BTAddress = $request->getAttribute('BTAddress');
+        $cls = Device::class;
+        
+        if (!isset($_SESSION['userId'])) {
+            return $response->withStatus(401);
+        }
+
+        $updateObjectArray = [];
+        $updateObjectArray['BTAddress'] = $BTAddress;
+        $updateObjectArray['competitionId'] = $objectArray['competitionId'];
+        $userId = $_SESSION['userId'];
+        $updateObjectArray['competitionIdSetByUserId'] = $userId;
+        
+        $sql = "UPDATE {$cls::$tableName} SET `competitionId` = :competitionId, `competitionIdSetByUserId` = :competitionIdSetByUserId, `updateTime` = NOW() WHERE BTAddress = :BTAddress";
+        $this->get('helper')->RunSql($sql, $updateObjectArray);
+          
+        $routeContext = RouteContext::fromRequest($request);
+        $routeParser = $routeContext->getRouteParser();
+        $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $BTAddress]);
+        return $response->withStatus(303)->withHeader('Location', $url);
+    })->setName("postDeviceSetCompetition");
+
+
 
 # DEVICESTATUS 
 /**
      * @SWG\Get(
-     *     path="/api/v1/Devices/{BTAddress}/DeviceStatuses?sort={sort}&limit={limit}",
+     *     path="/api/v1/Devices/{BTAddress}/DeviceStatuses?sort={sort}&limit={limit}&limitToCreatedTimeWithinSeconds={limitSeconds}",
      *     description="Returns all statuses of a device",
      *     operationId="getDeviceStatuses",
      *     @SWG\Parameter(
@@ -910,6 +966,13 @@ $app->post('/api/v1/Devices/{BTAddress}/SetConnectedToInternetTime', function (R
      *         description="limit number of results returned",
      *         in="path",
      *         name="limit",
+     *         required=false,
+     *         type="string"
+     *     ),
+     *     @SWG\Parameter(
+     *         description="limit results to those created within the last x seconds",
+     *         in="path",
+     *         name="limitToCreatedTimeWithinSeconds",
      *         required=false,
      *         type="string"
      *     ),
@@ -939,7 +1002,11 @@ $app->get('/api/v1/Devices/{BTAddress}/DeviceStatuses', function ($request, $res
     $cls = DeviceStatus::class;
     $sort = $this->get('helper')->getSort($cls, $request);
     $limit = $this->get('helper')->getLimit($request);
-    $sql = "SELECT DeviceStatuses.* FROM DeviceStatuses WHERE DeviceStatuses.BTAddress = :BTAddress " . $sort . " " . $limit;
+    $createdTimeLimit = $this->get('helper')->getCreatedTimeLimit($request);
+    if ($createdTimeLimit != "") {
+        $createdTimeLimit = " and " . $createdTimeLimit . " ";
+    }
+    $sql = "SELECT DeviceStatuses.* FROM DeviceStatuses WHERE DeviceStatuses.BTAddress = :BTAddress " . $createdTimeLimit . $sort . " " . $limit;
     $deviceStatuses = $this->get('helper')->GetAllBySql($cls, $sql, ['BTAddress'=>$BTAddress], $request);
     $response->getBody()->write(json_encode($deviceStatuses));
     return $response;
@@ -1485,9 +1552,10 @@ $app->get('/api/v1/UserDevices', function (Request $request, Response $response)
 $app->post('/api/v1/UserDevices', function (Request $request, Response $response) {
     $cls = UserDevice::class;
     $objectArray = json_decode($request->getBody(), true);
-    if (!array_key_exists("userId", $objectArray)) {
-		$user = $request->getAttribute('user');
-		$objectArray['userId'] = $user->id;
+    if (!array_key_exists("userId", $objectArray)) 
+    {
+		$userId = $_SESSION['userId'];
+		$objectArray['userId'] = $userId;
 	}
     $id = $this->get('helper')->Insert($cls, $objectArray, $cls::$tableName);
     $routeContext = RouteContext::fromRequest($request);
@@ -1567,8 +1635,8 @@ $app->delete('/api/v1/Devices/{deviceId}/UserDevices', function (Request $reques
 	$deviceId = $request->getAttribute('deviceId');
     $cls = UserDevice::class;
     $sql = "DELETE FROM {$cls::$tableName} WHERE deviceId = :deviceId AND userId = :userId";
-    $user = $request->getAttribute('user');
-	$values = ['deviceId'=>$deviceId, 'userId'=>$user->id];
+    $userId = $_SESSION['userId'];
+	$values = ['deviceId'=>$deviceId, 'userId'=>$userId];
     $this->get('helper')->DeleteBySql($sql, $values);
 	return $response->withStatus(204);
 })->setName("deleteUserDeviceByDevice");
@@ -2699,7 +2767,14 @@ $app->post('/api/v1/Competitions', function (Request $request, Response $respons
     $cls = Competition::class;
     $objectArray = json_decode($request->getBody(), true);
     
-    $id = $this->get('helper')->Insert($cls, $objectArray, $cls::$tableName);
+    $objectArrayForSelect = [];
+    if (in_array("id", $objectArray)) {
+        $objectArrayForSelect['id'] = $objectArray['id'];
+    } else {
+        $objectArrayForSelect['id'] = -1;
+    }
+    $id = $this->get('helper')->InsertOrUpdate($cls, $objectArray, $cls::$tableName, "SELECT * FROM {$cls::$tableName} WHERE id = :id", $objectArrayForSelect);
+  
     $routeContext = RouteContext::fromRequest($request);
     $routeParser = $routeContext->getRouteParser();
     $url = $routeParser->relativeUrlFor('getCompetition', ['competitionId' => $id]);

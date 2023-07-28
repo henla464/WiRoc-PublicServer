@@ -21,7 +21,7 @@ class AuthorizationMap {
             'getWiRocPython2Releases', 'getReleaseStatuses', 'getReleaseStatus',
             'getWiRocPython2Release', 'getWiRocBLEAPIReleases', 'getWiRocBLEAPIRelease',
             'getDeviceStatuses', 'getDeviceStatusesByBTAddress', 'getDeviceStatus',
-            'getCompetition', 'getCompetitions');
+            'getCompetition', 'getCompetitions', 'getLogin');
         $this->apiKeyRoutesArray = array('postMessageStat', 'postDeviceSetConnectedToInternetTime',
             'postDevices', 'postDeviceStatus', 'postLogArchives', 'postCreateTables', 'postReleaseStatus', 
             'deleteReleaseStatus', 'postWiRocPython2Release', 
@@ -51,9 +51,9 @@ class AuthorizationMap {
         
         $routeName = $route->getName();
         
-        if (!empty($_SESSION['user'])) {
+        if (!empty($_SESSION['userId'])) {
             if (in_array($routeName, $this->adminRoutesArray)) {
-                if ($_SESSION['user']->isAdmin) {
+                if ($_SESSION['userIsAdmin']) {
                     return True;
                 } else {
                     return False;

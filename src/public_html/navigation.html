@@ -30,6 +30,7 @@
 		<li class="nav-item">
 		  <a class="nav-link" href="competitions.html">Competitions</a>
 		</li>
+		
 	  </ul>
 	  <form class="d-flex navbar-nav">
 		<div class="container-fluid" id="loginDiv" style="display:none">
@@ -98,6 +99,8 @@
 				isLoggedIn = loginResponse.isLoggedIn;
 				callback(isLoggedIn);
 			});
+		} else {
+			callback(isLoggedIn);
 		}
 	}
 
@@ -108,6 +111,8 @@
 				isAdmin = loginResponse.isAdmin;
 				callback(isAdmin);
 			});
+		} else {
+			callback(isAdmin);
 		}
 	}
 
@@ -167,34 +172,32 @@
 					}
 				});
 
-				/*$.ajax({
-						url: "/api/v1/login",
-						type: "GET",
-						dataType: "json"
-				}).then(function(loginResponse) {
-						isLoggedIn = loginResponse.isLoggedIn;
-						isAdmin = loginResponse.isAdmin;
-						if (isLoggedIn) {
-							$('#loginDiv').hide();
-							$('#loggedInDiv').show();
-							
-						} else {
-							$('#loginDiv').show();
-							$('#loggedInDiv').hide();
-						}
-				}, function(fail) {
-					$('#loginDiv').show();
-					$('#loggedInDiv').hide();
-				});*/
+				getIsAdmin(function(isAdmin) {
+					if (isAdmin) {
+						$('ul.navbar-nav').append(`
+							<li class="nav-item">
+								<a class="nav-link" href="wirocpython2releases.html">WiRocPython2 Releases</a>
+							</li>
+							<li class="nav-item">
+								<a class="nav-link" href="wirocbleapireleases.html">WiRocBLEAPI Releases</a>
+							</li>
+							<li class="nav-item">
+								<a class="nav-link" href="wirocpython2releaseupgradescripts.html">WiRocPython2 Upgrade Scripts</a>
+							</li>
+							<li class="nav-item">
+								<a class="nav-link" href="wirocbleapireleaseupgradescripts.html">WiRocBLEAPI Upgrade Scripts</a>
+							</li>`);
+					}
 
-				
-
-				$.each($('.navbar').find('.nav-link'), function() {
+					$.each($('.navbar').find('.nav-link'), function() {
 						console.log($(this).attr('href'));
 						console.log(window.location.pathname);
 						$(this).toggleClass('active', 
 								window.location.pathname.indexOf($(this).attr('href')) > -1);
+					});
 				});
+
+				
 
 
 				

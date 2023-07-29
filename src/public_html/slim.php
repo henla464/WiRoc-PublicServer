@@ -210,12 +210,12 @@ $app->post('/api/v1/login', function($request, $response, $args) use ($app) {
 	if ($user != null && password_verify($pwd_peppered, $user->hashedPassword)) {
 		$_SESSION['userId'] = $user->id;
         $_SESSION['userEmail'] = $user->email;
-        $_SESSION['userIsAdmin'] = $user->isAdmin;
+        $_SESSION['userIsAdmin'] = $user->isAdmin == null ? false : ($user->isAdmin == 1);
      	$res = new LoginResponse();
 		$res->code = 0;
 		$res->message = "Login OK";
         $res->isLoggedIn = true;
-        $res->isAdmin = $user->isAdmin;
+        $res->isAdmin = $user->isAdmin == null ? false : $user->isAdmin;
   		$response->getBody()->write(json_encode($res));
 		return $response;
 	}
@@ -429,7 +429,7 @@ $app->post('/api/v1/User', function (Request $request, Response $response) {
         $objectArray = json_decode($request->getBody(), true);
           
         $user = [];
-        $user['email'] = $objectArray['email'];
+       // $user['email'] = $objectArray['email'];
         $user['isAdmin'] = $objectArray['isAdmin'];
         
         $cls = User::class;
@@ -454,7 +454,7 @@ $app->post('/api/v1/User', function (Request $request, Response $response) {
        
         $res = new CommandResponse();
         $res->code = 0;
-        $res->message = "User updated";
+        $res->message = $userObj; //"User updated";
         $response->getBody()->write(json_encode($res));
         return $response;
     })->setName("patchUser");
@@ -512,22 +512,17 @@ $app->get('/api/v1/Devices', function ($request, $response) use ($app) {
 	$cls = Device::class;
 	//$userId = $_SESSION['userId'];
 	$userId = 0; //$user->id;
-	$queryParams = $request->getQueryParams();
-	if ($queryParams['limitToUser'] == 'true') {
-		$sql = 'SELECT Devices.* FROM Devices JOIN UserDevices ON Devices.id = UserDevices.deviceId WHERE UserDevices.userId = :userId';
-		$response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, ['userId'=>$userId], $request)));
-		return $response;
-	} else {
-		$sql = 'SELECT Devices.*, CASE WHEN UserDevices.id IS NOT NULL THEN true ELSE false END AS connectedToUser FROM Devices LEFT JOIN UserDevices ON Devices.id = UserDevices.deviceId and UserDevices.userId = :userId';
-		$response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, ['userId'=>$userId], $request)));
-		return $response;
-	}
+	//$queryParams = $request->getQueryParams();
+    $sql = 'SELECT Devices.* FROM Devices';
+    $response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, ['userId'=>$userId], $request)));
+    return $response;
+
 })->setName("getDevices");
 
 
 /**
      * @SWG\Get(
-     *     path="/api/v1/DevicesView?sort={sort}&limit={limit}&limitToUser={limitToUser}",
+     *     path="/api/v1/DevicesView?sort={sort}&limit={limit}&limitToHeadBTAddress={headBTAddress}",
      *     description="Returns all devices",
      *     operationId="getDevicesView",
      *     @SWG\Parameter(
@@ -545,11 +540,11 @@ $app->get('/api/v1/Devices', function ($request, $response) use ($app) {
      *         type="string"
      *     ),
      *     @SWG\Parameter(
-     *         description="limit to user",
+     *         description="limit to headBTAddress",
      *         in="path",
-     *         name="limitToUser",
+     *         name="limitToHeadBTAddress",
      *         required=false,
-     *         type="boolean"
+     *         type="string"
      *     ),
      *     produces={"application/json"},
      *     @SWG\Response(
@@ -574,22 +569,22 @@ $app->get('/api/v1/Devices', function ($request, $response) use ($app) {
      */
 $app->get('/api/v1/DevicesView', function ($request, $response) use ($app) {
 	$cls = DeviceView::class;
-	//$userId = $_SESSION['userId'];
-	$userId = 0; //$user->id;
-	$queryParams = $request->getQueryParams();
-	if ($queryParams['limitToUser'] == 'true') {
-		$sql = 'SELECT CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -6 MINUTE) THEN true ELSE false END recentlyReported, 
-			CASE WHEN Devices.connectedToInternetTime > DATE_ADD(SYSDATE(), INTERVAL -1 MINUTE) THEN true ELSE false END connectedToInternet, 
-			Devices.* FROM Devices JOIN UserDevices ON Devices.id = UserDevices.deviceId WHERE UserDevices.userId = :userId';
-		$response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, ['userId'=>$userId], $request)));
-		return $response;
-	} else {
-		$sql = 'SELECT CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -6 MINUTE) THEN true ELSE false END recentlyReported, 
-			CASE WHEN Devices.connectedToInternetTime > DATE_ADD(SYSDATE(), INTERVAL -1 MINUTE) THEN true ELSE false END connectedToInternet, 
-			Devices.*, CASE WHEN UserDevices.id IS NOT NULL THEN true ELSE false END AS connectedToUser FROM Devices LEFT JOIN UserDevices ON Devices.id = UserDevices.deviceId and UserDevices.userId = :userId';
-		$response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, ['userId'=>$userId], $request)));
-		return $response;
-	}
+	$sql = 'SELECT CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -6 MINUTE) THEN true ELSE false END recentlyReported, 
+        CASE WHEN Devices.connectedToInternetTime > DATE_ADD(SYSDATE(), INTERVAL -1 MINUTE) THEN true ELSE false END connectedToInternet, 
+        Devices.* FROM Devices';
+    $sqlParam = [];
+    $sort = $this->get('helper')->getSort($cls, $request);
+    $limit = $this->get('helper')->getLimit($request);
+    $queryParams = $request->getQueryParams();
+    if (isset($queryParams['limitToHeadBTAddress'])) {
+        $headBTAddress = $queryParams['limitToHeadBTAddress'];
+        $sql .= ' WHERE headBTAddress = :headBTAddress';
+        $sqlParam = ['headBTAddress'=>$headBTAddress];
+    }
+    $sql .= $sort . ' ' . $limit;
+    $response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, $sqlParam, $request)));
+    return $response;
+
 })->setName("getDevicesView");
 
 /**
@@ -738,7 +733,52 @@ $app->get('/api/v1/Devices/{BTAddress}/SetBatteryIsLow', function (Request $requ
 	return $response->withStatus(302)->withHeader('Location', $url);
 })->setName('getDeviceSetBatteryIsLow');
 
-
+/**
+     * @SWG\Get(
+     *     path="/api/v1/Devices/{BTAddress}/SetBatteryIsLowReceived",
+     *     description="Set batteryIsLowReceived, returns the device",
+     *     operationId="getDeviceSetBatteryIsLow",
+     *     @SWG\Parameter(
+     *         description="BT Address of device to update",
+     *         in="path",
+     *         name="BTAddress",
+     *         required=true,
+     *         type="string"
+     *     ), 
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=200,
+     *         description="device response",
+     *         @SWG\Schema(
+     *             ref="#/definitions/Device"
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+    $app->get('/api/v1/Devices/{BTAddress}/SetBatteryIsLowReceived', function (Request $request, Response $response) {
+        $BTAddress = $request->getAttribute('BTAddress');
+        $cls = Device::class;
+        $objectArray = [];
+        $objectArray['batteryIsLowReceived'] = true;
+        $objectArray['BTAddress'] = $BTAddress;
+        $sql = "UPDATE {$cls::$tableName} SET `batteryIsLowReceived` = :batteryIsLowReceived, `batteryIsLowReceivedTime` = NOW(), `updateTime` = NOW() WHERE BTAddress = :BTAddress";
+        $this->get('helper')->RunSql($sql, $objectArray);
+        
+        $routeContext = RouteContext::fromRequest($request);
+        $routeParser = $routeContext->getRouteParser();
+        $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $objectArray['BTAddress']]);
+        return $response->withStatus(302)->withHeader('Location', $url);
+    })->setName('getDeviceSetBatteryIsLowReceived');
 
 /**
      * @SWG\Delete(
@@ -1438,214 +1478,11 @@ $app->delete('/api/v1/Devices/{BTAddress}/MessageStats/DeleteByBTAddress', funct
 })->setName("deleteMessageStatsByBTAddress");
 
 
-/**
-     * @SWG\Get(
-     *     path="/api/v1/UserDevices/{userDeviceId}",
-     *     description="Gets a UserDevice",
-     *     operationId="getUserDevice",
-     *     produces={"application/json"},
-     *     @SWG\Parameter(
-     *         description="ID of the UserDevice",
-     *         format="int64",
-     *         in="path",
-     *         name="userDeviceId",
-     *         required=true,
-     *         type="integer"
-     *     ),
-     *     @SWG\Response(
-     *         response=200,
-     *         description="MessageStat response",
-     *         @SWG\Schema(
-     *             ref="#/definitions/UserDevice"
-     *         ),
-     *     ),
-     *     @SWG\Response(
-     *         response="default",
-     *         description="unexpected error",
-     *         @SWG\Schema(
-     *             ref="#/definitions/ErrorModel"
-     *         )
-     *     ),
-     *     security={
-     *       {"api_key": {}}
-     *     }
-     * )
-     */
-$app->get('/api/v1/UserDevices/{userDeviceId}', function (Request $request, Response $response) {
-    $cls = UserDevice::class;
-    $id = $request->getAttribute('userDeviceId');
-    $userDevice = $this->get('helper')->Get($cls, $cls::$tableName, $id);
-    if ($userDevice == false) 
-    {
-        
-        return $response->withStatus(404);
-    }
-	$response->getBody()->write(json_encode($userDevice));
-	return $response;
-})->setName("getUserDevice");
-
-/**
-     * @SWG\Get(
-     *     path="/api/v1/UserDevices",
-     *     description="Gets UserDevices",
-     *     operationId="getUserDevices",
-     *     produces={"application/json"},
-     *     @SWG\Response(
-     *         response=200,
-     *         description="Userdevices response",
-     *         @SWG\Schema(
-     *             type="array",
-     *             @SWG\Items(ref="#/definitions/UserDevice")
-     *         ),
-     *     ),
-     *     @SWG\Response(
-     *         response="default",
-     *         description="unexpected error",
-     *         @SWG\Schema(
-     *             ref="#/definitions/ErrorModel"
-     *         )
-     *     ),
-     *     security={
-     *       {"api_key": {}}
-     *     }
-     * )
-     */
-$app->get('/api/v1/UserDevices', function (Request $request, Response $response) {
-    $cls = UserDevice::class;
-    $response->getBody()->write(json_encode($this->get('helper')->GetAll($cls, $cls::$tableName, $request)));
-    return $response;
-})->setName("getUserDevices");
-
-
-/**
-     * @SWG\Post(
-     *     path="/api/v1/UserDevices",
-     *     description="Adds a new UserDevice",
-     *     operationId="postUserDevice",
-     *     @SWG\Parameter(
-     *         name="UserDevice",
-     *         in="body",
-     *         description="UserDevice to add to the store",
-     *         required=true,
-     *         @SWG\Schema(ref="#/definitions/NewUserDevice"),
-     *     ),
-     *     produces={"application/json"},
-     *     @SWG\Response(
-     *         response=200,
-     *         description="UserDevice response",
-     *         @SWG\Schema(
-     *             ref="#/definitions/UserDevice"
-     *         ),
-     *     ),
-     *     @SWG\Response(
-     *         response="default",
-     *         description="unexpected error",
-     *         @SWG\Schema(
-     *             ref="#/definitions/ErrorModel"
-     *         )
-     *     ),
-     *     security={
-     *       {"api_key": {}}
-     *     }
-     * )
-     */
-$app->post('/api/v1/UserDevices', function (Request $request, Response $response) {
-    $cls = UserDevice::class;
-    $objectArray = json_decode($request->getBody(), true);
-    if (!array_key_exists("userId", $objectArray)) 
-    {
-		$userId = $_SESSION['userId'];
-		$objectArray['userId'] = $userId;
-	}
-    $id = $this->get('helper')->Insert($cls, $objectArray, $cls::$tableName);
-    $routeContext = RouteContext::fromRequest($request);
-    $routeParser = $routeContext->getRouteParser();
-    $url = $routeParser->relativeUrlFor('getUserDevice', ['userDeviceId' => $id]);
-	return $response->withStatus(303)->withHeader('Location', $url);
-})->setName("postUserDevice");
-
-
-/**
-     * @SWG\Delete(
-     *     path="/api/v1/UserDevices/{userDeviceId}",
-     *     description="Delete a new UserDevice",
-     *     operationId="deleteUserDevice",
-     *     @SWG\Parameter(
-     *         description="ID of the userDevice",
-     *         format="int64",
-     *         in="path",
-     *         name="userDeviceId",
-     *         required=true,
-     *         type="integer"
-     *     ),
-     *     @SWG\Response(
-     *         response=204,
-     *         description="deleted",
-     *     ),
-     *     @SWG\Response(
-     *         response="default",
-     *         description="unexpected error",
-     *         @SWG\Schema(
-     *             ref="#/definitions/ErrorModel"
-     *         )
-     *     ),
-     *     security={
-     *       {"api_key": {}}
-     *     }
-     * )
-     */
-$app->delete('/api/v1/UserDevices/{userDeviceId}', function (Request $request, Response $response) {
-	$id = $request->getAttribute('userDeviceId');
-    $cls = UserDevice::class;
-    $this->get('helper')->Delete($id, $cls::$tableName);
-	return $response->withStatus(204);
-})->setName("deleteUserDevice");
-
-
-/**
-     * @SWG\Delete(
-     *     path="/api/v1/Devices/{deviceId}/UserDevices",
-     *     description="Delete a the UserDevice of of the device and logged in user",
-     *     operationId="deleteUserDeviceByDevice",
-     *     @SWG\Parameter(
-     *         description="ID of the device",
-     *         format="int64",
-     *         in="path",
-     *         name="deviceId",
-     *         required=true,
-     *         type="integer"
-     *     ),
-     *     @SWG\Response(
-     *         response=204,
-     *         description="deleted",
-     *     ),
-     *     @SWG\Response(
-     *         response="default",
-     *         description="unexpected error",
-     *         @SWG\Schema(
-     *             ref="#/definitions/ErrorModel"
-     *         )
-     *     ),
-     *     security={
-     *       {"api_key": {}}
-     *     }
-     * )
-     */
-$app->delete('/api/v1/Devices/{deviceId}/UserDevices', function (Request $request, Response $response) {
-	$deviceId = $request->getAttribute('deviceId');
-    $cls = UserDevice::class;
-    $sql = "DELETE FROM {$cls::$tableName} WHERE deviceId = :deviceId AND userId = :userId";
-    $userId = $_SESSION['userId'];
-	$values = ['deviceId'=>$deviceId, 'userId'=>$userId];
-    $this->get('helper')->DeleteBySql($sql, $values);
-	return $response->withStatus(204);
-})->setName("deleteUserDeviceByDevice");
-
 
 /**
      * @SWG\Post(
      *     path="/api/v1/LogArchives",
-     *     description="Upload a logarchive (zip file with logs and database): curl -X POST ""http://monitor.wiroc.se/api/v1/LogArchives"" -H ""accept: application/json"" -H ""Authorization: <apikey>"" -F ""newfile=@/path/to/zipfile.zip""",
+     *     description="Upload a logarchive (zip file with logs and database): curl -X POST ""https://monitor.wiroc.se/api/v1/LogArchives"" -H ""accept: application/json"" -H ""Authorization: <apikey>"" -F ""newfile=@/path/to/zipfile.zip""",
      *     operationId="postLogArchives",
      *     @SWG\Response(
      *         response=200,

@@ -19,7 +19,10 @@ class User
      * @SWG\Property()
      */
     public $hashedPassword;
-    
+    /**
+     * @var boolean
+     * @SWG\Property()
+     */
     public $isAdmin;
 	public $updateTime;
     public $createdTime;
@@ -33,8 +36,7 @@ class User
  *       @SWG\Schema(ref="#/definitions/NewUser"),
  *       @SWG\Schema(
  *           required={"id"},
- *           @SWG\Property(property="id", format="int64", type="integer"),
- *           @SWG\Property(property="isAdmin", type="boolean"),
+ *           @SWG\Property(property="id", format="integer", type="integer"),
  * 			 @SWG\Property(property="updateTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="createdTime", format="date-time", type="string")
  *       )

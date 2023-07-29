@@ -36,7 +36,11 @@
       <br />
       Control numbers: <span id="deviceSIStationNumber"></span>
       <br/>
-      
+      Remote devices: <span id="remoteDevices"></span>
+      <br/>
+      <span id="remoteDeviceBatteryLowWarning">Battery low at remote device</span>
+      <span id="remoteDeviceBatteryLowWarningTime"></span>
+      <br/>
       <br/>
     </div>
 
@@ -321,13 +325,20 @@
               $('#competitionInput').val(device.competitionId);
               $('#deviceName').text(device.name);
               $('#deviceBTAddress').text("(" + btAddressOfDevice + ")");
-              if (device.batteryIsLow == true) {
+              if (device.batteryIsLow == 1) {
                 $('#batteryIsLowWarning').show();
                 $('batteryIsLowWarningTime').text('[' + device.batteryIsLowTime + ']');
                 $('batteryIsLowWarningTime').show();
               } else {
                 $('#batteryIsLowWarning').hide();
                 $('batteryIsLowWarningTime').hide();
+              }
+              if (device.batteryIsLowReceived == 1) {
+                $('#remoteDeviceBatteryLowWarning').show();
+                $('#remoteDeviceBatteryLowWarningTime').text('[' + device.batteryIsLowReceivedTime + ']');
+              } else {
+                $('#remoteDeviceBatteryLowWarning').hide();
+                $('#remoteDeviceBatteryLowWarningTime').hide();
               }
               
               loadCompetition(device.competitionId);
@@ -399,6 +410,18 @@
             });
           }
 
+          function loadRemoteDevices() {
+            $.ajax({
+                    url: "/api/v1/DevicesView?sort=connectedToInternetTime desc&limit=10&limitToHeadBTAddress=" + btAddressOfDevice
+            }).then(function(data) {
+                    const devices = JSON.parse(data);
+                    $.each(devices, function() {
+                        if (this.BTAddress != btAddressOfDevice) {
+                            $('#remoteDevices').append('<a href="device.html?devicebt=' + this.BTAddress + '">' + this.name + '</a>&nbsp;');
+                        }
+                    });          
+            });
+          }
           function setupAddItem() {
             var addItemForm = $('#addItemForm');
             $('#buttonAddItem').click(function() {
@@ -451,6 +474,7 @@
 
                   loadAggregated();
                   loadMessages();
+                  loadRemoteDevices();
                   setupAddItem();
                   
                   getIsLoggedIn(function(isLoggedIn) {

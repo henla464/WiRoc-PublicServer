@@ -40,6 +40,8 @@ class Device
     public $connectedToUser;
     public $batteryIsLow;
     public $batteryIsLowTime;
+    public $batteryIsLowReceived;
+    public $batteryIsLowReceivedTime;
     public $wirocPythonVersion;
     public $wirocBLEAPIVersion;
     public $reportTime;
@@ -56,14 +58,16 @@ class Device
  *       @SWG\Schema(ref="#/definitions/NewDevice"),
  *       @SWG\Schema(
  *           required={"id"},
- *           @SWG\Property(property="id", format="int64", type="integer"),
+ *           @SWG\Property(property="id", format="integer", type="integer"),
  * 			 @SWG\Property(property="name", type="string"),
  * 			 @SWG\Property(property="nameUpdateTime", format="date-time", type="string"),
- *           @SWG\Property(property="competitionId", type="int64"),
- *           @SWG\Property(property="competitionIdSetByUserId", type="int64"),
+ *           @SWG\Property(property="competitionId", type="integer"),
+ *           @SWG\Property(property="competitionIdSetByUserId", type="integer"),
  * 			 @SWG\Property(property="connectedToUser", type="boolean"),
  * 			 @SWG\Property(property="batteryIsLow", type="boolean"),
  * 			 @SWG\Property(property="batteryIsLowTime", format="date-time", type="string"),
+ * 			 @SWG\Property(property="batteryIsLowReceived", type="boolean"),
+ * 			 @SWG\Property(property="batteryIsLowReceivedTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="wirocPythonVersion", type="string"),
  * 			 @SWG\Property(property="wirocBLEAPIVersion", type="string"),
  * 			 @SWG\Property(property="reportTime", format="date-time", type="string"),

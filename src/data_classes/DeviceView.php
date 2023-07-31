@@ -33,6 +33,7 @@ class DeviceView
      */
     public $relayPathNo;
     public $competitionId;
+    public $competitionName;
     public $connectedToUser;
     public $batteryIsLow;
     public $batteryIsLowTime;
@@ -52,10 +53,11 @@ class DeviceView
  *       @SWG\Schema(ref="#/definitions/NewDeviceView"),
  *       @SWG\Schema(
  *           required={"id"},
- *           @SWG\Property(property="id", format="int64", type="integer"),
+ *           @SWG\Property(property="id", format="integer", type="integer"),
  * 			 @SWG\Property(property="name", type="string"),
  * 			 @SWG\Property(property="nameUpdateTime", format="date-time", type="string"),
- *           @SWG\Property(property="competitionId", type="int64"),
+ *           @SWG\Property(property="competitionId", type="integer"),
+ *           @SWG\Property(property="competitionName", type="string"),
  * 			 @SWG\Property(property="connectedToUser", type="boolean"),
  * 			 @SWG\Property(property="batteryIsLow", type="boolean"),
  * 			 @SWG\Property(property="batteryIsLowTime", format="date-time", type="string"),

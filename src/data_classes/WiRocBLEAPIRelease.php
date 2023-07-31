@@ -2,7 +2,7 @@
 use Swagger\Annotations as SWG;
 
 /**
- * @SWG\Definition(definition="NewWiRocBLEAPIRelease", type="object", required={"releaseName", "releaseStatusId", "minHWVersion", "minHWRevision", "maxHWVersion", "maxHWRevision", "releaseNote", "md5HashOfReleaseFile"})
+ * @SWG\Definition(definition="NewWiRocBLEAPIRelease", type="object", required={"releaseName", "versionNumber", "releaseStatusId", "minHWVersion", "minHWRevision", "maxHWVersion", "maxHWRevision", "releaseNote", "md5HashOfReleaseFile"})
  */
 class WiRocBLEAPIRelease
 {
@@ -14,6 +14,11 @@ class WiRocBLEAPIRelease
      * @var string
      */
     public $releaseName;
+     /**
+     * @SWG\Property()
+     * @var int
+     */
+    public $versionNumber;
     /**
      * @SWG\Property()
      * @var int
@@ -64,7 +69,7 @@ class WiRocBLEAPIRelease
  *       @SWG\Schema(ref="#/definitions/NewWiRocBLEAPIRelease"),
  *       @SWG\Schema(
  *           required={"id"},
- *           @SWG\Property(property="id", format="int64", type="integer"),
+ *           @SWG\Property(property="id", format="integer", type="integer"),
  * 			 @SWG\Property(property="updateTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="createdTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="releaseStatusDisplayName", type="string")

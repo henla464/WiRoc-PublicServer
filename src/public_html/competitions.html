@@ -85,7 +85,7 @@
                         }).then(function(items) {
                                 jqTableTBody.empty();
                                 $.each(items, function() {
-                                        jqTableTBody.append('<tr><td>' + this.id + '</td><td>' + this.name + '</td><td><button class="btn fa fa-pencil edititem" data-id="' + this.id  + '" /></td><td><button class="deleteitem btn fa fa-trash" data-bs-toggle="modal" data-bs-target="#confirm-delete" data-id="' + this.id + '" /></td></tr>');
+                                        jqTableTBody.append('<tr><td>' + this.id + '</td><td><a href="index.html?competitionId=' + this.id + '">' + this.name + '</a></td><td><button class="btn fa fa-pencil edititem" data-id="' + this.id  + '" /></td><td><button class="deleteitem btn fa fa-trash" data-bs-toggle="modal" data-bs-target="#confirm-delete" data-id="' + this.id + '" /></td></tr>');
                                 });
 
                                 jqTable.tablesorter({ theme: 'bootstrap'});

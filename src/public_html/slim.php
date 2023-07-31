@@ -522,7 +522,7 @@ $app->get('/api/v1/Devices', function ($request, $response) use ($app) {
 
 /**
      * @SWG\Get(
-     *     path="/api/v1/DevicesView?sort={sort}&limit={limit}&limitToHeadBTAddress={headBTAddress}",
+     *     path="/api/v1/DevicesView?sort={sort}&limit={limit}&limitToHeadBTAddress={limitToHeadBTAddress}&limitToCompetitionId={limitToCompetitionId}",
      *     description="Returns all devices",
      *     operationId="getDevicesView",
      *     @SWG\Parameter(
@@ -543,6 +543,13 @@ $app->get('/api/v1/Devices', function ($request, $response) use ($app) {
      *         description="limit to headBTAddress",
      *         in="path",
      *         name="limitToHeadBTAddress",
+     *         required=false,
+     *         type="string"
+     *     ),
+     *      @SWG\Parameter(
+     *         description="limit to CompetitionId",
+     *         in="path",
+     *         name="limitToCompetitionId",
      *         required=false,
      *         type="string"
      *     ),
@@ -571,15 +578,27 @@ $app->get('/api/v1/DevicesView', function ($request, $response) use ($app) {
 	$cls = DeviceView::class;
 	$sql = 'SELECT CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -6 MINUTE) THEN true ELSE false END recentlyReported, 
         CASE WHEN Devices.connectedToInternetTime > DATE_ADD(SYSDATE(), INTERVAL -1 MINUTE) THEN true ELSE false END connectedToInternet, 
-        Devices.* FROM Devices';
+        Devices.*, Competitions.name as competitionName FROM Devices LEFT JOIN Competitions ON Devices.competitionId = Competitions.id';
     $sqlParam = [];
     $sort = $this->get('helper')->getSort($cls, $request);
     $limit = $this->get('helper')->getLimit($request);
     $queryParams = $request->getQueryParams();
-    if (isset($queryParams['limitToHeadBTAddress'])) {
-        $headBTAddress = $queryParams['limitToHeadBTAddress'];
-        $sql .= ' WHERE headBTAddress = :headBTAddress';
-        $sqlParam = ['headBTAddress'=>$headBTAddress];
+    $headBTAddress = $queryParams['limitToHeadBTAddress'] ?? '';
+	$competitionId = $queryParams['limitToCompetitionId'] ?? '';
+    
+    if (trim($headBTAddress) != '' || trim($competitionId) != '') {
+        $sql .= ' WHERE ';
+    }
+    if (trim($headBTAddress) != '') {
+        $sql .= 'headBTAddress = :headBTAddress';
+        $sqlParam['headBTAddress'] = $headBTAddress;
+    }
+    if (trim($headBTAddress) != '' && trim($competitionId) != '') {
+        $sql .= ' AND ';
+    }
+    if (trim($competitionId) != '') {
+        $sql .= 'competitionId = :competitionId';
+        $sqlParam['competitionId'] = $competitionId; 
     }
     $sql .= $sort . ' ' . $limit;
     $response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, $sqlParam, $request)));
@@ -1518,58 +1537,64 @@ $app->post('/api/v1/LogArchives', function (Request $request, Response $response
 
 # WiRocPython2Releases
 /**
-     * @SWG\Get(
-     *     path="/api/v1/WiRocPython2Releases?limit={limit}&hwVersion={hwVersion}&hwRevision={hwRevision}",
-     *     description="Returns all releases of WiRocPython2",
-     *     operationId="getWiRocPython2Releases",
-     *     @SWG\Parameter(
-     *         description="limit number of results returned",
-     *         in="path",
-     *         name="limit",
-     *         required=false,
-     *         type="string"
-     *     ),
-     *     @SWG\Parameter(
-     *         description="only return the ones relevant to hwVersion",
-     *         in="path",
-     *         name="hwVersion",
-     *         required=false,
-     *         type="string"
-     *     ),
-     *     @SWG\Parameter(
-     *         description="only return the ones relevant to hwRevision",
-     *         in="path",
-     *         name="hwRevision",
-     *         required=false,
-     *         type="string"
-     *     ),
-     *     produces={"application/json"},
-     *     @SWG\Response(
-     *         response=200,
-     *         description="WiRocPython2Releases response",
-     *         @SWG\Schema(
-     *             type="array",
-     *             @SWG\Items(ref="#/definitions/WiRocPython2Release")
-     *         ),
-     *     ),
-     *     @SWG\Response(
-     *         response="default",
-     *         description="unexpected error",
-     *         @SWG\Schema(
-     *             ref="#/definitions/ErrorModel"
-     *         )
-     *     ),
-     *     security={
-     *       {"api_key": {}}
-     *     }
-     * )
-     */
+ * @SWG\Get(
+ *     path="/api/v1/WiRocPython2Releases?sort={sort}&limit={limit}&hwVersion={hwVersion}&hwRevision={hwRevision}",
+ *     description="Returns all releases of WiRocPython2",
+ *     operationId="getWiRocPython2Releases",
+ *     @SWG\Parameter(
+*         description="columns to sort on",
+*         in="path",
+*         name="sort",
+*         required=false,
+*         type="string"
+*     ),
+*     @SWG\Parameter(
+*         description="limit number of results returned",
+*         in="path",
+*         name="limit",
+*         required=false,
+*         type="string"
+*     ),
+*     @SWG\Parameter(
+*         description="only return the ones relevant to hwVersion",
+*         in="path",
+*         name="hwVersion",
+*         required=false,
+*         type="string"
+*     ),
+*     @SWG\Parameter(
+*         description="only return the ones relevant to hwRevision",
+*         in="path",
+*         name="hwRevision",
+*         required=false,
+*         type="string"
+*     ),
+*     produces={"application/json"},
+*     @SWG\Response(
+*         response=200,
+*         description="WiRocPython2Releases response",
+*         @SWG\Schema(
+*             type="array",
+*             @SWG\Items(ref="#/definitions/WiRocPython2Release")
+*         ),
+*     ),
+*     @SWG\Response(
+*         response="default",
+*         description="unexpected error",
+*         @SWG\Schema(
+*             ref="#/definitions/ErrorModel"
+*         )
+*     ),
+*     security={
+*       {"api_key": {}}
+*     }
+* )
+*/
 $app->get('/api/v1/WiRocPython2Releases', function ($request, $response) use ($app) {
     $cls = WiRocPython2Release::class;
     $limit = $this->get('helper')->getLimit($request);
-  //  $hwVersion = $request->getAttribute('hwVersion');
+    $sort = $this->get('helper')->getSort($cls, $request);
     $hwVersion = $request->getQueryParams()['hwVersion'] ?? '';
-  //  $hwRevision = $request->getAttribute('hwRevision');
     $hwRevision = $request->getQueryParams()['hwRevision'] ?? '';
     $sql = 'SELECT WiRocPython2Releases.*, ReleaseStatuses.displayName as releaseStatusDisplayName, ReleaseStatuses.keyName as releaseStatusKeyName FROM WiRocPython2Releases LEFT JOIN ReleaseStatuses ON WiRocPython2Releases.releaseStatusId = ReleaseStatuses.id';
     if (ctype_digit($hwVersion) || ctype_digit($hwRevision))
@@ -1588,8 +1613,8 @@ $app->get('/api/v1/WiRocPython2Releases', function ($request, $response) use ($a
     {
        $sql .= 'WiRocPython2Releases.minHWRevision <= :hwRevision and :hwRevision <= WiRocPython2Releases.maxHWRevision';
     }
-    $sql .= ' ' . $limit;
-//$sql = 'select ' . $hwVersion;
+    $sql .= $sort . ' ' . $limit;
+
     $response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, ['hwVersion'=>$hwVersion, 'hwRevision'=>$hwRevision], $request)));
     return $response;
 })->setName("getWiRocPython2Releases");
@@ -1678,7 +1703,11 @@ $app->post('/api/v1/WiRocPython2Releases', function (Request $request, Response 
     $objectArray = json_decode($request->getBody(), true);
     
     $objectArrayForSelect = [];
-    $objectArrayForSelect['id'] = $objectArray['id'];
+    if (in_array("id", $objectArray)) {
+        $objectArrayForSelect['id'] = $objectArray['id'];
+    } else {
+        $objectArrayForSelect['id'] = -1;
+    }
     $id = $this->get('helper')->InsertOrUpdate($cls, $objectArray, $cls::$tableName, "SELECT * FROM {$cls::$tableName} WHERE id = :id", $objectArrayForSelect);
    
     $routeContext = RouteContext::fromRequest($request);
@@ -1727,9 +1756,16 @@ $app->delete('/api/v1/WiRocPython2Releases/{releaseId}', function (Request $requ
 # WiRocBLEAPIReleases
 /**
  * @SWG\Get(
- *     path="/api/v1/WiRocBLEAPIReleases?limit={limit}&hwVersion={hwVersion}&hwRevision={hwRevision}",
+ *     path="/api/v1/WiRocBLEAPIReleases?sort={sort}&limit={limit}&hwVersion={hwVersion}&hwRevision={hwRevision}",
  *     description="Returns all releases of WiRocBLEAPI",
  *     operationId="getWiRocBLEAPIReleases",
+ *     @SWG\Parameter(
+ *         description="columns to sort on",
+ *         in="path",
+ *         name="sort",
+ *         required=false,
+ *         type="string"
+ *     ),
  *     @SWG\Parameter(
  *         description="limit number of results returned",
  *         in="path",
@@ -1775,9 +1811,8 @@ $app->delete('/api/v1/WiRocPython2Releases/{releaseId}', function (Request $requ
 $app->get('/api/v1/WiRocBLEAPIReleases', function ($request, $response) use ($app) {
     $cls = WiRocBLEAPIRelease::class;
     $limit = $this->get('helper')->getLimit($request);
-    //  $hwVersion = $request->getAttribute('hwVersion');
+    $sort = $this->get('helper')->getSort($cls, $request);
     $hwVersion = $request->getQueryParams()['hwVersion'] ?? '';
-    //  $hwRevision = $request->getAttribute('hwRevision');
     $hwRevision = $request->getQueryParams()['hwRevision'] ?? '';
     $sql = 'SELECT WiRocBLEAPIReleases.*, ReleaseStatuses.displayName as releaseStatusDisplayName, ReleaseStatuses.keyName as releaseStatusKeyName FROM WiRocBLEAPIReleases LEFT JOIN ReleaseStatuses ON WiRocBLEAPIReleases.releaseStatusId = ReleaseStatuses.id';
     if (ctype_digit($hwVersion) || ctype_digit($hwRevision))
@@ -1796,7 +1831,7 @@ $app->get('/api/v1/WiRocBLEAPIReleases', function ($request, $response) use ($ap
     {
         $sql .= 'WiRocBLEAPIReleases.minHWRevision <= :hwRevision and :hwRevision <= WiRocBLEAPIReleases.maxHWRevision';
     }
-    $sql .= ' ' . $limit;
+    $sql .= $sort . ' ' . $limit;
 
     $response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, ['hwVersion'=>$hwVersion, 'hwRevision'=>$hwRevision], $request)));
     return $response;
@@ -1885,7 +1920,11 @@ $app->post('/api/v1/WiRocBLEAPIReleases', function (Request $request, Response $
     $objectArray = json_decode($request->getBody(), true);
     
     $objectArrayForSelect = [];
-    $objectArrayForSelect['id'] = $objectArray['id'];
+    if (in_array("id", $objectArray)) {
+        $objectArrayForSelect['id'] = $objectArray['id'];
+    } else {
+        $objectArrayForSelect['id'] = -1;
+    }
     $id = $this->get('helper')->InsertOrUpdate($cls, $objectArray, $cls::$tableName, "SELECT * FROM {$cls::$tableName} WHERE id = :id", $objectArrayForSelect);
     
 
@@ -2113,7 +2152,7 @@ $app->delete('/api/v1/ReleaseStatuses/{releaseStatusId}', function (Request $req
 # WiRocBLEAPIReleaseUpgradeScripts
 /**
  * @SWG\Get(
- *     path="/api/v1/WiRocBLEAPIReleaseUpgradeScripts?sort={sort}&limit={limit}",
+ *     path="/api/v1/WiRocBLEAPIReleaseUpgradeScripts?sort={sort}&limit={limit}&limitFromVersion={limitFromVersion}&limitToVersion={limitToVersion}",
  *     description="Returns all WiRocBLEAPIReleaseUpgradeScripts",
  *     operationId="getWiRocBLEAPIReleaseUpgradeScripts",
  *     produces={"application/json"},
@@ -2131,6 +2170,20 @@ $app->delete('/api/v1/ReleaseStatuses/{releaseStatusId}', function (Request $req
  *         required=false,
  *         format="int64",
  *         type="integer"
+ *     ),
+ *     @SWG\Parameter(
+ *         description="only return the ones relevant to limitFromVersion",
+ *         in="path",
+ *         name="limitFromVersion",
+ *         required=false,
+ *         type="string"
+ *     ),
+ *     @SWG\Parameter(
+ *         description="only return the ones relevant to limitToVersion",
+ *         in="path",
+ *         name="limitToVersion",
+ *         required=false,
+ *         type="string"
  *     ),
  *     @SWG\Response(
  *         response=200,
@@ -2154,10 +2207,28 @@ $app->delete('/api/v1/ReleaseStatuses/{releaseStatusId}', function (Request $req
  */
 $app->get('/api/v1/WiRocBLEAPIReleaseUpgradeScripts', function ($request, $response) use ($app) {
     $cls = WiRocBLEAPIReleaseUpgradeScript::class;
-    $sql = 'SELECT WiRocBLEAPIReleaseUpgradeScripts.*, WiRocBLEAPIReleases.releaseName FROM WiRocBLEAPIReleaseUpgradeScripts JOIN WiRocBLEAPIReleases ON WiRocBLEAPIReleaseUpgradeScripts.releaseId = WiRocBLEAPIReleases.id';
-	$response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, [], $request)));
+    $limitFromVersion = $request->getQueryParams()['limitFromVersion'] ?? '';
+    $limitFromVersion = ltrim($limitFromVersion, 'v');
+    $limitFromVersion = ltrim($limitFromVersion, 'V');
+    $limitToVersion = $request->getQueryParams()['limitToVersion'] ?? '';
+    $limitToVersion = ltrim($limitToVersion, 'v');
+    $limitToVersion = ltrim($limitToVersion, 'V');
 
-    //$response->getBody()->write(json_encode($this->get('helper')->GetAll($cls, $cls::$tableName, $request)));
+    $sort = $this->get('helper')->getSort($cls, $request);
+    $limit = $this->get('helper')->getLimit($request);
+  
+    $sql = 'SELECT WiRocBLEAPIReleaseUpgradeScripts.*, WiRocBLEAPIReleases.releaseName 
+    FROM WiRocBLEAPIReleaseUpgradeScripts JOIN WiRocBLEAPIReleases 
+    ON WiRocBLEAPIReleaseUpgradeScripts.releaseId = WiRocBLEAPIReleases.id';
+    $sqlParam = [];
+    if ($limitFromVersion != '' && $limitToVersion != '') {
+        $sql .= ' WHERE versionNumber > :limitFromVersion AND versionNumber <= :limitToVersion';
+        $sqlParam['limitFromVersion'] = $limitFromVersion;
+        $sqlParam['limitToVersion'] = $limitToVersion;
+    }
+    $sql .= $sort . ' ' . $limit;
+	$response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, $sqlParam, $request)));
+
     return $response;
 })->setName("getWiRocBLEAPIReleaseUpgradeScripts");
 
@@ -2246,7 +2317,11 @@ $app->post('/api/v1/WiRocBLEAPIReleaseUpgradeScripts', function (Request $reques
     $objectArray = json_decode($request->getBody(), true);
     
     $objectArrayForSelect = [];
-    $objectArrayForSelect['id'] = $objectArray['id'];
+    if (in_array("id", $objectArray)) {
+        $objectArrayForSelect['id'] = $objectArray['id'];
+    } else {
+        $objectArrayForSelect['id'] = -1;
+    }
     $id = $this->get('helper')->InsertOrUpdate($cls, $objectArray, $cls::$tableName, "SELECT * FROM {$cls::$tableName} WHERE id = :id", $objectArrayForSelect);
   
     $routeContext = RouteContext::fromRequest($request);
@@ -2296,7 +2371,7 @@ $app->delete('/api/v1/WiRocBLEAPIReleaseUpgradeScripts/{scriptId}', function (Re
 # WiRocPython2ReleaseUpgradeScripts
 /**
  * @SWG\Get(
- *     path="/api/v1/WiRocPython2ReleaseUpgradeScripts?sort={sort}&limit={limit}",
+ *     path="/api/v1/WiRocPython2ReleaseUpgradeScripts?sort={sort}&limit={limit}&limitFromVersion={limitFromVersion}&limitToVersion={limitToVersion}",
  *     description="Returns all WiRocPython2ReleaseUpgradeScripts",
  *     operationId="getWiRocPython2ReleaseUpgradeScripts",
  *     produces={"application/json"},
@@ -2314,6 +2389,20 @@ $app->delete('/api/v1/WiRocBLEAPIReleaseUpgradeScripts/{scriptId}', function (Re
  *         required=false,
  *         format="int64",
  *         type="integer"
+ *     ),
+ *     @SWG\Parameter(
+ *         description="only return the ones relevant to limitFromVersion",
+ *         in="path",
+ *         name="limitFromVersion",
+ *         required=false,
+ *         type="string"
+ *     ),
+ *     @SWG\Parameter(
+ *         description="only return the ones relevant to limitToVersion",
+ *         in="path",
+ *         name="limitToVersion",
+ *         required=false,
+ *         type="string"
  *     ),
  *     @SWG\Response(
  *         response=200,
@@ -2337,10 +2426,28 @@ $app->delete('/api/v1/WiRocBLEAPIReleaseUpgradeScripts/{scriptId}', function (Re
  */
 $app->get('/api/v1/WiRocPython2ReleaseUpgradeScripts', function ($request, $response) use ($app) {
     $cls = WiRocPython2ReleaseUpgradeScript::class;
+ 
+    $limitFromVersion = $request->getQueryParams()['limitFromVersion'] ?? '';
+    $limitFromVersion = ltrim($limitFromVersion, 'v');
+    $limitFromVersion = ltrim($limitFromVersion, 'V');
+    $limitToVersion = $request->getQueryParams()['limitToVersion'] ?? '';
+    $limitToVersion = ltrim($limitToVersion, 'v');
+    $limitToVersion = ltrim($limitToVersion, 'V');
+    $sort = $this->get('helper')->getSort($cls, $request);
+    $limit = $this->get('helper')->getLimit($request);
 
-    $sql = 'SELECT WiRocPython2ReleaseUpgradeScripts.*, WiRocPython2Releases.releaseName FROM WiRocPython2ReleaseUpgradeScripts LEFT JOIN WiRocPython2Releases ON WiRocPython2ReleaseUpgradeScripts.releaseId = WiRocPython2Releases.id';
-	$response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, [], $request)));
-    //$response->getBody()->write(json_encode($this->get('helper')->GetAll($cls, $cls::$tableName, $request)));
+    $sql = 'SELECT WiRocPython2ReleaseUpgradeScripts.*, WiRocPython2Releases.releaseName 
+    FROM WiRocPython2ReleaseUpgradeScripts LEFT JOIN WiRocPython2Releases 
+    ON WiRocPython2ReleaseUpgradeScripts.releaseId = WiRocPython2Releases.id';
+    $sqlParam = [];
+	if ($limitFromVersion != '' && $limitToVersion != '') {
+        $sql .= ' WHERE WiRocPython2Releases.versionNumber > :limitFromVersion AND WiRocPython2Releases.versionNumber <= :limitToVersion';
+        $sqlParam['limitFromVersion'] = $limitFromVersion;
+        $sqlParam['limitToVersion'] = $limitToVersion;
+    }
+    $sql .= $sort . ' ' . $limit;
+    $response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, $sqlParam, $request)));
+    
     return $response;
 })->setName("getWiRocPython2ReleaseUpgradeScripts");
 
@@ -2427,7 +2534,11 @@ $app->post('/api/v1/WiRocPython2ReleaseUpgradeScripts', function (Request $reque
     $objectArray = json_decode($request->getBody(), true);
     
     $objectArrayForSelect = [];
-    $objectArrayForSelect['id'] = $objectArray['id'];
+    if (in_array("id", $objectArray)) {
+        $objectArrayForSelect['id'] = $objectArray['id'];
+    } else {
+        $objectArrayForSelect['id'] = -1;
+    }
     $id = $this->get('helper')->InsertOrUpdate($cls, $objectArray, $cls::$tableName, "SELECT * FROM {$cls::$tableName} WHERE id = :id", $objectArrayForSelect);
   
     $routeContext = RouteContext::fromRequest($request);

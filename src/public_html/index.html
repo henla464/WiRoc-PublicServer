@@ -22,7 +22,7 @@
 	</div>
 	<div id="nav-placeholder"></div>
         <div class="container-fluid">
-                <h1>WiRoc Devices</h1>
+                <h1 id="header">WiRoc Devices</h1>
 
                 <div class="table-responsive">
                         <table class="table table-striped table-hover table-sm" id="WiRocDevices">
@@ -57,85 +57,108 @@
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" crossorigin="anonymous"></script>
         -->
         <script>
-                $(document).ready(function() {
-                $(function(){
-                        $("#signup-modal-placeholder").load("signupmodal.html", function() {
-                        $('#signup').on('shown.bs.modal', function () {
-                                $('#signUpEmailInput').trigger('focus');
-                        });
+                $.urlParam = function (name) {
+                        var results = new RegExp('[\?&]' + name + '=([^&#]*)')
+                                        .exec(window.location.search);
 
-                        var signUpForm = $('#signupForm');
-                        $('#buttonSignUp').click(function() {
-                        if (signUpForm[0].checkValidity()) {
-                                var email = $('#signUpEmailInput').val();
-                                var pw = $('#confirmPassword').val();
-                                var postUserData = JSON.stringify({
-                                                "email": email,
-                                                "password": pw
-                                        });
-                                $.ajax({
-                                        url: "/api/v1/User",
-                                        type: "POST",
-                                        data: postUserData,
-                                        dataType: "json"
-                                }).then(function(cmdResponse) {
-                                        if (cmdResponse.code == "0") {
-                                                $('#signUpEmailExistsAlert').addClass('collapse');
-                                                var signUpModalElement = document.querySelector('#signup');
-                                                var signUpModal = bootstrap.Modal.getOrCreateInstance(signUpModalElement);
-                                                signUpModal.hide();
-                                                $('#accountCreatedAlert').removeClass('collapse');
-                                                $('#loginUsername').val($('#signUpEmailInput').val());
-                                        } else if (cmdResponse.code == "1") {
-                                                $('#signUpEmailExistsAlert').removeClass('collapse');
+                        return (results !== null) ? results[1] || 0 : false;
+                }
+
+                function loadHeader(competitionId) {
+                        $.ajax({
+                                url: "/api/v1/Competitions/" + competitionId
+                        }).then(function(data) {
+                                const competition = JSON.parse(data);
+                                $("#header").text("WiRoc Devices for competition: " + competition.name);
+                        }, function(fail) {
+                               
+                        });
+                }
+
+                var competitionId = $.urlParam('competitionId');
+        
+                $(document).ready(function() {
+                        $("#signup-modal-placeholder").load("signupmodal.html", function() {
+                                $('#signup').on('shown.bs.modal', function () {
+                                        $('#signUpEmailInput').trigger('focus');
+                                });
+
+                                var signUpForm = $('#signupForm');
+                                $('#buttonSignUp').click(function() {
+                                        if (signUpForm[0].checkValidity()) {
+                                                var email = $('#signUpEmailInput').val();
+                                                var pw = $('#confirmPassword').val();
+                                                var postUserData = JSON.stringify({
+                                                                "email": email,
+                                                                "password": pw
+                                                        });
+                                                $.ajax({
+                                                        url: "/api/v1/User",
+                                                        type: "POST",
+                                                        data: postUserData,
+                                                        dataType: "json"
+                                                }).then(function(cmdResponse) {
+                                                        if (cmdResponse.code == "0") {
+                                                                $('#signUpEmailExistsAlert').addClass('collapse');
+                                                                var signUpModalElement = document.querySelector('#signup');
+                                                                var signUpModal = bootstrap.Modal.getOrCreateInstance(signUpModalElement);
+                                                                signUpModal.hide();
+                                                                $('#accountCreatedAlert').removeClass('collapse');
+                                                                $('#loginUsername').val($('#signUpEmailInput').val());
+                                                        } else if (cmdResponse.code == "1") {
+                                                                $('#signUpEmailExistsAlert').removeClass('collapse');
+                                                        } else {
+                                                                $('#signUpOtherExistsAlert').text(cmdResponse.message);
+                                                                $('#signUpOtherExistsAlert').removeClass('collapse');
+                                                        }
+                                                });
                                         } else {
-                                                $('#signUpOtherExistsAlert').text(cmdResponse.message);
-                                                $('#signUpOtherExistsAlert').removeClass('collapse');
+                                                //Validate Form
+                                                signUpForm[0].reportValidity();
                                         }
                                 });
-                        } else {
-                                //Validate Form
-                                signUpForm[0].reportValidity();
-                        }
-                        });
-                });
-
-                $("#nav-placeholder").load("navigation.html", function() {
-                        console.log("adfs");
-                        $.each($('.navbar').find('.nav-link'), function() {
-                        console.log($(this).attr('href'));
-                        console.log(window.location.pathname);
-                        $(this).toggleClass('active', 
-                                window.location.pathname.indexOf($(this).attr('href')) > -1);
                         });
 
-                        $.ajax({
-                                url: "/api/v1/DevicesView?sort=dfgh&limit=100&limitToUser=false"
-                        }).then(function(data) {
-                                const devices = JSON.parse(data);
-                                $.each(devices, function() {
-                                        $('#WiRocDevices tbody').append('<tr><td>' + this.recentlyReported + '</td><td>' + this.connectedToInternet + '</td><td><a href="device.html?devicebt=' + this.BTAddress + '">' + this.name + '</a></td><td>' + this.BTAddress + '</td><td>' + this.reportTime + '</td></tr>');
+                        $("#nav-placeholder").load("navigation.html", function() {
+                                $.each($('.navbar').find('.nav-link'), function() {
+                                console.log($(this).attr('href'));
+                                console.log(window.location.pathname);
+                                $(this).toggleClass('active', 
+                                        window.location.pathname.indexOf($(this).attr('href')) > -1);
                                 });
 
-                                $("#WiRocDevices").tablesorter({ theme: 'bootstrap'});
+                                var urlDeviceView = "/api/v1/DevicesView?sort=createdTime desc";
+                                if (competitionId) {
+                                        urlDeviceView += "&limitToCompetitionId=" + competitionId;
+                                        loadHeader(competitionId);
+                                }
+                                $.ajax({
+                                        url: urlDeviceView
+                                }).then(function(data) {
+                                        const devices = JSON.parse(data);
+                                        $.each(devices, function() {
+                                                $('#WiRocDevices tbody').append('<tr><td>' + this.recentlyReported + '</td><td>' + this.connectedToInternet + '</td><td><a href="device.html?devicebt=' + this.BTAddress + '">' + this.name + '</a></td><td>' + this.BTAddress + '</td><td>' + this.reportTime + '</td></tr>');
+                                        });
+                                       
 
-                                var tooltip = 'Quotes (\") match phrases. (not) excludes a match from the results. (or) can be used to do Or searches. I.e. [red or blue] will match either red or blue. Numeric values support >=, >, <=, <, = and != operators.';
-                                // Initialise Plugin
-                                var optionsbasic = {
-                                        columnFilters: [   
-                                                { columnName: 'Alive', inputType: 'None'},
-                                                { columnName: 'Internet', inputType: 'None'},
-                                                { columnName: 'Name', inputType: 'text', toolTipMessage: tooltip},
-                                                { columnName: 'BT Address', inputType: 'text', toolTipMessage: tooltip},
-                                                { columnName: 'Last contact', inputType: 'text', toolTipMessage: tooltip}
-                                        ],
-                                        enableCookies: false
-                                };
+                                        $("#WiRocDevices").tablesorter({ theme: 'bootstrap'});
 
-                                $("#WiRocDevices").tableFilter(optionsbasic);
+                                        var tooltip = 'Quotes (\") match phrases. (not) excludes a match from the results. (or) can be used to do Or searches. I.e. [red or blue] will match either red or blue. Numeric values support >=, >, <=, <, = and != operators.';
+                                        // Initialise Plugin
+                                        var optionsbasic = {
+                                                columnFilters: [   
+                                                        { columnName: 'Alive', inputType: 'None'},
+                                                        { columnName: 'Internet', inputType: 'None'},
+                                                        { columnName: 'Name', inputType: 'text', toolTipMessage: tooltip},
+                                                        { columnName: 'BT Address', inputType: 'text', toolTipMessage: tooltip},
+                                                        { columnName: 'Last contact', inputType: 'text', toolTipMessage: tooltip}
+                                                ],
+                                                enableCookies: false
+                                        };
+
+                                        $("#WiRocDevices").tableFilter(optionsbasic);
+                                });
                         });
-                        });
-                });
                 });
                 </script>
         </div>

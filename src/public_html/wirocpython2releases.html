@@ -147,6 +147,7 @@
                                                 if (addItemForm[0].checkValidity()) {
                                                         var id = addItemForm.data('id');
                                                         var releaseName = $('#releaseNameInput').val();
+                                                        var versionNumber = $('#versionNumberInput').val();
                                                         var releaseNote = $('#releaseNoteInput').val();
                                                         var minHWVersion = $('#minHWVersionInput').val();
                                                         var minHWRevision = $('#minHWRevisionInput').val();
@@ -158,6 +159,7 @@
                                                         if (id == null) {
                                                                 postItemData = JSON.stringify({
                                                                         "releaseName": releaseName,
+                                                                        "versionNumber": versionNumber,
                                                                         "releaseNote": releaseNote,
                                                                         "minHWVersion": minHWVersion,
                                                                         "minHWRevision": minHWRevision,
@@ -169,6 +171,7 @@
                                                                 postItemData = JSON.stringify({
                                                                         "id": id,
                                                                         "releaseName": releaseName,
+                                                                        "versionNumber": versionNumber,
                                                                         "releaseNote": releaseNote,
                                                                         "minHWVersion": minHWVersion,
                                                                         "minHWRevision": minHWRevision,

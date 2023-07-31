@@ -117,10 +117,9 @@
                         });
                 }
 
-                $(document).ready(function() {
-       
+                function loadReleaseDropDown() {
                         $.ajax({
-                                url: "/api/v1/" + releaseTableName + "?sort=CreatedDate&limit=100",
+                                url: "/api/v1/" + releaseTableName + "?sort=CreatedTime desc&limit=100",
                                 dataType: "json"
                         }).then(function(items) {
                                 
@@ -128,7 +127,10 @@
                                         $('#releaseInput').append('<option value="' + this.id + '">' + this.releaseName + '</option>');
                                 });
                         });
+                }
 
+                $(document).ready(function() {
+       
                         $("#addnewitem-modal-placeholder").load(modalHtmlFileName, function() {
                                 $('#btnAddItem').click(function() {
                                         $('#addItemDescription').text('Please fill in the form to add a new script');
@@ -191,6 +193,8 @@
                                                 addItemForm[0].classList.add('was-validated');
                                         }
                                 });
+
+                                loadReleaseDropDown();
                         });
                         
 

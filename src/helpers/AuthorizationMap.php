@@ -14,20 +14,91 @@ class AuthorizationMap {
     public function __construct($app)
     {
         $this->app = $app;
-        $this->publicRoutesArray = array('postLogin', 'getDevicesView', 
-            'getMessageStats', 'getMessageStat', 'getMessageStatsOfADevice', 
-            'ApiV1', 'postUser', 'getDeviceUpdateDeviceName',
-            'getDeviceSetBatteryIsLow', 'getDevice', 'getPing', 'postLogArchives', 
-            'getWiRocPython2Releases', 'getReleaseStatuses', 'getReleaseStatus',
-            'getWiRocPython2Release', 'getWiRocBLEAPIReleases', 'getWiRocBLEAPIRelease',
-            'getDeviceStatuses', 'getDeviceStatusesByBTAddress', 'getDeviceStatus',
-            'getCompetition', 'getCompetitions', 'getLogin');
-        $this->apiKeyRoutesArray = array('postMessageStat', 'postDeviceSetConnectedToInternetTime',
-            'postDevices', 'postDeviceStatus', 'postLogArchives', 'postCreateTables', 'postReleaseStatus', 
-            'deleteReleaseStatus', 'postWiRocPython2Release', 
-            'deleteWiRocPython2Release', 'postWiRocBLEAPIRelease', 'deleteWiRocBLEAPIRelease',
-            'getWiRocPython2ReleaseUpgradeScripts', 'getWiRocBLEAPIReleaseUpgradeScripts');
-        $this->adminRoutesArray = array('postReleaseStatus', 'deleteReleaseStatus');
+        $this->publicRoutesArray = array(
+            'ApiV1',
+            'getDocs',
+            'getPing',
+            'getLogin',
+            'postLogin',
+            'postUser',
+            'getDevices',
+            'getDevicesView',
+            'getDevice',
+            'getDeviceStatusesByBTAddress',
+            'getDeviceStatuses',
+            'getDeviceStatus',
+            'getMessageStatsOfADevice',
+            'getMessageStats',
+            'getMessageStat',
+            'getCompetitions',
+            'getCompetition');
+
+        
+        
+            //'getDeviceUpdateDeviceName',
+            //'getDeviceSetBatteryIsLow', '', '', 'postLogArchives', 
+            //'getWiRocPython2Releases', 'getReleaseStatuses', 'getReleaseStatus',
+            //'getWiRocPython2Release', 'getWiRocBLEAPIReleases', 'getWiRocBLEAPIRelease',
+
+        $this->apiKeyRoutesArray = array(
+            'getDeviceUpdateDeviceName',
+            'getDeviceSetBatteryIsLow',
+            'getDeviceSetBatteryIsLowReceived',
+            'postDevices',
+            'postDeviceSetConnectedToInternetTime',
+            'postDeviceStatus',
+            'postMessageStat',
+            'postLogArchives',
+            'getWiRocPython2Releases',
+            'getWiRocBLEAPIReleases',
+            'getWiRocBLEAPIReleaseUpgradeScripts',
+            'getWiRocPython2ReleaseUpgradeScripts');
+
+            //'postCreateTables', 'postReleaseStatus', 
+            //'deleteReleaseStatus', 'postWiRocPython2Release', 
+            //'deleteWiRocPython2Release', 'postWiRocBLEAPIRelease', 'deleteWiRocBLEAPIRelease',
+            
+        $this->adminRoutesArray = array(
+            'postCreateTables',
+            'getUsers',
+            'patchUser',
+            'getDeviceUpdateDeviceName',
+            'getDeviceSetBatteryIsLow',
+            'getDeviceSetBatteryIsLowReceived',
+            'deleteDevice',
+            'postDevices',
+            'postDeviceSetConnectedToInternetTime',
+            'postDeviceStatus',
+            'postMessageStat',
+            'postLogArchives',
+            'getWiRocPython2Releases',
+            'getWiRocPython2Release',
+            'postWiRocPython2Release',
+            'deleteWiRocPython2Release',
+            'getWiRocBLEAPIReleases',
+            'getWiRocBLEAPIRelease',
+            'postWiRocBLEAPIRelease',
+            'deleteWiRocBLEAPIRelease',
+            'getReleaseStatuses',
+            'getReleaseStatus',
+            'postReleaseStatus',
+            'deleteReleaseStatus',
+            'getWiRocBLEAPIReleaseUpgradeScripts',
+            'getWiRocBLEAPIReleaseUpgradeScript',
+            'postWiRocBLEAPIReleaseUpgradeScript',
+            'deleteWiRocBLEAPIReleaseUpgradeScript',
+            'getWiRocPython2ReleaseUpgradeScripts',
+            'getWiRocPython2ReleaseUpgradeScript',
+            'postWiRocPython2ReleaseUpgradeScript',
+            'deleteWiRocPython2ReleaseUpgradeScript');
+        
+        $this->loggedInRoutesArray = array(
+            'getLogout',
+            'postDeviceSetCompetition',
+            'deleteDeviceStatusesByBTAddress',
+            'deleteMessageStatsByBTAddress',
+            'postCompetition',
+            'deleteCompetition');
     }
     
     public function needsAuthorization(ServerRequestInterface $request) {

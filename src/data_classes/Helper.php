@@ -169,20 +169,18 @@ class Helper
 		//$stmt = $this->db->query($sql);
 		//$sql = 'DROP TABLE Users';
 		//$stmt = $this->db->query($sql);
-		//$sql = 'DROP TABLE UserDevices';
-		//$stmt = $this->db->query($sql);
 		//$sql = 'DROP TABLE ReleaseStatuses';
 		//$stmt = $this->db->query($sql);
-		//$sql = 'DROP TABLE WiRocPython2Releases';
+		$sql = 'DROP TABLE WiRocPython2Releases';
+		$stmt = $this->db->query($sql);
+		$sql = 'DROP TABLE WiRocBLEAPIReleases';
+		$stmt = $this->db->query($sql);
+		//$sql = 'DROP TABLE WiRocBLEAPIReleaseUpgradeScripts';
 		//$stmt = $this->db->query($sql);
-		//$sql = 'DROP TABLE WiRocBLEAPIReleases';
+		//$sql = 'DROP TABLE WiRocPython2ReleaseUpgradeScripts';
 		//$stmt = $this->db->query($sql);
-		$sql = 'DROP TABLE WiRocBLEAPIReleaseUpgradeScripts';
-		$stmt = $this->db->query($sql);
-		$sql = 'DROP TABLE WiRocPython2ReleaseUpgradeScripts';
-		$stmt = $this->db->query($sql);
-		$sql = 'DROP TABLE Competitions';
-		$stmt = $this->db->query($sql);
+		//$sql = 'DROP TABLE Competitions';
+		//$stmt = $this->db->query($sql);
 
 
 		$sql = 'CREATE TABLE IF NOT EXISTS Devices (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), headBTAddress varchar(50), description varchar(255), 
@@ -205,9 +203,9 @@ class Helper
 		$stmt = $this->db->query($sql);
 		$sql = 'CREATE TABLE IF NOT EXISTS ReleaseStatuses (id int NOT NULL AUTO_INCREMENT, displayName varchar(50), keyName varchar(50), sortOrder int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS WiRocPython2Releases (id int NOT NULL AUTO_INCREMENT, releaseName varchar(50), releaseStatusId int, minHWVersion int, minHWRevision int, maxHWVersion int, maxHWRevision int, releaseNote varchar(500), md5HashOfReleaseFile varchar(32), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
+		$sql = 'CREATE TABLE IF NOT EXISTS WiRocPython2Releases (id int NOT NULL AUTO_INCREMENT, releaseName varchar(50), versionNumber int, releaseStatusId int, minHWVersion int, minHWRevision int, maxHWVersion int, maxHWRevision int, releaseNote varchar(500), md5HashOfReleaseFile varchar(32), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS WiRocBLEAPIReleases (id int NOT NULL AUTO_INCREMENT, releaseName varchar(50), releaseStatusId int, minHWVersion int, minHWRevision int, maxHWVersion int, maxHWRevision int, releaseNote varchar(500), md5HashOfReleaseFile varchar(32), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
+		$sql = 'CREATE TABLE IF NOT EXISTS WiRocBLEAPIReleases (id int NOT NULL AUTO_INCREMENT, releaseName varchar(50), versionNumber int, releaseStatusId int, minHWVersion int, minHWRevision int, maxHWVersion int, maxHWRevision int, releaseNote varchar(500), md5HashOfReleaseFile varchar(32), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
 		$sql = 'CREATE TABLE IF NOT EXISTS WiRocBLEAPIReleaseUpgradeScripts (id int NOT NULL AUTO_INCREMENT, releaseId int,  scriptText varchar(5000), scriptNote varchar(255), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);

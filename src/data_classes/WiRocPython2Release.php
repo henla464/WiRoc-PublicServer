@@ -2,7 +2,7 @@
 use Swagger\Annotations as SWG;
 
 /**
- * @SWG\Definition(definition="NewWiRocPython2Release", type="object", required={"releaseName", "releaseStatusId", "minHWVersion", "minHWRevision", "maxHWVersion", "maxHWRevision", "releaseNote", "md5HashOfReleaseFile"})
+ * @SWG\Definition(definition="NewWiRocPython2Release", type="object", required={"releaseName", "versionNumber", "releaseStatusId", "minHWVersion", "minHWRevision", "maxHWVersion", "maxHWRevision", "releaseNote", "md5HashOfReleaseFile"})
  */
 class WiRocPython2Release
 {
@@ -14,6 +14,11 @@ class WiRocPython2Release
      * @var string
      */
     public $releaseName;
+    /**
+     * @SWG\Property()
+     * @var int
+     */
+    public $versionNumber;
     /**
      * @SWG\Property()
      * @var int
@@ -64,7 +69,7 @@ class WiRocPython2Release
  *       @SWG\Schema(ref="#/definitions/NewWiRocPython2Release"),
  *       @SWG\Schema(
  *           required={"id"},
- *           @SWG\Property(property="id", format="int64", type="integer"),
+ *           @SWG\Property(property="id", format="integer", type="integer"),
  * 			 @SWG\Property(property="updateTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="createdTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="releaseStatusDisplayName", type="string")

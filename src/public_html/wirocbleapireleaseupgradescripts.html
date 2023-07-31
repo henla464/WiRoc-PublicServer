@@ -117,11 +117,9 @@
                         });
                 }
 
-
-
-                $(document).ready(function() {
+                function loadReleaseDropDown() {
                         $.ajax({
-                                url: "/api/v1/" + releaseTableName + "?sort=CreatedDate&limit=100",
+                                url: "/api/v1/" + releaseTableName + "?sort=CreatedTime desc&limit=100",
                                 dataType: "json"
                         }).then(function(items) {
                                 
@@ -129,6 +127,10 @@
                                         $('#releaseInput').append('<option value="' + this.id + '">' + this.releaseName + '</option>');
                                 });
                         });
+                }
+
+                $(document).ready(function() {
+
                                 
                         $("#addnewitem-modal-placeholder").load(modalHtmlFileName, function() {
                                 $('#btnAddItem').click(function() {
@@ -195,6 +197,7 @@
                                 });
                         });
                         
+                        loadReleaseDropDown();
 
                         $("#nav-placeholder").load("navigation.html", function() {
                                 loadTable();

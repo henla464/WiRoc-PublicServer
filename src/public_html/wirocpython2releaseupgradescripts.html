@@ -26,7 +26,7 @@
         <div class="container-fluid">
                 <h1>WiRocPython2 Upgrade Scripts</h1>
 
-                <button type="button" class="btn btn-secondary small" style="margin-bottom:10px;text-decoration:none;color:rgba(0,0,0,.55)" data-bs-toggle="modal" data-bs-target="#additem">Add new script</button>
+                <button type="button" class="btn btn-secondary small" id="btnAddItem" style="margin-bottom:10px;text-decoration:none;color:rgba(0,0,0,.55)">Add new script</button>
                 <br/>
                 <div class="table-responsive">
                         <table class="table table-striped table-hover table-sm" id="WiRocPython2ReleaseUpgradeScripts">
@@ -132,10 +132,16 @@
                 $(document).ready(function() {
        
                         $("#addnewitem-modal-placeholder").load(modalHtmlFileName, function() {
+                                var addItemForm = $('#addItemForm');
+
                                 $('#btnAddItem').click(function() {
                                         $('#addItemDescription').text('Please fill in the form to add a new script');
                                         $('#addItemTitle').text('Add script');
                                         $('#buttonAddItem').text('Add script');
+                                        $('#releaseInput').val('');
+                                        $('#scriptTextInput').val('');
+                                        $('#scriptNoteInput').val('');
+                                        addItemForm.data("id", null);
                                         var itemModalElement = document.querySelector('#additem');
                                         var itemModal = bootstrap.Modal.getOrCreateInstance(itemModalElement);
                                         itemModal.show();
@@ -145,8 +151,6 @@
                                         $('#releaseInput').trigger('focus');
                                 });
 
-                
-                                var addItemForm = $('#addItemForm');
                                 $('#buttonAddItem').click(function() {
                                         if (addItemForm[0].checkValidity()) {
                                                 var id = addItemForm.data('id');
@@ -220,9 +224,9 @@
                                         $('#scriptNoteInput').val(item.scriptNote);
                                        
                                        
-                                        $('#addItemDescription').text('Please fill in the form to edit the release');
-                                        $('#addItemTitle').text('Edit release');
-                                        $('#buttonAddItem').text('Save release');
+                                        $('#addItemDescription').text('Please fill in the form to edit the release upgrade script');
+                                        $('#addItemTitle').text('Edit script');
+                                        $('#buttonAddItem').text('Save script');
                                         var itemModalElement = document.querySelector('#additem');
                                         var itemModal = bootstrap.Modal.getOrCreateInstance(itemModalElement);
                                         itemModal.show();

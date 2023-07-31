@@ -26,7 +26,7 @@
         <div class="container-fluid">
                 <h1>WiRocBLEAPI Upgrade Scripts</h1>
 
-                <button type="button" class="btn btn-secondary small" style="margin-bottom:10px;text-decoration:none;color:rgba(0,0,0,.55)" data-bs-toggle="modal" data-bs-target="#additem">Add new script</button>
+                <button type="button" class="btn btn-secondary small" id="btnAddItem" style="margin-bottom:10px;text-decoration:none;color:rgba(0,0,0,.55)">Add new script</button>
                 <br/>
                 <div class="table-responsive">
                         <table class="table table-striped table-hover table-sm" id="WiRocBLEAPIReleaseUpgradeScripts">
@@ -133,10 +133,16 @@
 
                                 
                         $("#addnewitem-modal-placeholder").load(modalHtmlFileName, function() {
+                                var addItemForm = $('#addItemForm');
+                                
                                 $('#btnAddItem').click(function() {
                                         $('#addItemDescription').text('Please fill in the form to add a new script');
                                         $('#addItemTitle').text('Add script');
                                         $('#buttonAddItem').text('Add script');
+                                        $('#releaseInput').val('');
+                                        $('#scriptTextInput').val('');
+                                        $('#scriptNoteInput').val('');
+                                        addItemForm.data("id", null);
                                         var itemModalElement = document.querySelector('#additem');
                                         var itemModal = bootstrap.Modal.getOrCreateInstance(itemModalElement);
                                         itemModal.show();
@@ -147,7 +153,7 @@
                                 });
 
                 
-                                var addItemForm = $('#addItemForm');
+                                
                                 $('#buttonAddItem').click(function() {
                                         if (addItemForm[0].checkValidity()) {
                                                 var id = addItemForm.data('id');
@@ -195,10 +201,10 @@
                                                 addItemForm[0].classList.add('was-validated');
                                         }
                                 });
+                                
+                                loadReleaseDropDown();
                         });
                         
-                        loadReleaseDropDown();
-
                         $("#nav-placeholder").load("navigation.html", function() {
                                 loadTable();
                         });
@@ -216,17 +222,13 @@
                                         dataType: "json"
                                 }).then(function(item) {
                                         addItemForm.data("id", itemId);
-                                        $('#releaseNameInput').val(item.releaseName);
-                                        $('#releaseNoteInput').val(item.releaseNote);
-                                        $('#minHWVersionInput').val(item.minHWRevision);
-                                        $('#minHWRevisionInput').val(item.minHWRevision);
-                                        $('#maxHWVersionInput').val(item.maxHWVersion);
-                                        $('#maxHWRevisionInput').val(item.maxHWRevision);
-                                        $('#releaseStatus').val(item.releaseStatusId);
-
-                                        $('#addItemDescription').text('Please fill in the form to edit the release');
-                                        $('#addItemTitle').text('Edit release');
-                                        $('#buttonAddItem').text('Save release');
+                                        $('#releaseInput').val(item.releaseId);
+                                        $('#scriptTextInput').val(item.scriptText);
+                                        $('#scriptNoteInput').val(item.scriptNote);
+                                        
+                                        $('#addItemDescription').text('Please fill in the form to edit the release upgrade script');
+                                        $('#addItemTitle').text('Edit script');
+                                        $('#buttonAddItem').text('Save script');
                                         var itemModalElement = document.querySelector('#additem');
                                         var itemModal = bootstrap.Modal.getOrCreateInstance(itemModalElement);
                                         itemModal.show();

@@ -28,6 +28,7 @@ class WiRocPython2ReleaseUpgradeScript
 	public $updateTime;
     public $createdTime;
     public $releaseName;
+    public $versionNumber;
 }
 
 /**
@@ -38,12 +39,26 @@ class WiRocPython2ReleaseUpgradeScript
  *       @SWG\Schema(ref="#/definitions/NewWiRocPython2ReleaseUpgradeScript"),
  *       @SWG\Schema(
  *           required={"id"},
- *           @SWG\Property(property="id", format="int64", type="integer"),
+ *           @SWG\Property(property="id", format="integer", type="integer"),
  * 			 @SWG\Property(property="updateTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="createdTime", format="date-time", type="string"),
- * 			 @SWG\Property(property="releaseName", type="string")
+ * 			 @SWG\Property(property="releaseName", type="string"),
+ *           @SWG\Property(property="versionNumber", type="integer")
  *       )
  *   }
  * )
  */
 
+/**
+ *  @SWG\Definition(
+ *   definition="UpsertWiRocPython2ReleaseUpgradeScript",
+ *   type="object",
+ *   allOf={
+ *       @SWG\Schema(ref="#/definitions/NewWiRocPython2ReleaseUpgradeScript"),
+ *       @SWG\Schema(
+ *           required={"id"},
+ *           @SWG\Property(property="id", format="integer", type="integer")
+ *       )
+ *   }
+ * )
+ */

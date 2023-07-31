@@ -161,57 +161,69 @@ class Helper
 	}
 	
 	public function CreateTables() {
-		//$sql = 'DROP TABLE Devices';
-		//$stmt = $this->db->query($sql);
-		//$sql = 'DROP TABLE DeviceStatuses';
-		//$stmt = $this->db->query($sql);
-		//$sql = 'DROP TABLE MessageStats';
-		//$stmt = $this->db->query($sql);
-		//$sql = 'DROP TABLE Users';
-		//$stmt = $this->db->query($sql);
-		//$sql = 'DROP TABLE ReleaseStatuses';
-		//$stmt = $this->db->query($sql);
+		/*$sql = 'DROP TABLE WiRocBLEAPIReleaseUpgradeScripts';
+		$stmt = $this->db->query($sql);
+		$sql = 'DROP TABLE WiRocPython2ReleaseUpgradeScripts';
+		$stmt = $this->db->query($sql);
 		$sql = 'DROP TABLE WiRocPython2Releases';
 		$stmt = $this->db->query($sql);
 		$sql = 'DROP TABLE WiRocBLEAPIReleases';
 		$stmt = $this->db->query($sql);
-		//$sql = 'DROP TABLE WiRocBLEAPIReleaseUpgradeScripts';
-		//$stmt = $this->db->query($sql);
-		//$sql = 'DROP TABLE WiRocPython2ReleaseUpgradeScripts';
-		//$stmt = $this->db->query($sql);
-		//$sql = 'DROP TABLE Competitions';
-		//$stmt = $this->db->query($sql);
+		$sql = 'DROP TABLE ReleaseStatuses';
+		$stmt = $this->db->query($sql);
+		$sql = 'DROP TABLE DeviceStatuses';
+		$stmt = $this->db->query($sql);
+		$sql = 'DROP TABLE MessageStats';
+		$stmt = $this->db->query($sql);
+		$sql = 'DROP TABLE Devices';
+		$stmt = $this->db->query($sql);
+		$sql = 'DROP TABLE Competitions';
+		$stmt = $this->db->query($sql);
+		$sql = 'DROP TABLE Users';
+		$stmt = $this->db->query($sql);
+		*/
 
-
+		$sql = 'CREATE TABLE IF NOT EXISTS Competitions (id int NOT NULL AUTO_INCREMENT, name varchar(50), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
+		$stmt = $this->db->query($sql);
+		
 		$sql = 'CREATE TABLE IF NOT EXISTS Devices (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), headBTAddress varchar(50), description varchar(255), 
 				name varchar(50), nameUpdateTime datetime, relayPathNo int, competitionId int, competitionIdSetByUserId int,
-				connectedToUser boolean, batteryIsLow boolean, batteryIsLowTime datetime, 
+				batteryIsLow boolean, batteryIsLowTime datetime, 
 				wirocPythonVersion varchar(20), wirocBLEAPIVersion varchar(20), reportTime datetime, connectedToInternetTime datetime, updateTime datetime, 
-				createdTime datetime, PRIMARY KEY (id))';
+				createdTime datetime, FOREIGN KEY(competitionId) REFERENCES Competitions(id), PRIMARY KEY (id))';
 
 		$stmt = $this->db->query($sql);
 		$sql = 'CREATE TABLE IF NOT EXISTS DeviceStatuses (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), batteryLevel int, siStationNumber int, updateTime datetime, createdTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS MessageStats (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), adapterInstance varchar(50), ';
-		$sql .= 'messageType varchar(50), status varchar(50), noOfMessages int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
+		$sql = 'CREATE TABLE IF NOT EXISTS MessageStats (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), adapterInstance varchar(50), 
+				messageType varchar(50), status varchar(50), noOfMessages int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
 
 	
 		$sql = 'CREATE TABLE IF NOT EXISTS Users (id int NOT NULL AUTO_INCREMENT, email varchar(255) UNIQUE NOT NULL, hashedPassword varchar(255), createdTime datetime, updateTime datetime, isAdmin boolean, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS UserDevices (id int NOT NULL AUTO_INCREMENT, userId int, deviceId int, createdTime datetime, PRIMARY KEY (id))';
-		$stmt = $this->db->query($sql);
 		$sql = 'CREATE TABLE IF NOT EXISTS ReleaseStatuses (id int NOT NULL AUTO_INCREMENT, displayName varchar(50), keyName varchar(50), sortOrder int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS WiRocPython2Releases (id int NOT NULL AUTO_INCREMENT, releaseName varchar(50), versionNumber int, releaseStatusId int, minHWVersion int, minHWRevision int, maxHWVersion int, maxHWRevision int, releaseNote varchar(500), md5HashOfReleaseFile varchar(32), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
+
+		$sql = 'INSERT INTO ReleaseStatuses VALUES(NULL, "Development", "DEV", 0, NOW(), NULL)';
 		$stmt = $this->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS WiRocBLEAPIReleases (id int NOT NULL AUTO_INCREMENT, releaseName varchar(50), versionNumber int, releaseStatusId int, minHWVersion int, minHWRevision int, maxHWVersion int, maxHWRevision int, releaseNote varchar(500), md5HashOfReleaseFile varchar(32), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
+		$sql = 'INSERT INTO ReleaseStatuses VALUES(NULL, "Beta", "BETA", 5, NOW(), NULL)';
 		$stmt = $this->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS WiRocBLEAPIReleaseUpgradeScripts (id int NOT NULL AUTO_INCREMENT, releaseId int,  scriptText varchar(5000), scriptNote varchar(255), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
+		$sql = 'INSERT INTO ReleaseStatuses VALUES(NULL, "Production", "PROD", 10, NOW(), NULL)';
 		$stmt = $this->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS WiRocPython2ReleaseUpgradeScripts (id int NOT NULL AUTO_INCREMENT, releaseId int,  scriptText varchar(5000), scriptNote varchar(255), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
+
+
+		$sql = 'CREATE TABLE IF NOT EXISTS WiRocPython2Releases (id int NOT NULL AUTO_INCREMENT, releaseName varchar(50), versionNumber int, releaseStatusId int, minHWVersion int, minHWRevision int, maxHWVersion int, 
+				maxHWRevision int, releaseNote varchar(500), md5HashOfReleaseFile varchar(32), createdTime datetime, updateTime datetime, FOREIGN KEY(releaseStatusId) REFERENCES ReleaseStatuses(id), PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS Competitions (id int NOT NULL AUTO_INCREMENT, name varchar(50), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
+		$sql = 'CREATE TABLE IF NOT EXISTS WiRocBLEAPIReleases (id int NOT NULL AUTO_INCREMENT, releaseName varchar(50), versionNumber int, releaseStatusId int, minHWVersion int, minHWRevision int, maxHWVersion int, 
+				maxHWRevision int, releaseNote varchar(500), md5HashOfReleaseFile varchar(32), createdTime datetime, updateTime datetime, FOREIGN KEY(releaseStatusId) REFERENCES ReleaseStatuses(id), PRIMARY KEY (id))';
+		$stmt = $this->db->query($sql);
+		$sql = 'CREATE TABLE IF NOT EXISTS WiRocBLEAPIReleaseUpgradeScripts (id int NOT NULL AUTO_INCREMENT, releaseId int,  scriptText varchar(5000), scriptNote varchar(255), createdTime datetime, 
+				updateTime datetime, FOREIGN KEY(releaseId) REFERENCES WiRocBLEAPIReleases(id), PRIMARY KEY (id))';
+		$stmt = $this->db->query($sql);
+		$sql = 'CREATE TABLE IF NOT EXISTS WiRocPython2ReleaseUpgradeScripts (id int NOT NULL AUTO_INCREMENT, releaseId int,  scriptText varchar(5000), scriptNote varchar(255), createdTime datetime, 
+				updateTime datetime, FOREIGN KEY(releaseId) REFERENCES WiRocPython2Releases(id), PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
 		
 		$res = new CommandResponse();

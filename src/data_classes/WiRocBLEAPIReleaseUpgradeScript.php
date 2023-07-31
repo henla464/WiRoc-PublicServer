@@ -28,6 +28,7 @@ class WiRocBLEAPIReleaseUpgradeScript
 	public $updateTime;
     public $createdTime;
     public $releaseName;
+    public $versionNumber;
 }
 
 /**
@@ -41,7 +42,22 @@ class WiRocBLEAPIReleaseUpgradeScript
  *           @SWG\Property(property="id", format="integer", type="integer"),
  * 			 @SWG\Property(property="updateTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="createdTime", format="date-time", type="string"),
- * 			 @SWG\Property(property="releaseName", type="string")
+ * 			 @SWG\Property(property="releaseName", type="string"),
+ *           @SWG\Property(property="versionNumber", type="integer")
+ *       )
+ *   }
+ * )
+ */
+
+/**
+ *  @SWG\Definition(
+ *   definition="UpsertWiRocBLEAPIReleaseUpgradeScript",
+ *   type="object",
+ *   allOf={
+ *       @SWG\Schema(ref="#/definitions/NewWiRocBLEAPIReleaseUpgradeScript"),
+ *       @SWG\Schema(
+ *           required={"id"},
+ *           @SWG\Property(property="id", format="integer", type="integer")			
  *       )
  *   }
  * )

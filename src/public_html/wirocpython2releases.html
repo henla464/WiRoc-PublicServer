@@ -27,7 +27,7 @@
         <div class="container-fluid">
                 <h1>WiRocPython2 releases</h1>
 
-                <button type="button" class="btn btn-secondary small" style="margin-bottom:10px;text-decoration:none;color:rgba(0,0,0,.55)" data-bs-toggle="modal" data-bs-target="#additem">Add new release</button>
+                <button type="button" id="btnAddItem" class="btn btn-secondary small" style="margin-bottom:10px;text-decoration:none;color:rgba(0,0,0,.55)">Add new release</button>
                 <br/>
                 <div class="table-responsive">
                         <table class="table table-striped table-hover table-sm" id="WiRocPython2Releases">
@@ -125,6 +125,21 @@
                         });
                 }
 
+
+                function loadReleaseStatusDropDown()
+                {
+                        $.ajax({
+                                        url: "/api/v1/ReleaseStatuses?sort=sortOrder",
+                                        dataType: "json"
+                                }).then(function(items) {
+                                        
+                                        $.each(items, function() {
+                                                $('#releaseStatus').append('<option value="' + this.id + '">' + this.displayName + '</option>');
+                                        });
+                                });
+                }
+
+
                 $(document).ready(function() {
                         $(function(){
 
@@ -133,6 +148,15 @@
                                                 $('#addItemDescription').text('Please fill in the form to add a new release');
                                                 $('#addItemTitle').text('Add release');
                                                 $('#buttonAddItem').text('Add release');
+                                                addItemForm.data("id", null);
+                                                $('#releaseNameInput').val(null);
+                                                $('#releaseNoteInput').val(null);
+                                                $('#versionNumberInput').val(null);
+                                                $('#minHWVersionInput').val(null);
+                                                $('#minHWRevisionInput').val(null);
+                                                $('#maxHWVersionInput').val(null);
+                                                $('#maxHWRevisionInput').val(null);
+                                                $('#releaseStatus').val(null);
                                                 var itemModalElement = document.querySelector('#additem');
                                                 var itemModal = bootstrap.Modal.getOrCreateInstance(itemModalElement);
                                                 itemModal.show();
@@ -205,6 +229,8 @@
                                                         addItemForm[0].classList.add('was-validated');
                                                 }
                                         });
+                                
+                                        loadReleaseStatusDropDown();
                                 });
                                 
 
@@ -227,6 +253,7 @@
                                                 addItemForm.data("id", itemId);
                                                 $('#releaseNameInput').val(item.releaseName);
                                                 $('#releaseNoteInput').val(item.releaseNote);
+                                                $('#versionNumberInput').val(item.versionNumber);
                                                 $('#minHWVersionInput').val(item.minHWRevision);
                                                 $('#minHWRevisionInput').val(item.minHWRevision);
                                                 $('#maxHWVersionInput').val(item.maxHWVersion);

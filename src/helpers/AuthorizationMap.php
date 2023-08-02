@@ -10,6 +10,7 @@ class AuthorizationMap {
     private $publicRoutesArray;
     private $apiKeyRoutesArray; 
     private $adminRoutesArray;
+    private $loggedInRoutesArray;
     
     public function __construct($app)
     {
@@ -41,9 +42,12 @@ class AuthorizationMap {
             //'getWiRocPython2Release', 'getWiRocBLEAPIReleases', 'getWiRocBLEAPIRelease',
 
         $this->apiKeyRoutesArray = array(
+            'postCreateTables',
             'getDeviceUpdateDeviceName',
             'getDeviceSetBatteryIsLow',
+            'getDeviceSetBatteryIsNormal',
             'getDeviceSetBatteryIsLowReceived',
+            'getDeviceSetBatteryIsNormalReceived',
             'postDevices',
             'postDeviceSetConnectedToInternetTime',
             'postDeviceStatus',
@@ -59,7 +63,7 @@ class AuthorizationMap {
             //'deleteWiRocPython2Release', 'postWiRocBLEAPIRelease', 'deleteWiRocBLEAPIRelease',
             
         $this->adminRoutesArray = array(
-            'postCreateTables',
+            
             'getUsers',
             'patchUser',
             'getDeviceUpdateDeviceName',
@@ -100,7 +104,7 @@ class AuthorizationMap {
             'postCompetition',
             'deleteCompetition');
     }
-    
+
     public function needsAuthorization(ServerRequestInterface $request) {
         $routeContext = RouteContext::fromRequest($request);
         $route = $routeContext->getRoute();
@@ -122,30 +126,27 @@ class AuthorizationMap {
         
         $routeName = $route->getName();
         
-        if (!empty($_SESSION['userId'])) {
-            if (in_array($routeName, $this->adminRoutesArray)) {
-                if ($_SESSION['userIsAdmin']) {
-                    return True;
-                } else {
-                    return False;
-                }
-            }
-            # Logged in uses can access all routes (incl public and api key routes) 
-            # except the admin routes, for that admin permission is required
-            return True;
-        }
-        
-        
         if (in_array($routeName, $this->apiKeyRoutesArray)) {
             $apiKey = $request->getHeaderLine("X-Authorization");
             $container = $this->app->getContainer();
             $correctApiKey = $container->get('config')['api_key'];
             if ($apiKey == $correctApiKey) {
                 return True;
-            } else {
-                return False;
             }
         }
+
+        if (!empty($_SESSION['userId'])) {
+            if (in_array($routeName, $this->adminRoutesArray)) {
+                if ($_SESSION['userIsAdmin']) {
+                    return True;
+                }
+            }
+            
+            if (in_array($routeName, $this->loggedInRoutesArray)) {
+                return True;
+            }
+        }
+        
         return False;
     }
 

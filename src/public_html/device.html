@@ -2,6 +2,11 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -31,14 +36,14 @@
       <h4 id="deviceBTAddress">()</h4>
       Competition: <span id="competitionName"></span><button class="btn fa fa-pencil edititem" data-bs-toggle="modal" data-bs-target="#additem"></button>
       <br />
-      Battery: <i class="fa fa-exclamation-triangle" style="display:none" id="batteryIsLowWarning"> Battery is LOW!</i><span id="batteryIsLowWarningTime"></span><span id="deviceBattery"></span>
+      Battery: <i class="fa fa-exclamation-triangle" style="display:none" id="batteryIsLowWarning"> Battery is LOW!</i>&nbsp;<span id="batteryIsLowWarningTime"></span>&nbsp;&nbsp;<span id="deviceBattery"></span>
       <button class="btn fa fa-area-chart" data-bs-toggle="modal" data-bs-target="#batteryChartModal"></button>
       <br />
       Control numbers: <span id="deviceSIStationNumber"></span>
       <br/>
       Remote devices: <span id="remoteDevices"></span>
       <br/>
-      <span id="remoteDeviceBatteryLowWarning">Battery low at remote device</span>
+      <span id="remoteDeviceBatteryLowWarning" style="background-color: red;">Battery low at remote device</span>
       <span id="remoteDeviceBatteryLowWarningTime"></span>
       <br/>
       <br/>
@@ -126,7 +131,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"/>
                   </div>
                   <div class="modal-body">
-                      <div>
+                      <div style="min-height: 400px">
                         <canvas id="batteryChart"></canvas>
                       </div>     
                       <div class="form-group d-flex">
@@ -234,6 +239,7 @@
               type: 'line',
               data: data,
               options: {
+                maintainAspectRatio: false,
                 parsing: {
                   xAxisKey: 'createdTime',
                   yAxisKey: 'batteryLevel'
@@ -303,7 +309,7 @@
 
           function loadDeviceStatuses() {
             $.ajax({
-              url: "/api/v1/Devices/" + btAddressOfDevice + "/DeviceStatuses?sort=createdTime desc&limitToCreatedTimeWithinSeconds=86400",
+              url: "/api/v1/Devices/" + btAddressOfDevice.replaceAll(':','%3A') + "/DeviceStatuses?sort=createdTime desc&limitToCreatedTimeWithinSeconds=86400",
               dataType: "json"
             }).then(function(latestStatuses) {
               if (latestStatuses.length > 0) {
@@ -319,7 +325,7 @@
 
           function loadDevice() {
             $.ajax({
-                url: "/api/v1/" + tableName + "/" + btAddressOfDevice,
+                url: "/api/v1/" + tableName + "/" + btAddressOfDevice.replaceAll(':','%3A'),
                 dataType: "json"
             }).then(function(device) {
               $('#competitionInput').val(device.competitionId);
@@ -327,11 +333,11 @@
               $('#deviceBTAddress').text("(" + btAddressOfDevice + ")");
               if (device.batteryIsLow == 1) {
                 $('#batteryIsLowWarning').show();
-                $('batteryIsLowWarningTime').text('[' + device.batteryIsLowTime + ']');
-                $('batteryIsLowWarningTime').show();
+                $('#batteryIsLowWarningTime').text('[' + device.batteryIsLowTime + ']');
+                $('#batteryIsLowWarningTime').show();
               } else {
                 $('#batteryIsLowWarning').hide();
-                $('batteryIsLowWarningTime').hide();
+                $('#batteryIsLowWarningTime').hide();
               }
               if (device.batteryIsLowReceived == 1) {
                 $('#remoteDeviceBatteryLowWarning').show();
@@ -348,7 +354,7 @@
           
           function loadAggregated() {
             $.ajax({
-                    url: "/api/v1/Devices/" + btAddressOfDevice +"/MessageStats?sort=adapterInstance,messageType&outputType=aggregated"
+                    url: "/api/v1/Devices/" + btAddressOfDevice.replaceAll(':','%3A') +"/MessageStats?sort=adapterInstance,messageType&outputType=aggregated"
             }).then(function(data) {
                     const devices = JSON.parse(data);
                     $.each(devices, function() {
@@ -380,7 +386,7 @@
 
           function loadMessages() {
             $.ajax({
-                url: "/api/v1/Devices/" + btAddressOfDevice +"/MessageStats?sort=createdTime desc&outputType=normal"
+                url: "/api/v1/Devices/" + btAddressOfDevice.replaceAll(':','%3A') +"/MessageStats?sort=createdTime desc&outputType=normal"
             }).then(function(data) {
                 const devices = JSON.parse(data);
                 $.each(devices, function() {
@@ -412,7 +418,7 @@
 
           function loadRemoteDevices() {
             $.ajax({
-                    url: "/api/v1/DevicesView?sort=connectedToInternetTime desc&limit=10&limitToHeadBTAddress=" + btAddressOfDevice
+                    url: "/api/v1/DevicesView?sort=connectedToInternetTime desc&limit=10&limitToHeadBTAddress=" + btAddressOfDevice.replaceAll(':','%3A')
             }).then(function(data) {
                     const devices = JSON.parse(data);
                     $.each(devices, function() {

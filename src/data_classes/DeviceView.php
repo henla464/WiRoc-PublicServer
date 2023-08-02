@@ -34,7 +34,6 @@ class DeviceView
     public $relayPathNo;
     public $competitionId;
     public $competitionName;
-    public $connectedToUser;
     public $batteryIsLow;
     public $batteryIsLowTime;
     public $wirocPythonVersion;
@@ -58,7 +57,6 @@ class DeviceView
  * 			 @SWG\Property(property="nameUpdateTime", format="date-time", type="string"),
  *           @SWG\Property(property="competitionId", type="integer"),
  *           @SWG\Property(property="competitionName", type="string"),
- * 			 @SWG\Property(property="connectedToUser", type="boolean"),
  * 			 @SWG\Property(property="batteryIsLow", type="boolean"),
  * 			 @SWG\Property(property="batteryIsLowTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="wirocPythonVersion", type="string"),

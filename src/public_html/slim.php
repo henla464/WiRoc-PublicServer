@@ -21,8 +21,17 @@ require '../vendor/autoload.php';
 if (PHP_SAPI == 'cli-server') {
 
     $url  = parse_url($_SERVER['REQUEST_URI']);
+    
+    //if ($url == false) {
+    //    throw new Exception("FALSE");
+   // }
+    //if ($url == true) {
+     //   return false;
+        //throw new Exception($_SERVER['REQUEST_URI']);
+        //throw new Exception("TRUE");
+    //}
     $file = __DIR__ . $url['path'];
-	// check the file types, only serve standard files
+    // check the file types, only serve standard files
     if (preg_match('/\.(?:png|js|jpg|jpeg|gif|css|html|css|js|htm)$/', $file)) {
         // does the file exist? If so, return it
         if (is_file($file)) {
@@ -463,7 +472,7 @@ $app->post('/api/v1/User', function (Request $request, Response $response) {
 # DEVICES
 /**
      * @SWG\Get(
-     *     path="/api/v1/Devices?sort={sort}&limit={limit}&limitToUser={limitToUser}",
+     *     path="/api/v1/Devices?sort={sort}&limit={limit}",
      *     description="Returns all devices",
      *     operationId="getDevices",
      *     @SWG\Parameter(
@@ -479,13 +488,6 @@ $app->post('/api/v1/User', function (Request $request, Response $response) {
      *         name="limit",
      *         required=false,
      *         type="string"
-     *     ),
-     *     @SWG\Parameter(
-     *         description="limit to user",
-     *         in="path",
-     *         name="limitToUser",
-     *         required=false,
-     *         type="boolean"
      *     ),
      *     produces={"application/json"},
      *     @SWG\Response(
@@ -510,11 +512,7 @@ $app->post('/api/v1/User', function (Request $request, Response $response) {
      */
 $app->get('/api/v1/Devices', function ($request, $response) use ($app) {
 	$cls = Device::class;
-	//$userId = $_SESSION['userId'];
-	$userId = 0; //$user->id;
-	//$queryParams = $request->getQueryParams();
-    $sql = 'SELECT Devices.* FROM Devices';
-    $response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, ['userId'=>$userId], $request)));
+    $response->getBody()->write(json_encode($this->get('helper')->GetAll($cls, $cls::$tableName, $request)));
     return $response;
 
 })->setName("getDevices");
@@ -584,7 +582,9 @@ $app->get('/api/v1/DevicesView', function ($request, $response) use ($app) {
     $limit = $this->get('helper')->getLimit($request);
     $queryParams = $request->getQueryParams();
     $headBTAddress = $queryParams['limitToHeadBTAddress'] ?? '';
-	$competitionId = $queryParams['limitToCompetitionId'] ?? '';
+    $headBTAddress = $headBTAddress == 'undefined' ? '': $headBTAddress;
+    $competitionId = $queryParams['limitToCompetitionId'] ?? '';
+    $competitionId = $competitionId == 'undefined' ? '': $competitionId;
     
     if (trim($headBTAddress) != '' || trim($competitionId) != '') {
         $sql .= ' WHERE ';
@@ -601,6 +601,7 @@ $app->get('/api/v1/DevicesView', function ($request, $response) use ($app) {
         $sqlParam['competitionId'] = $competitionId; 
     }
     $sql .= $sort . ' ' . $limit;
+    
     $response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, $sqlParam, $request)));
     return $response;
 
@@ -699,105 +700,208 @@ $app->get('/api/v1/Devices/{BTAddress}/UpdateDeviceName/{deviceName}', function 
     
     $routeContext = RouteContext::fromRequest($request);
     $routeParser = $routeContext->getRouteParser();
-    $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $objectArray['BTAddress']]);
+    $btAddressUrl = str_replace(':','%3A', $objectArray['BTAddress']);
+    $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $btAddressUrl]);
 	return $response->withStatus(302)->withHeader('Location', $url);
 })->setName('getDeviceUpdateDeviceName');
 
 
 
 /**
-     * @SWG\Get(
-     *     path="/api/v1/Devices/{BTAddress}/SetBatteryIsLow",
-     *     description="Set batteryIsLow, returns the device",
-     *     operationId="getDeviceSetBatteryIsLow",
-     *     @SWG\Parameter(
-     *         description="BT Address of device to update",
-     *         in="path",
-     *         name="BTAddress",
-     *         required=true,
-     *         type="string"
-     *     ), 
-     *     produces={"application/json"},
-     *     @SWG\Response(
-     *         response=200,
-     *         description="device response",
-     *         @SWG\Schema(
-     *             ref="#/definitions/Device"
-     *         ),
-     *     ),
-     *     @SWG\Response(
-     *         response="default",
-     *         description="unexpected error",
-     *         @SWG\Schema(
-     *             ref="#/definitions/ErrorModel"
-     *         )
-     *     ),
-     *     security={
-     *       {"api_key": {}}
-     *     }
-     * )
-     */
+ * @SWG\Get(
+ *     path="/api/v1/Devices/{BTAddress}/SetBatteryIsLow",
+ *     description="Set batteryIsLow, returns the device",
+ *     operationId="getDeviceSetBatteryIsLow",
+ *     @SWG\Parameter(
+ *         description="BT Address of device to update",
+ *         in="path",
+ *         name="BTAddress",
+ *         required=true,
+ *         type="string"
+ *     ), 
+ *     produces={"application/json"},
+ *     @SWG\Response(
+ *         response=200,
+ *         description="device response",
+ *         @SWG\Schema(
+ *             ref="#/definitions/Device"
+ *         ),
+ *     ),
+ *     @SWG\Response(
+ *         response="default",
+ *         description="unexpected error",
+ *         @SWG\Schema(
+ *             ref="#/definitions/ErrorModel"
+ *         )
+ *     ),
+ *     security={
+ *       {"api_key": {}}
+ *     }
+ * )
+ */
 $app->get('/api/v1/Devices/{BTAddress}/SetBatteryIsLow', function (Request $request, Response $response) {
     $BTAddress = $request->getAttribute('BTAddress');
     $cls = Device::class;
     $objectArray = [];
-    $objectArray['batteryIsLow'] = true;
+    $objectArray['batteryIsLow'] = 1;
     $objectArray['BTAddress'] = $BTAddress;
     $sql = "UPDATE {$cls::$tableName} SET `batteryIsLow` = :batteryIsLow, `batteryIsLowTime` = NOW(), `updateTime` = NOW() WHERE BTAddress = :BTAddress";
     $this->get('helper')->RunSql($sql, $objectArray);
     
     $routeContext = RouteContext::fromRequest($request);
     $routeParser = $routeContext->getRouteParser();
-    $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $objectArray['BTAddress']]);
+    $btAddressUrl = str_replace(':','%3A', $objectArray['BTAddress']);
+    $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $btAddressUrl]);
 	return $response->withStatus(302)->withHeader('Location', $url);
+    
 })->setName('getDeviceSetBatteryIsLow');
 
+
 /**
-     * @SWG\Get(
-     *     path="/api/v1/Devices/{BTAddress}/SetBatteryIsLowReceived",
-     *     description="Set batteryIsLowReceived, returns the device",
-     *     operationId="getDeviceSetBatteryIsLow",
-     *     @SWG\Parameter(
-     *         description="BT Address of device to update",
-     *         in="path",
-     *         name="BTAddress",
-     *         required=true,
-     *         type="string"
-     *     ), 
-     *     produces={"application/json"},
-     *     @SWG\Response(
-     *         response=200,
-     *         description="device response",
-     *         @SWG\Schema(
-     *             ref="#/definitions/Device"
-     *         ),
-     *     ),
-     *     @SWG\Response(
-     *         response="default",
-     *         description="unexpected error",
-     *         @SWG\Schema(
-     *             ref="#/definitions/ErrorModel"
-     *         )
-     *     ),
-     *     security={
-     *       {"api_key": {}}
-     *     }
-     * )
-     */
-    $app->get('/api/v1/Devices/{BTAddress}/SetBatteryIsLowReceived', function (Request $request, Response $response) {
-        $BTAddress = $request->getAttribute('BTAddress');
-        $cls = Device::class;
-        $objectArray = [];
-        $objectArray['batteryIsLowReceived'] = true;
-        $objectArray['BTAddress'] = $BTAddress;
-        $sql = "UPDATE {$cls::$tableName} SET `batteryIsLowReceived` = :batteryIsLowReceived, `batteryIsLowReceivedTime` = NOW(), `updateTime` = NOW() WHERE BTAddress = :BTAddress";
-        $this->get('helper')->RunSql($sql, $objectArray);
-        
-        $routeContext = RouteContext::fromRequest($request);
-        $routeParser = $routeContext->getRouteParser();
-        $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $objectArray['BTAddress']]);
-        return $response->withStatus(302)->withHeader('Location', $url);
-    })->setName('getDeviceSetBatteryIsLowReceived');
+ * @SWG\Get(
+ *     path="/api/v1/Devices/{BTAddress}/SetBatteryIsNormal",
+ *     description="Set batteryIsLow to false, returns the device",
+ *     operationId="getDeviceSetBatteryIsNormal",
+ *     @SWG\Parameter(
+ *         description="BT Address of device to update",
+ *         in="path",
+ *         name="BTAddress",
+ *         required=true,
+ *         type="string"
+ *     ), 
+ *     produces={"application/json"},
+ *     @SWG\Response(
+ *         response=200,
+ *         description="device response",
+ *         @SWG\Schema(
+ *             ref="#/definitions/Device"
+ *         ),
+ *     ),
+ *     @SWG\Response(
+ *         response="default",
+ *         description="unexpected error",
+ *         @SWG\Schema(
+ *             ref="#/definitions/ErrorModel"
+ *         )
+ *     ),
+ *     security={
+ *       {"api_key": {}}
+ *     }
+ * )
+ */
+$app->get('/api/v1/Devices/{BTAddress}/SetBatteryIsNormal', function (Request $request, Response $response) {
+    $BTAddress = $request->getAttribute('BTAddress');
+    $cls = Device::class;
+    $objectArray = [];
+    $objectArray['batteryIsLow'] = 0;
+    $objectArray['BTAddress'] = $BTAddress;
+    $sql = "UPDATE {$cls::$tableName} SET `batteryIsLow` = :batteryIsLow, `batteryIsLowTime` = NOW(), `updateTime` = NOW() WHERE BTAddress = :BTAddress";
+    $this->get('helper')->RunSql($sql, $objectArray);
+    
+    $routeContext = RouteContext::fromRequest($request);
+    $routeParser = $routeContext->getRouteParser();
+    $btAddressUrl = str_replace(':','%3A', $objectArray['BTAddress']);
+    $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $btAddressUrl]);
+	return $response->withStatus(302)->withHeader('Location', $url);
+})->setName('getDeviceSetBatteryIsNormal');
+
+
+/**
+ * @SWG\Get(
+ *     path="/api/v1/Devices/{BTAddress}/SetBatteryIsLowReceived",
+ *     description="Set batteryIsLowReceived, returns the device",
+ *     operationId="getDeviceSetBatteryIsLowReceived",
+ *     @SWG\Parameter(
+ *         description="BT Address of device to update",
+ *         in="path",
+ *         name="BTAddress",
+ *         required=true,
+ *         type="string"
+ *     ), 
+ *     produces={"application/json"},
+ *     @SWG\Response(
+ *         response=200,
+ *         description="device response",
+ *         @SWG\Schema(
+ *             ref="#/definitions/Device"
+ *         ),
+ *     ),
+ *     @SWG\Response(
+ *         response="default",
+ *         description="unexpected error",
+ *         @SWG\Schema(
+ *             ref="#/definitions/ErrorModel"
+ *         )
+ *     ),
+ *     security={
+ *       {"api_key": {}}
+ *     }
+ * )
+ */
+$app->get('/api/v1/Devices/{BTAddress}/SetBatteryIsLowReceived', function (Request $request, Response $response) {
+    $BTAddress = $request->getAttribute('BTAddress');
+    $cls = Device::class;
+    $objectArray = [];
+    $objectArray['batteryIsLowReceived'] = 1;
+    $objectArray['BTAddress'] = $BTAddress;
+    $sql = "UPDATE {$cls::$tableName} SET `batteryIsLowReceived` = :batteryIsLowReceived, `batteryIsLowReceivedTime` = NOW(), `updateTime` = NOW() WHERE BTAddress = :BTAddress";
+    $this->get('helper')->RunSql($sql, $objectArray);
+    
+    $routeContext = RouteContext::fromRequest($request);
+    $routeParser = $routeContext->getRouteParser();
+    $btAddressUrl = str_replace(':','%3A', $objectArray['BTAddress']);
+    $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $btAddressUrl]);
+    return $response->withStatus(302)->withHeader('Location', $url);
+})->setName('getDeviceSetBatteryIsLowReceived');
+
+
+/**
+ * @SWG\Get(
+ *     path="/api/v1/Devices/{BTAddress}/SetBatteryIsNormalReceived",
+ *     description="Set batteryIsNormalReceived, returns the device",
+ *     operationId="getDeviceSetBatteryIsNormalReceived",
+ *     @SWG\Parameter(
+ *         description="BT Address of device to update",
+ *         in="path",
+ *         name="BTAddress",
+ *         required=true,
+ *         type="string"
+ *     ), 
+ *     produces={"application/json"},
+ *     @SWG\Response(
+ *         response=200,
+ *         description="device response",
+ *         @SWG\Schema(
+ *             ref="#/definitions/Device"
+ *         ),
+ *     ),
+ *     @SWG\Response(
+ *         response="default",
+ *         description="unexpected error",
+ *         @SWG\Schema(
+ *             ref="#/definitions/ErrorModel"
+ *         )
+ *     ),
+ *     security={
+ *       {"api_key": {}}
+ *     }
+ * )
+ */
+$app->get('/api/v1/Devices/{BTAddress}/SetBatteryIsNormalReceived', function (Request $request, Response $response) {
+    $BTAddress = $request->getAttribute('BTAddress');
+    $cls = Device::class;
+    $objectArray = [];
+    $objectArray['batteryIsLowReceived'] = 0;
+    $objectArray['BTAddress'] = $BTAddress;
+    $sql = "UPDATE {$cls::$tableName} SET `batteryIsLowReceived` = :batteryIsLowReceived, `batteryIsLowReceivedTime` = NOW(), `updateTime` = NOW() WHERE BTAddress = :BTAddress";
+    $this->get('helper')->RunSql($sql, $objectArray);
+    
+    $routeContext = RouteContext::fromRequest($request);
+    $routeParser = $routeContext->getRouteParser();
+    $btAddressUrl = str_replace(':','%3A', $objectArray['BTAddress']);
+    $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $btAddressUrl]);
+    return $response->withStatus(302)->withHeader('Location', $url);
+})->setName('getDeviceSetBatteryIsNormalReceived');
 
 /**
      * @SWG\Delete(
@@ -805,12 +909,11 @@ $app->get('/api/v1/Devices/{BTAddress}/SetBatteryIsLow', function (Request $requ
      *     description="Deletes a device",
      *     operationId="deleteDevice",
      *     @SWG\Parameter(
-     *         description="ID of device to fetch",
-     *         format="int64",
+     *         description="BT address of device to delete",
      *         in="path",
-     *         name="deviceId",
+     *         name="BTAddress",
      *         required=true,
-     *         type="integer"
+     *         type="string"
      *     ),
      *     produces={"application/json"},
      *     @SWG\Response(
@@ -834,7 +937,7 @@ $app->delete('/api/v1/Devices/{BTAddress}', function (Request $request, Response
     $cls = Device::class;
     $objectArray = [];
     $objectArray['BTAddress'] = $BTAddress;
-	$this->get('helper')->DeleteBySql("DELETE FROM $cls WHERE BTAddress = :BTAddress", $objectArray);
+	$this->get('helper')->DeleteBySql("DELETE FROM {$cls::$tableName} WHERE BTAddress = :BTAddress", $objectArray);
     return $response->withStatus(204);
 })->setName('deleteDevice');
 
@@ -873,6 +976,10 @@ $app->delete('/api/v1/Devices/{BTAddress}', function (Request $request, Response
 $app->post('/api/v1/Devices', function (Request $request, Response $response) {
     $objectArray = json_decode($request->getBody(), true);
     $objectArrayForSelect = [];
+    if ($objectArray['BTAddress'] == "NoBTAddress") {
+        return $response->withStatus(400);
+    }
+
     $objectArrayForSelect['BTAddress'] = $objectArray['BTAddress'];
 	$cls = Device::class;
     $id = $this->get('helper')->InsertOrUpdate($cls, $objectArray, $cls::$tableName, "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress", $objectArrayForSelect);
@@ -884,7 +991,8 @@ $app->post('/api/v1/Devices', function (Request $request, Response $response) {
     
     $routeContext = RouteContext::fromRequest($request);
     $routeParser = $routeContext->getRouteParser();
-    $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $objectArray['BTAddress']]);
+    $btAddressUrl = str_replace(':','%3A', $objectArray['BTAddress']);
+    $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $btAddressUrl]);
 	return $response->withStatus(303)->withHeader('Location', $url);
 })->setName("postDevices");
 
@@ -931,8 +1039,10 @@ $app->post('/api/v1/Devices/{BTAddress}/SetConnectedToInternetTime', function (R
   	
     $routeContext = RouteContext::fromRequest($request);
     $routeParser = $routeContext->getRouteParser();
-    $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $objectArray['BTAddress']]);
+    $btAddressUrl = str_replace(':','%3A', $BTAddress);
+    $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $btAddressUrl]);
 	return $response->withStatus(303)->withHeader('Location', $url);
+
 })->setName("postDeviceSetConnectedToInternetTime");
 
 
@@ -995,7 +1105,8 @@ $app->post('/api/v1/Devices/{BTAddress}/SetConnectedToInternetTime', function (R
           
         $routeContext = RouteContext::fromRequest($request);
         $routeParser = $routeContext->getRouteParser();
-        $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $BTAddress]);
+        $btAddressUrl = str_replace(':','%3A', $BTAddress);
+        $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $btAddressUrl]);
         return $response->withStatus(303)->withHeader('Location', $url);
     })->setName("postDeviceSetCompetition");
 
@@ -1596,6 +1707,7 @@ $app->get('/api/v1/WiRocPython2Releases', function ($request, $response) use ($a
     $sort = $this->get('helper')->getSort($cls, $request);
     $hwVersion = $request->getQueryParams()['hwVersion'] ?? '';
     $hwRevision = $request->getQueryParams()['hwRevision'] ?? '';
+    $sqlParams = [];
     $sql = 'SELECT WiRocPython2Releases.*, ReleaseStatuses.displayName as releaseStatusDisplayName, ReleaseStatuses.keyName as releaseStatusKeyName FROM WiRocPython2Releases LEFT JOIN ReleaseStatuses ON WiRocPython2Releases.releaseStatusId = ReleaseStatuses.id';
     if (ctype_digit($hwVersion) || ctype_digit($hwRevision))
     {
@@ -1604,6 +1716,7 @@ $app->get('/api/v1/WiRocPython2Releases', function ($request, $response) use ($a
     if (ctype_digit($hwVersion))
     {
         $sql .= ' WiRocPython2Releases.minHWVersion <= :hwVersion and :hwVersion <= WiRocPython2Releases.maxHWVersion';
+        $sqlParams['hwVersion'] = $hwVersion;
     }
     if (ctype_digit($hwVersion) && ctype_digit($hwRevision))
     {
@@ -1611,11 +1724,14 @@ $app->get('/api/v1/WiRocPython2Releases', function ($request, $response) use ($a
     }
     if (ctype_digit($hwRevision))
     {
-       $sql .= 'WiRocPython2Releases.minHWRevision <= :hwRevision and :hwRevision <= WiRocPython2Releases.maxHWRevision';
+       $sql .= '(WiRocPython2Releases.minHWVersion < :hwVersion  or (WiRocPython2Releases.minHWVersion = :hwVersion and WiRocPython2Releases.minHWRevision <= :hwRevision))';
+       $sql .= ' and (WiRocPython2Releases.maxHWVersion > :hwVersion or (:hwVersion = WiRocPython2Releases.maxHWVersion and :hwRevision <= WiRocPython2Releases.maxHWRevision))';
+ 
+       $sqlParams['hwRevision'] = $hwRevision;
     }
     $sql .= $sort . ' ' . $limit;
 
-    $response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, ['hwVersion'=>$hwVersion, 'hwRevision'=>$hwRevision], $request)));
+    $response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, $sqlParams, $request)));
     return $response;
 })->setName("getWiRocPython2Releases");
 
@@ -1702,18 +1818,38 @@ $app->post('/api/v1/WiRocPython2Releases', function (Request $request, Response 
     $cls = WiRocPython2Release::class;
     $objectArray = json_decode($request->getBody(), true);
     
-    $objectArrayForSelect = [];
-    if (array_key_exists("id", $objectArray)) {
-        $objectArrayForSelect['id'] = $objectArray['id'];
-    } else {
-        $objectArrayForSelect['id'] = -1;
+    $urlToReleasePackage = 'https://github.com/henla464/WiRoc-Python-2/archive/v' . $objectArray['versionNumber'] . '.tar.gz';
+    // Use basename() function to return the base name of file
+    $localFilePath = "WiRocPython2ReleasePackages/" . basename($urlToReleasePackage);
+      
+    // Use file_get_contents() function to get the file
+    // from url and use file_put_contents() function to
+    // save the file by using base name
+    if (file_put_contents($localFilePath, file_get_contents($urlToReleasePackage)))
+    {
+        // File downloaded successfully
+        $md5Hash = md5_file($localFilePath);
+        $objectArray['md5HashOfReleaseFile'] = $md5Hash;
+
+        $objectArrayForSelect = [];
+        if (array_key_exists("id", $objectArray)) {
+            $objectArrayForSelect['id'] = $objectArray['id'];
+        } else {
+            $objectArrayForSelect['id'] = -1;
+        }
+        $id = $this->get('helper')->InsertOrUpdate($cls, $objectArray, $cls::$tableName, "SELECT * FROM {$cls::$tableName} WHERE id = :id", $objectArrayForSelect);
+    
+        $routeContext = RouteContext::fromRequest($request);
+        $routeParser = $routeContext->getRouteParser();
+        $url = $routeParser->relativeUrlFor('getWiRocPython2Release', ['releaseId' => $id]);
+        return $response->withStatus(303)->withHeader('Location', $url);
     }
-    $id = $this->get('helper')->InsertOrUpdate($cls, $objectArray, $cls::$tableName, "SELECT * FROM {$cls::$tableName} WHERE id = :id", $objectArrayForSelect);
-   
-    $routeContext = RouteContext::fromRequest($request);
-    $routeParser = $routeContext->getRouteParser();
-    $url = $routeParser->relativeUrlFor('getWiRocPython2Release', ['releaseId' => $id]);
-    return $response->withStatus(303)->withHeader('Location', $url);
+    else
+    {
+        throw new Exception('File downloading failed.');
+    }
+
+    
 })->setName("postWiRocPython2Release");
 
 
@@ -1814,6 +1950,7 @@ $app->get('/api/v1/WiRocBLEAPIReleases', function ($request, $response) use ($ap
     $sort = $this->get('helper')->getSort($cls, $request);
     $hwVersion = $request->getQueryParams()['hwVersion'] ?? '';
     $hwRevision = $request->getQueryParams()['hwRevision'] ?? '';
+    $sqlParams = [];
     $sql = 'SELECT WiRocBLEAPIReleases.*, ReleaseStatuses.displayName as releaseStatusDisplayName, ReleaseStatuses.keyName as releaseStatusKeyName FROM WiRocBLEAPIReleases LEFT JOIN ReleaseStatuses ON WiRocBLEAPIReleases.releaseStatusId = ReleaseStatuses.id';
     if (ctype_digit($hwVersion) || ctype_digit($hwRevision))
     {
@@ -1822,6 +1959,7 @@ $app->get('/api/v1/WiRocBLEAPIReleases', function ($request, $response) use ($ap
     if (ctype_digit($hwVersion))
     {
         $sql .= ' WiRocBLEAPIReleases.minHWVersion <= :hwVersion and :hwVersion <= WiRocBLEAPIReleases.maxHWVersion';
+        $sqlParams['hwVersion'] = $hwVersion;
     }
     if (ctype_digit($hwVersion) && ctype_digit($hwRevision))
     {
@@ -1829,11 +1967,13 @@ $app->get('/api/v1/WiRocBLEAPIReleases', function ($request, $response) use ($ap
     }
     if (ctype_digit($hwRevision))
     {
-        $sql .= 'WiRocBLEAPIReleases.minHWRevision <= :hwRevision and :hwRevision <= WiRocBLEAPIReleases.maxHWRevision';
+        $sql .= '(WiRocBLEAPIReleases.minHWVersion < :hwVersion  or (WiRocBLEAPIReleases.minHWVersion = :hwVersion and WiRocBLEAPIReleases.minHWRevision <= :hwRevision))';
+        $sql .= ' and (WiRocBLEAPIReleases.maxHWVersion > :hwVersion or (:hwVersion = WiRocBLEAPIReleases.maxHWVersion and :hwRevision <= WiRocBLEAPIReleases.maxHWRevision))';
+        $sqlParams['hwRevision'] = $hwRevision;
     }
     $sql .= $sort . ' ' . $limit;
 
-    $response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, ['hwVersion'=>$hwVersion, 'hwRevision'=>$hwRevision], $request)));
+    $response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, $sqlParams , $request)));
     return $response;
 })->setName("getWiRocBLEAPIReleases");
 
@@ -1918,20 +2058,37 @@ $app->get('/api/v1/WiRocBLEAPIReleases/{releaseId}', function (Request $request,
 $app->post('/api/v1/WiRocBLEAPIReleases', function (Request $request, Response $response) {
     $cls = WiRocBLEAPIRelease::class;
     $objectArray = json_decode($request->getBody(), true);
-    
-    $objectArrayForSelect = [];
-    if (array_key_exists("id", $objectArray)) {
-        $objectArrayForSelect['id'] = $objectArray['id'];
-    } else {
-        $objectArrayForSelect['id'] = -1;
-    }
-    $id = $this->get('helper')->InsertOrUpdate($cls, $objectArray, $cls::$tableName, "SELECT * FROM {$cls::$tableName} WHERE id = :id", $objectArrayForSelect);
-    
+    $urlToReleasePackage = 'https://github.com/henla464/WiRoc-BLE-API/archive/v' . $objectArray['versionNumber'] . '.tar.gz';
+    // Use basename() function to return the base name of file
+    $localFilePath = "WiRocBLEAPIReleasePackages/" . basename($urlToReleasePackage);
+      
+    // Use file_get_contents() function to get the file
+    // from url and use file_put_contents() function to
+    // save the file by using base name
+    if (file_put_contents($localFilePath, file_get_contents($urlToReleasePackage)))
+    {
+        // File downloaded successfully
+        $md5Hash = md5_file($localFilePath);
+        $objectArray['md5HashOfReleaseFile'] = $md5Hash;
+            
+        $objectArrayForSelect = [];
+        if (array_key_exists("id", $objectArray)) {
+            $objectArrayForSelect['id'] = $objectArray['id'];
+        } else {
+            $objectArrayForSelect['id'] = -1;
+        }
+        $id = $this->get('helper')->InsertOrUpdate($cls, $objectArray, $cls::$tableName, "SELECT * FROM {$cls::$tableName} WHERE id = :id", $objectArrayForSelect);
+        
 
-    $routeContext = RouteContext::fromRequest($request);
-    $routeParser = $routeContext->getRouteParser();
-    $url = $routeParser->relativeUrlFor('getWiRocBLEAPIRelease', ['releaseId' => $id]);
-    return $response->withStatus(303)->withHeader('Location', $url);
+        $routeContext = RouteContext::fromRequest($request);
+        $routeParser = $routeContext->getRouteParser();
+        $url = $routeParser->relativeUrlFor('getWiRocBLEAPIRelease', ['releaseId' => $id]);
+        return $response->withStatus(303)->withHeader('Location', $url);
+    }
+    else
+    {
+        throw new Exception('File downloading failed.');
+    }
 })->setName("postWiRocBLEAPIRelease");
 
 

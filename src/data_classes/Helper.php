@@ -161,6 +161,7 @@ class Helper
 	}
 	
 	public function CreateTables() {
+		
 		/*$sql = 'DROP TABLE WiRocBLEAPIReleaseUpgradeScripts';
 		$stmt = $this->db->query($sql);
 		$sql = 'DROP TABLE WiRocPython2ReleaseUpgradeScripts';
@@ -174,21 +175,22 @@ class Helper
 		$sql = 'DROP TABLE DeviceStatuses';
 		$stmt = $this->db->query($sql);
 		$sql = 'DROP TABLE MessageStats';
-		$stmt = $this->db->query($sql);
+		$stmt = $this->db->query($sql);*/
 		$sql = 'DROP TABLE Devices';
 		$stmt = $this->db->query($sql);
-		$sql = 'DROP TABLE Competitions';
+		/*$sql = 'DROP TABLE Competitions';
 		$stmt = $this->db->query($sql);
 		$sql = 'DROP TABLE Users';
 		$stmt = $this->db->query($sql);
 		*/
+		
 
 		$sql = 'CREATE TABLE IF NOT EXISTS Competitions (id int NOT NULL AUTO_INCREMENT, name varchar(50), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
 		
 		$sql = 'CREATE TABLE IF NOT EXISTS Devices (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), headBTAddress varchar(50), description varchar(255), 
 				name varchar(50), nameUpdateTime datetime, relayPathNo int, competitionId int, competitionIdSetByUserId int,
-				batteryIsLow boolean, batteryIsLowTime datetime, 
+				batteryIsLow boolean, batteryIsLowTime datetime, batteryIsLowReceived boolean, batteryIsLowReceivedTime datetime,
 				wirocPythonVersion varchar(20), wirocBLEAPIVersion varchar(20), reportTime datetime, connectedToInternetTime datetime, updateTime datetime, 
 				createdTime datetime, FOREIGN KEY(competitionId) REFERENCES Competitions(id), PRIMARY KEY (id))';
 
@@ -202,21 +204,26 @@ class Helper
 	
 		$sql = 'CREATE TABLE IF NOT EXISTS Users (id int NOT NULL AUTO_INCREMENT, email varchar(255) UNIQUE NOT NULL, hashedPassword varchar(255), createdTime datetime, updateTime datetime, isAdmin boolean, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
+		$sql = 'UPDATE Users SET isAdmin = 1 WHERE email="laselase@gmail.com"';
+		$stmt = $this->db->query($sql);
+		
+
 		$sql = 'CREATE TABLE IF NOT EXISTS ReleaseStatuses (id int NOT NULL AUTO_INCREMENT, displayName varchar(50), keyName varchar(50), sortOrder int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
 
+		/*
 		$sql = 'INSERT INTO ReleaseStatuses VALUES(NULL, "Development", "DEV", 0, NOW(), NULL)';
 		$stmt = $this->db->query($sql);
 		$sql = 'INSERT INTO ReleaseStatuses VALUES(NULL, "Beta", "BETA", 5, NOW(), NULL)';
 		$stmt = $this->db->query($sql);
 		$sql = 'INSERT INTO ReleaseStatuses VALUES(NULL, "Production", "PROD", 10, NOW(), NULL)';
 		$stmt = $this->db->query($sql);
+		*/
 
-
-		$sql = 'CREATE TABLE IF NOT EXISTS WiRocPython2Releases (id int NOT NULL AUTO_INCREMENT, releaseName varchar(50), versionNumber int, releaseStatusId int, minHWVersion int, minHWRevision int, maxHWVersion int, 
+		$sql = 'CREATE TABLE IF NOT EXISTS WiRocPython2Releases (id int NOT NULL AUTO_INCREMENT, releaseName varchar(50), versionNumber nvarchar(10), releaseStatusId int, minHWVersion int, minHWRevision int, maxHWVersion int, 
 				maxHWRevision int, releaseNote varchar(500), md5HashOfReleaseFile varchar(32), createdTime datetime, updateTime datetime, FOREIGN KEY(releaseStatusId) REFERENCES ReleaseStatuses(id), PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS WiRocBLEAPIReleases (id int NOT NULL AUTO_INCREMENT, releaseName varchar(50), versionNumber int, releaseStatusId int, minHWVersion int, minHWRevision int, maxHWVersion int, 
+		$sql = 'CREATE TABLE IF NOT EXISTS WiRocBLEAPIReleases (id int NOT NULL AUTO_INCREMENT, releaseName varchar(50), versionNumber nvarchar(10), releaseStatusId int, minHWVersion int, minHWRevision int, maxHWVersion int, 
 				maxHWRevision int, releaseNote varchar(500), md5HashOfReleaseFile varchar(32), createdTime datetime, updateTime datetime, FOREIGN KEY(releaseStatusId) REFERENCES ReleaseStatuses(id), PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
 		$sql = 'CREATE TABLE IF NOT EXISTS WiRocBLEAPIReleaseUpgradeScripts (id int NOT NULL AUTO_INCREMENT, releaseId int,  scriptText varchar(5000), scriptNote varchar(255), createdTime datetime, 

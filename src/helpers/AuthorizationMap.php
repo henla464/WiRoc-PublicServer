@@ -32,7 +32,9 @@ class AuthorizationMap {
             'getMessageStats',
             'getMessageStat',
             'getCompetitions',
-            'getCompetition');
+            'getCompetition',
+            'postPasswordRecovery',
+            'postSetNewPassword');
 
         
         

@@ -5,31 +5,22 @@ use DI\Container;
 use Slim\Routing\RouteContext;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-//use \Interop\Container\ContainerInterface as ContainerInterface;
-//use Doctrine\Common\Annotations\AnnotationReader;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
 use Slim\Factory\AppFactory;
+require 'PHPMailer/PHPMailer-master/src/Exception.php';
+require 'PHPMailer/PHPMailer-master/src/PHPMailer.php';
+require 'PHPMailer/PHPMailer-master/src/SMTP.php';
 
-
-//require_once '../helpers/AuthorizationMiddleware.php';
-//require_once '../helpers/AuthorizationMap.php';
 
 require '../vendor/autoload.php';
-//\Doctrine\Common\Annotations\AnnotationRegistry::registerLoader('class_exists');
-
 //require __DIR__ . '/../vendor/autoload.php';
 
 if (PHP_SAPI == 'cli-server') {
 
     $url  = parse_url($_SERVER['REQUEST_URI']);
-    
-    //if ($url == false) {
-    //    throw new Exception("FALSE");
-   // }
-    //if ($url == true) {
-     //   return false;
-        //throw new Exception($_SERVER['REQUEST_URI']);
-        //throw new Exception("TRUE");
-    //}
+
     $file = __DIR__ . $url['path'];
     // check the file types, only serve standard files
     if (preg_match('/\.(?:png|js|jpg|jpeg|gif|css|html|css|js|htm)$/', $file)) {
@@ -63,6 +54,11 @@ $container->set('config', function () {
     $config['upload']['log_archive_upload_directory'] = $ini_array['upload']['log_archive_upload_directory'];
     $config['pepper'] = $ini_array['user']['pepper'];
     $config['api_key'] = $ini_array['api']['api_key'];
+    $config['smtp']['username'] = $ini_array['smtp']['username'];
+    $config['smtp']['password'] = $ini_array['smtp']['password'];
+    $config['smtp']['from'] = $ini_array['smtp']['from'];
+    $config['smtp']['replyto'] = $ini_array['smtp']['replyto'];
+
     return $config;
 });
 
@@ -2923,6 +2919,209 @@ $app->delete('/api/v1/Competitions/{competitionId}', function (Request $request,
     $this->get('helper')->Delete($id, $cls::$tableName);
     return $response->withStatus(204);
 })->setName("deleteCompetition");
+
+
+function GUID()
+{
+    if (function_exists('com_create_guid') === true)
+    {
+        return trim(com_create_guid(), '{}');
+    }
+
+    return sprintf('%04X%04X-%04X-%04X-%04X-%04X%04X%04X', mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(16384, 20479), mt_rand(32768, 49151), mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(0, 65535));
+}
+
+/**
+ * @SWG\Post(
+ *     path="/api/v1/Users/PasswordRecovery",
+ *     description="Initiates a password recovery",
+ *     operationId="postPasswordRecovery",
+ *     @SWG\Parameter(
+ *         name="PasswordRecovery",
+ *         in="body",
+ *         description="Email of the user to recover password for",
+ *         required=true,
+ *         @SWG\Schema(ref="#/definitions/PasswordRecovery"),
+ *     ),
+ *     produces={"application/json"},
+ *     @SWG\Response(
+ *         response=200,
+ *         description="PasswordRecovery CommandResponse",
+ *         @SWG\Schema(
+ *             ref="#/definitions/CommandResponse"
+ *         ),
+ *     ),
+ *     @SWG\Response(
+ *         response="default",
+ *         description="unexpected error",
+ *         @SWG\Schema(
+ *             ref="#/definitions/ErrorModel"
+ *         )
+ *     )
+ * )
+ */
+$app->post('/api/v1/Users/PasswordRecovery', function (Request $request, Response $response) {
+    $cls = User::class;
+    $objectArray = json_decode($request->getBody(), true);
+    
+    $objectArrayForSelect = [];
+    $email = "";
+    if (array_key_exists("email", $objectArray)) {
+        $email = $objectArray['email'];
+    }
+    $objectArrayForSelect['email'] = $email;
+
+	$sqlSelect = "SELECT * FROM {$cls::$tableName} WHERE email = :email";
+	$user = $this->get('helper')->GetBySql($cls, $sqlSelect, $objectArrayForSelect);
+	
+	if ($user != null) {
+        $objectArrayForUpdate = [];
+        $objectArrayForUpdate['email'] = $email;
+        $recGuid = GUID();
+        $objectArrayForUpdate['recoveryGuid'] = $recGuid;
+        $sqlUpdate = "UPDATE {$cls::$tableName} SET recoveryGuid = :recoveryGuid, recoveryTime = NOW() WHERE email = :email";
+        $this->get('helper')->RunSql($sqlUpdate, $objectArrayForUpdate);
+
+        $smtpUsername = $this->get('config')['smtp']['username'];
+        $smtpPassword = $this->get('config')['smtp']['password'];
+        $smtpFrom = $this->get('config')['smtp']['from'];
+        $smtpReplyTo = $this->get('config')['smtp']['replyto'];
+        
+
+
+        $mail = new PHPMailer();
+        $mail->isSMTP(); 
+        $mail->Host = 'mailcluster.loopia.se'; 
+        $mail->SMTPAuth = true; 
+        $mail->Username = $smtpUsername; // SMTP username
+        $mail->Password = $smtpPassword; // SMTP password
+        $mail->SMTPSecure = 'tls'; 
+        $mail->Port = 587;
+        $mail->CharSet = 'UTF-8';
+        $mail->From = $smtpFrom;;
+        $mail->FromName = 'Mailer';
+        $mail->addAddress($email); // Add a recipient
+        $mail->addReplyTo($smtpReplyTo, '');
+        $mail->Subject = 'Password recovery for monitor.wiroc.se';
+        $mail->Body = 'Go to the <a href="https://monitor.wiroc.se/passwordrecovery.html?recoveryGuid=' . $recGuid . '">Password Recovery Page</a> to set a new password. Must be done within 10 minutes of the request.';
+        $mail->AltBody = 'Go to the Password Recovery Page: https://monitor.wiroc.se/passwordrecovery.html?recoveryGuid=' . $recGuid . ' to set a new password. Must be done within 10 minutes of the request.';
+        if($mail->send()) {
+            $res = new CommandResponse();
+            $res->code = 0;
+            $res->message = "Email sent";
+            $response->getBody()->write(json_encode($res));
+            return $response;
+        } else {
+            $res = new CommandResponse();
+            $res->code = 1;
+            $res->message = "Error sending email";
+            $response->getBody()->write(json_encode($res));
+            return $response;
+        }
+    }
+    $res = new CommandResponse();
+	$res->code = 2;
+	$res->message = "User not found";
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("postPasswordRecovery");
+
+/**
+ * @SWG\Post(
+ *     path="/api/v1/Users/SetNewPassword",
+ *     description="Sets a new password given a correct and valid recoveryGuid",
+ *     operationId="postSetNewPassword",
+ *     @SWG\Parameter(
+ *         name="SetNewPassword",
+ *         in="body",
+ *         description="recoveryGuid and password",
+ *         required=true,
+ *         @SWG\Schema(ref="#/definitions/UserSetPassword"),
+ *     ),
+ *     produces={"application/json"},
+ *     @SWG\Response(
+ *         response=200,
+ *         description="SetNewPassword CommandResponse",
+ *         @SWG\Schema(
+ *             ref="#/definitions/CommandResponse"
+ *         ),
+ *     ),
+ *     @SWG\Response(
+ *         response="default",
+ *         description="unexpected error",
+ *         @SWG\Schema(
+ *             ref="#/definitions/ErrorModel"
+ *         )
+ *     )
+ * )
+ */
+$app->post('/api/v1/Users/SetNewPassword', function (Request $request, Response $response) {
+    $cls = User::class;
+    $objectArray = json_decode($request->getBody(), true);
+    
+    $objectArrayForSelect = [];
+    $objectArrayForUpdate = [];
+    $recoveryGuid = "";
+    if (array_key_exists("recoveryGuid", $objectArray)) {
+        $recoveryGuid = $objectArray['recoveryGuid'];
+    }
+    $objectArrayForSelect['recoveryGuid'] = $recoveryGuid;
+    $objectArrayForUpdate['recoveryGuid'] = $recoveryGuid;
+    
+    //recoveryGuid
+	$sqlSelect = "SELECT * FROM {$cls::$tableName} WHERE recoveryGuid = :recoveryGuid";
+	$user = $this->get('helper')->GetBySql($cls, $sqlSelect, $objectArrayForSelect);
+	
+	if ($user != null) {
+
+        $dateTimeNow = new DateTime();
+        $recoveryTime = $user->recoveryTime;
+        $dateTimeRecovery = new DateTime($recoveryTime);
+        $dateTimeRecovery->modify("+10 minutes");
+
+        if ($dateTimeRecovery > $dateTimeNow) {
+            // Within 10 minutes
+            $hashedPassword = "";
+            if (array_key_exists("password", $objectArray)) {
+                $password = $objectArray['password'];
+
+                
+                $pepper = $this->get('config')['pepper'];
+                $pwd_peppered = hash_hmac("sha256", $objectArray['password'], $pepper);
+                $pwd_hashed = password_hash($pwd_peppered, PASSWORD_ARGON2ID);
+                $objectArrayForUpdate['hashedPassword'] = $pwd_hashed;
+
+                $sqlUpdate = "UPDATE {$cls::$tableName} SET hashedPassword = :hashedPassword, updateTime = NOW() WHERE recoveryGuid = :recoveryGuid";
+                $this->get('helper')->RunSql($sqlUpdate, $objectArrayForUpdate);
+
+                $res = new CommandResponse();
+                $res->code = 0;
+                $res->message = "Password updated";
+                $response->getBody()->write(json_encode($res));
+                return $response;
+            } else {
+                $res = new CommandResponse();
+                $res->code = 3;
+                $res->message = "Password not supplied";
+                $response->getBody()->write(json_encode($res));
+                return $response;
+            }
+            
+        } else {
+            $res = new CommandResponse();
+            $res->code = 1;
+            $res->message = "To late, the recovery guid has expired!";
+            $response->getBody()->write(json_encode($res));
+            return $response;
+        }
+    }
+    $res = new CommandResponse();
+	$res->code = 2;
+	$res->message = "User not found";
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("postSetNewPassword");
+
 
 $app->run();
 

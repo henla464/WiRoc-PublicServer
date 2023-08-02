@@ -175,14 +175,15 @@ class Helper
 		$sql = 'DROP TABLE DeviceStatuses';
 		$stmt = $this->db->query($sql);
 		$sql = 'DROP TABLE MessageStats';
-		$stmt = $this->db->query($sql);*/
+		$stmt = $this->db->query($sql);
 		$sql = 'DROP TABLE Devices';
 		$stmt = $this->db->query($sql);
-		/*$sql = 'DROP TABLE Competitions';
-		$stmt = $this->db->query($sql);
-		$sql = 'DROP TABLE Users';
+		$sql = 'DROP TABLE Competitions';
 		$stmt = $this->db->query($sql);
 		*/
+		//$sql = 'DROP TABLE Users';
+		//$stmt = $this->db->query($sql);
+		
 		
 
 		$sql = 'CREATE TABLE IF NOT EXISTS Competitions (id int NOT NULL AUTO_INCREMENT, name varchar(50), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
@@ -202,7 +203,7 @@ class Helper
 		$stmt = $this->db->query($sql);
 
 	
-		$sql = 'CREATE TABLE IF NOT EXISTS Users (id int NOT NULL AUTO_INCREMENT, email varchar(255) UNIQUE NOT NULL, hashedPassword varchar(255), createdTime datetime, updateTime datetime, isAdmin boolean, PRIMARY KEY (id))';
+		$sql = 'CREATE TABLE IF NOT EXISTS Users (id int NOT NULL AUTO_INCREMENT, email varchar(255) UNIQUE NOT NULL, hashedPassword varchar(255), createdTime datetime, updateTime datetime, isAdmin boolean, recoveryGuid varchar(50), recoveryTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
 		$sql = 'UPDATE Users SET isAdmin = 1 WHERE email="laselase@gmail.com"';
 		$stmt = $this->db->query($sql);

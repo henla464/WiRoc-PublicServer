@@ -2,9 +2,9 @@
 use Swagger\Annotations as SWG;
 
 /**
- * @SWG\Definition(definition="NewNewUser", type="object", required={"email", "password"})
+ * @SWG\Definition(definition="UserSetPassword", type="object", required={"recoveryGuid", "password"})
  */
-class NewUser
+class UserSetPassword
 {
 	public static $tableName = 'Users';
 	
@@ -12,11 +12,10 @@ class NewUser
      * @var string
      * @SWG\Property()
      */
-    public $email;
+    public $recoveryGuid;
     /**
      * @var string
      * @SWG\Property()
      */
     public $password;
 }
-

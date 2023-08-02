@@ -24,6 +24,8 @@ class User
      * @SWG\Property()
      */
     public $isAdmin;
+    public $recoveryGuid;
+    public $recoveryTime;
 	public $updateTime;
     public $createdTime;
 }
@@ -44,3 +46,16 @@ class User
  * )
  */
 
+/**
+ *  @SWG\Definition(
+ *   definition="PasswordRecovery",
+ *   type="object",
+ *   allOf={
+ *       @SWG\Schema(
+ *           @SWG\Property(property="email", type="string")
+ *       )
+ *   }
+ * )
+ */
+
+ 

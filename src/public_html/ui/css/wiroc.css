@@ -54,6 +54,34 @@
 }
 
 
+.recorvery-form form {
+	color: #999;
+}
+.recovery-form .form-group {
+	margin-bottom: 20px;
+}
+.recovery-form .input-group-addon {
+	width: 30px;
+}
+.recovery-form input[type="checkbox"] {
+	margin-top: 2px;
+}   
+.recovery-form .fa {
+	font-size: 21px;
+	margin-top: 10px;
+}
+.recovery-form .fa-paper-plane {
+	font-size: 18px;
+}
+.recovery-form .fa-check {
+	color: #fff;
+	left: 5px;
+	top: 10px;
+	font-size: 7px;
+	position: absolute;
+}
+
+
 .close {
   position: absolute;
   top: 0;

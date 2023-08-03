@@ -18,7 +18,7 @@
 
 <nav class="navbar navbar-expand-lg navbar-light bg-top sticky-top">
   <div class="container-fluid">
-	<a class="navbar-brand" href="#"><img src="res/logotransparent.png" height="50" alt=""><span class="h1" style="vertical-align:middle"> Monitor</span></a>
+	<a class="navbar-brand" href="index.html"><img src="res/logotransparent.png" height="50" alt=""><span class="h1" style="vertical-align:middle"> Monitor</span></a>
 	<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
 	  <span class="navbar-toggler-icon"></span>
 	</button>
@@ -40,7 +40,7 @@
 			</div><div class="col-5">
 				<input class="form-control me-2" type="password" id="loginPassword" placeholder="Password" aria-label="Password">
 			</div><div class="col-2">
-				<button class="btn btn-outline-success" id="btnlogin" type="button">Log&nbsp;in</button>
+				<button class="btn btn-secondary small" id="btnlogin" type="button">Log&nbsp;in</button>
 			</div>
 		  </div>
 		  <div class="row">
@@ -48,14 +48,14 @@
 				<button type="button" class="btn btn-link small" style="padding-left:0px;text-decoration:none;color:rgba(0,0,0,.55)" data-bs-toggle="modal" data-bs-target="#signup">Create account</button>
 			</div>
 			<div class="col-5">
-				<button type="button" class="btn btn-link small" style="padding-left:0px;text-decoration:none;color:rgba(0,0,0,.55)" data-bs-toggle="modal" data-bs-target="#forgotpw">Forgot password</button>
+				<a href="passwordrecovery.html" class="btn btn-link small" style="padding-left:0px;text-decoration:none;color:rgba(0,0,0,.55)">Forgot password</a>
 			</div>
 		  </div>
 		</div>
 		<div class="container-fluid" id="loggedInDiv" style="display:none">
 			<div class="row">
 			  <div class="col-5 ml-auto">
-				<button type="button" id="btnLogout"class="btn btn-link small" style="padding-left:0px;text-decoration:none;color:rgba(0,0,0,.55)">Log&nbsp;out</button>
+				<button type="button" id="btnLogout" class="btn btn-secondary small">Log&nbsp;out</button>
 		      </div><div class="col-5">
 			  </div><div class="col-2">
 			  </div>

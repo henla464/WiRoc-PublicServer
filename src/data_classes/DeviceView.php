@@ -2,7 +2,7 @@
 use Swagger\Annotations as SWG;
 
 /**
- * @SWG\Definition(definition="NewDeviceView", type="object", required={"BTAddress", "headBTAddress", "description", "relayPathNo"})
+ * @SWG\Definition(definition="NewDeviceView", type="object", required={"BTAddress", "headBTAddress"})
  */
 class DeviceView
 {
@@ -36,8 +36,21 @@ class DeviceView
     public $competitionName;
     public $batteryIsLow;
     public $batteryIsLowTime;
+    /**
+     * @var string
+     * @SWG\Property()
+     */
     public $wirocPythonVersion;
+    /**
+     * @var string
+     * @SWG\Property()
+     */
     public $wirocBLEAPIVersion;
+    /**
+     * @var string
+     * @SWG\Property()
+     */
+    public $hardwareVersion;
     public $recentlyReported;
     public $reportTime;
 	public $updateTime;
@@ -59,8 +72,6 @@ class DeviceView
  *           @SWG\Property(property="competitionName", type="string"),
  * 			 @SWG\Property(property="batteryIsLow", type="boolean"),
  * 			 @SWG\Property(property="batteryIsLowTime", format="date-time", type="string"),
- * 			 @SWG\Property(property="wirocPythonVersion", type="string"),
- * 			 @SWG\Property(property="wirocBLEAPIVersion", type="string"),
  * 			 @SWG\Property(property="recentlyReported", type="boolean"),
  * 			 @SWG\Property(property="reportTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="updateTime", format="date-time", type="string"),

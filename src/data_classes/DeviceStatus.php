@@ -2,7 +2,7 @@
 use Swagger\Annotations as SWG;
 
 /**
- * @SWG\Definition(definition="NewDeviceStatus", type="object", required={"BTAddress", "batteryLevel", "siStationNumber"})
+ * @SWG\Definition(definition="NewDeviceStatus", type="object", required={"BTAddress", "batteryLevel", "siStationNumber", "noOfLoraMsgSentNotAcked"})
  */
 class DeviceStatus
 {
@@ -24,6 +24,17 @@ class DeviceStatus
      * @SWG\Property()
      */
     public $siStationNumber;
+    /**
+     * @var integer
+     * @SWG\Property()
+     */
+    public $noOfLoraMsgSentNotAcked;
+    /**
+     * @var boolean
+     * @SWG\Property()
+     */
+	public $allLoraPunchesSentOK;
+
 
 	public $updateTime;
     public $createdTime;

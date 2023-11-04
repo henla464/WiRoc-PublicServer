@@ -37,13 +37,13 @@ class Device
     public $relayPathNo;
     public $competitionId;
     public $competitionIdSetByUserId;
-    public $connectedToUser;
     public $batteryIsLow;
     public $batteryIsLowTime;
     public $batteryIsLowReceived;
     public $batteryIsLowReceivedTime;
     public $wirocPythonVersion;
     public $wirocBLEAPIVersion;
+    public $hardwareVersion;
     public $reportTime;
     public $connectedToInternetTime;
 	public $updateTime;
@@ -63,13 +63,13 @@ class Device
  * 			 @SWG\Property(property="nameUpdateTime", format="date-time", type="string"),
  *           @SWG\Property(property="competitionId", type="integer"),
  *           @SWG\Property(property="competitionIdSetByUserId", type="integer"),
- * 			 @SWG\Property(property="connectedToUser", type="boolean"),
  * 			 @SWG\Property(property="batteryIsLow", type="boolean"),
  * 			 @SWG\Property(property="batteryIsLowTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="batteryIsLowReceived", type="boolean"),
  * 			 @SWG\Property(property="batteryIsLowReceivedTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="wirocPythonVersion", type="string"),
  * 			 @SWG\Property(property="wirocBLEAPIVersion", type="string"),
+ * 			 @SWG\Property(property="hardwareVersion", type="string"),
  * 			 @SWG\Property(property="reportTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="connectedToInternetTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="updateTime", format="date-time", type="string"),

@@ -192,11 +192,14 @@ class Helper
 		$sql = 'CREATE TABLE IF NOT EXISTS Devices (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), headBTAddress varchar(50), description varchar(255), 
 				name varchar(50), nameUpdateTime datetime, relayPathNo int, competitionId int, competitionIdSetByUserId int,
 				batteryIsLow boolean, batteryIsLowTime datetime, batteryIsLowReceived boolean, batteryIsLowReceivedTime datetime,
-				wirocPythonVersion varchar(20), wirocBLEAPIVersion varchar(20), reportTime datetime, connectedToInternetTime datetime, updateTime datetime, 
+				wirocPythonVersion varchar(20), wirocBLEAPIVersion varchar(20), hardwareVersion varchar(20), reportTime datetime, connectedToInternetTime datetime, updateTime datetime, 
 				createdTime datetime, FOREIGN KEY(competitionId) REFERENCES Competitions(id), PRIMARY KEY (id))';
-
 		$stmt = $this->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS DeviceStatuses (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), batteryLevel int, siStationNumber int, updateTime datetime, createdTime datetime, PRIMARY KEY (id))';
+		$sql = 'ALTER TABLE DeviceStatuses ADD COLUMN IF NOT EXISTS (allLoraPunchesSentOK boolean)';
+		$stmt = $this->db->query($sql);
+		$sql = 'ALTER TABLE DeviceStatuses ADD COLUMN IF NOT EXISTS (noOfLoraMsgSentNotAcked int)';
+		$stmt = $this->db->query($sql);
+		$sql = 'CREATE TABLE IF NOT EXISTS DeviceStatuses (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), batteryLevel int, siStationNumber int, noOfLoraMsgSentNotAcked int, allLoraPunchesSentOK boolean, updateTime datetime, createdTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
 		$sql = 'CREATE TABLE IF NOT EXISTS MessageStats (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), adapterInstance varchar(50), 
 				messageType varchar(50), status varchar(50), noOfMessages int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';

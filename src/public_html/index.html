@@ -89,7 +89,9 @@
             <tr>
               <th scope="col" style="width: 64px">Alive</th>
               <th scope="col" style="width: 82px">Internet</th>
+              <th scope="col" style="width: 82px">Battery</th>
               <th scope="col">Name</th>
+              <th scope="col">Description</th>
               <th scope="col">BT Address</th>
               <th scope="col">Last contact</th>
             </tr>
@@ -149,6 +151,26 @@
           );
         }
 
+        function hasUpdatedInLastMinutes(dateString, minutes) {
+          const inputTime = new Date(dateString).getTime();
+          const currentTime = Date.now();
+          return currentTime - inputTime <= minutes * 60000;
+        }
+
+        function getBatteryPercentFormatted(batteryLevel, batteryLevelTime) {
+          if (hasUpdatedInLastMinutes(batteryLevelTime, 6)) {
+            if (batteryLevel < 15) {
+              return '<td style="color:red">' + batteryLevel + "%</td>";
+            }
+            if (batteryLevel < 35) {
+              return '<td style="color:orange">' + batteryLevel + "%</td>";
+            }
+            return '<td style="color:green">' + batteryLevel + "%</td>";
+          } else {
+            return '<td style="color:gray">' + batteryLevel + "%</td>";
+          }
+        }
+
         function loadTable() {
           var urlDeviceView = "/api/v1/DevicesView?sort=createdTime desc";
           if (competitionId) {
@@ -161,7 +183,13 @@
             '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-circle-fill" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="green"/></svg>';
           var redCircle =
             '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-circle-fill" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="red"/></svg>';
-          $("#WiRocDevices tbody").children().remove();
+
+          var sortList = null;
+          if ($("#WiRocDevices").hasClass("tablesorter")) {
+            sortList = $("#WiRocDevices")[0].config.sortList;
+          }
+          $("#WiRocDevices tbody").empty();
+
           $.ajax({
             url: urlDeviceView,
           }).then(function (data) {
@@ -176,11 +204,18 @@
                   (this.connectedToInternet == 1
                     ? '<span style="display:none">1</span>' + globeIcon
                     : '<span style="display:none">2</span>') +
-                  '</td><td><a href="device.html?devicebt=' +
+                  "</td>" +
+                  getBatteryPercentFormatted(
+                    this.batteryLevel,
+                    this.batteryLevelTime
+                  ) +
+                  '<td><a href="device.html?devicebt=' +
                   this.BTAddress +
                   '">' +
                   this.name +
                   "</a></td><td>" +
+                  (this.description != null ? this.description : "") +
+                  "</td><td>" +
                   this.BTAddress +
                   "</td><td>" +
                   this.reportTime +
@@ -188,8 +223,57 @@
               );
             });
 
-            $("#WiRocDevices").tablesorter({ theme: "bootstrap" });
+            if (!$("#WiRocDevices").hasClass("tablesorter")) {
+              $("#WiRocDevices").tablesorter({
+                theme: "bootstrap",
+                widgets: ["zebra"],
+              });
+            } else {
+              // If tablesorter is already initialized, just update and apply the sort
+              $("#WiRocDevices").trigger("update");
+              if (sortList) {
+                $("#WiRocDevices").trigger("sorton", [sortList]);
+              }
+            }
 
+            if (!$("#WiRocDevices").hasClass("tableFilter")) {
+              // Initialize table filter only once
+              var tooltip = 'Quotes (") match phrases...'; // your tooltip text
+              var optionsbasic = {
+                columnFilters: [
+                  { columnName: "Alive", inputType: "None" },
+                  { columnName: "Internet", inputType: "None" },
+                  {
+                    columnName: "Battery",
+                    inputType: "text",
+                    toolTipMessage: tooltip,
+                  },
+                  {
+                    columnName: "BatteryTime",
+                    inputType: "text",
+                    toolTipMessage: tooltip,
+                  },
+                  {
+                    columnName: "Name",
+                    inputType: "text",
+                    toolTipMessage: tooltip,
+                  },
+                  {
+                    columnName: "BT Address",
+                    inputType: "text",
+                    toolTipMessage: tooltip,
+                  },
+                  {
+                    columnName: "Last contact",
+                    inputType: "text",
+                    toolTipMessage: tooltip,
+                  },
+                ],
+                enableCookies: false,
+              };
+              $("#WiRocDevices").tableFilter(optionsbasic);
+            }
+            /*
             var tooltip =
               'Quotes (") match phrases. (not) excludes a match from the results. (or) can be used to do Or searches. I.e. [red or blue] will match either red or blue. Numeric values support >=, >, <=, <, = and != operators.';
             // Initialise Plugin
@@ -217,6 +301,7 @@
             };
 
             $("#WiRocDevices").tableFilter(optionsbasic);
+            */
           });
         }
 

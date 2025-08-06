@@ -55,6 +55,8 @@ class DeviceView
     public $reportTime;
 	public $updateTime;
     public $createdTime;
+    public $batteryLevel;
+    public $batteryLevelTime;
 }
 
 /**
@@ -75,7 +77,9 @@ class DeviceView
  * 			 @SWG\Property(property="recentlyReported", type="boolean"),
  * 			 @SWG\Property(property="reportTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="updateTime", format="date-time", type="string"),
- * 			 @SWG\Property(property="createdTime", format="date-time", type="string")
+ * 			 @SWG\Property(property="createdTime", format="date-time", type="string"),
+ * 			 @SWG\Property(property="batteryLevel",  type="integer"),
+ * 			 @SWG\Property(property="batteryLevelTime", format="date-time", type="string")
  *       )
  *   }
  * )

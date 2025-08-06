@@ -71,11 +71,11 @@
       >&nbsp;<span id="batteryIsLowWarningTime"></span>&nbsp;&nbsp;<span
         id="deviceBattery"
       ></span>
-      <button
+      <!-- <button
         class="btn fa fa-area-chart"
         data-bs-toggle="modal"
         data-bs-target="#batteryChartModal"
-      ></button>
+      ></button> -->
       <br />
       Control numbers: <span id="deviceSIStationNumber"></span>
       <br />
@@ -88,6 +88,11 @@
       >
       <span id="remoteDeviceBatteryLowWarningTime"></span>
       <br />
+
+      <div style="min-height: 400px">
+        <canvas id="batteryChart"></canvas>
+      </div>
+
       <button
         type="button"
         id="btnDeleteMessageStats"
@@ -180,43 +185,6 @@
         </div>
       </div>
 
-      <div
-        class="modal fade"
-        id="batteryChartModal"
-        tabindex="-1"
-        aria-labelledby="modalTitle"
-        aria-hidden="true"
-      >
-        <div class="modal-dialog modal-xl">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="modalTitle">Battery chart</h5>
-              <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-              />
-            </div>
-            <div class="modal-body">
-              <div style="min-height: 400px">
-                <canvas id="batteryChart"></canvas>
-              </div>
-              <div class="form-group d-flex">
-                <button
-                  type="button"
-                  id="btnCloseChart"
-                  class="btn btn-secondary btn-lg ms-auto"
-                  data-bs-dismiss="modal"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div id="signup-modal-placeholder"></div>
       <div id="addnewitem-modal-placeholder"></div>
 
@@ -278,6 +246,11 @@
           let minCreateDateTimeStr = minCreateDateStatusObj.createdTime;
 
           const ctx = document.getElementById("batteryChart");
+          // Only destroy if the chart exists and is a Chart.js instance
+          if (ctx.chart) {
+            ctx.chart.destroy();
+          }
+
           let todayDateTime = new Date();
           const yesterdayDateTime = new Date();
           yesterdayDateTime.setDate(yesterdayDateTime.getDate() - 1);
@@ -304,20 +277,67 @@
           }
           let maxDateTimeStr = maxDateTime.toLocaleString("sv-SE").slice(0, 23);
 
-          console.log(minCreateDateTimeStr),
-            console.log(minDateTimeStr),
-            console.log(maxDateTimeStr);
+          console.log(minCreateDateTimeStr);
+          console.log(minDateTimeStr);
+          console.log(maxDateTimeStr);
           console.log(yesterdayDateOnly), console.log(todayDateOnly);
+
+          // Convert boolean status to numeric (1=true, 0=false)
+          const anyPunchNotAcked = latestStatuses.map((s) => ({
+            x: s.createdTime,
+            y: s.allLoraPunchesSentOK == 0 ? 1 : 0,
+          }));
+          console.log(latestStatuses[0].allLoraPunchesSentOK);
+
           const data = {
             labels: [yesterdayDateOnly, todayDateOnly, tomorrowDateOnly],
             datasets: [
               {
-                label: "",
+                label: "Battery Level",
                 data: latestStatuses,
-                borderColor: "#00FF00",
+                borderColor: "#00FF00", // Green for battery
+                backgroundColor: "#00FF00",
                 fill: false,
                 cubicInterpolationMode: "monotone",
                 tension: 0.4,
+                parsing: {
+                  xAxisKey: "createdTime",
+                  yAxisKey: "batteryLevel",
+                },
+                yAxisID: "y",
+              },
+              {
+                label: "Unacknowledged LoRa Messages",
+                data: latestStatuses,
+                borderColor: "#FFA500", // Red for unacknowledged messages
+                backgroundColor: "#FFA500",
+                fill: false,
+                cubicInterpolationMode: "monotone",
+                tension: 0.4,
+                parsing: {
+                  xAxisKey: "createdTime",
+                  yAxisKey: "noOfLoraMsgSentNotAcked",
+                },
+                yAxisID: "y1",
+              },
+              // Boolean status (blue)
+              {
+                label: "Any unacknowledged punches",
+                data: anyPunchNotAcked,
+                borderColor: "#FF0000",
+                backgroundColor: "#FF0000",
+                borderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                parsing: {
+                  xAxisKey: "x",
+                  yAxisKey: "y",
+                },
+                yAxisID: "y2",
+                // Customize the appearance to make booleans clear
+                fill: true,
+                stepped: true, // Makes abrupt changes between 0 and 1
+                tension: 0, // No smoothing for boolean values
               },
             ],
           };
@@ -335,11 +355,32 @@
               plugins: {
                 title: {
                   display: true,
-                  text: "Battery level",
+                  text: "Battery Level / Unacknowledged LoRa Messages / Any Unacknowledged Punches",
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function (context) {
+                      let label = context.dataset.label || "";
+                      if (context.datasetIndex === 0) {
+                        return label + ": " + context.parsed.y + "%";
+                      } else if (context.datasetIndex === 1) {
+                        return label + ": " + context.parsed.y;
+                      } else {
+                        return (
+                          label +
+                          ": " +
+                          (context.parsed.y === 1
+                            ? "At least one punch not acked"
+                            : "All acked")
+                        );
+                      }
+                    },
+                  },
                 },
               },
               interaction: {
                 intersect: false,
+                mode: "index",
               },
               scales: {
                 x: {
@@ -371,13 +412,50 @@
                   },
                 },
                 y: {
+                  type: "linear",
                   display: true,
+                  position: "left",
                   title: {
                     display: true,
-                    text: "Percentage",
+                    text: "Battery Percentage",
                   },
                   suggestedMin: 0,
                   suggestedMax: 100,
+                  grid: {
+                    drawOnChartArea: true,
+                  },
+                },
+                y1: {
+                  type: "linear",
+                  display: true,
+                  position: "right",
+                  title: {
+                    display: true,
+                    text: "Unacknowledged Messages",
+                  },
+                  suggestedMin: 0,
+                  grid: {
+                    drawOnChartArea: false,
+                  },
+                },
+                y2: {
+                  // Boolean axis (far right)
+                  //type: "linear",
+                  display: true,
+                  position: "right",
+                  min: -0,
+                  max: 1.1,
+                  ticks: {
+                    callback: function (value) {
+                      // Map numeric values back to text labels
+                      if (value === 0) return "No - all good";
+                      if (value === 1) return "Yes";
+                      return "";
+                    },
+                    stepSize: 1,
+                  },
+                  title: { display: true, text: "Unacknowledged punches" },
+                  grid: { drawOnChartArea: false },
                 },
               },
             },
@@ -461,7 +539,8 @@
               btAddressOfDevice.replaceAll(":", "%3A") +
               "/MessageStats?sort=adapterInstance,messageType&outputType=aggregated",
           }).then(function (data) {
-            $("#ReceivedMessagesAggregated tbody").children().remove();
+            $("#ReceivedMessagesAggregated tbody").empty();
+            $("#SentMessagesAggregated tbody").empty();
             const devices = JSON.parse(data);
             $.each(devices, function () {
               if (this.status == "Received") {
@@ -504,8 +583,8 @@
               enableCookies: false,
             };
 
-            $("#ReceivedMessagesAggregated").tableFilter(optionsbasic);
-            $("#SentMessagesAggregated").tableFilter(optionsbasic);
+            //$("#ReceivedMessagesAggregated").tableFilter(optionsbasic);
+            //$("#SentMessagesAggregated").tableFilter(optionsbasic);
           });
         }
 
@@ -514,9 +593,10 @@
             url:
               "/api/v1/Devices/" +
               btAddressOfDevice.replaceAll(":", "%3A") +
-              "/MessageStats?sort=createdTime desc&outputType=normal&limit=500",
+              "/MessageStats?sort=createdTime desc&outputType=normal&limit=200",
           }).then(function (data) {
-            $("#ReceivedMessages tbody").children().remove();
+            $("#ReceivedMessages tbody").empty();
+            $("#SentMessages tbody").empty();
             const devices = JSON.parse(data);
             $.each(devices, function () {
               if (this.status == "Received") {
@@ -557,8 +637,8 @@
               enableCookies: false,
             };
 
-            $("#ReceivedMessages").tableFilter(optionsbasic);
-            $("#SentMessages").tableFilter(optionsbasic);
+            //$("#ReceivedMessages").tableFilter(optionsbasic);
+            //$("#SentMessages").tableFilter(optionsbasic);
           });
         }
 

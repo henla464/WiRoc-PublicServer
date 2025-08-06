@@ -572,7 +572,10 @@ $app->get('/api/v1/DevicesView', function ($request, $response) use ($app) {
 	$cls = DeviceView::class;
 	$sql = 'SELECT CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -6 MINUTE) THEN true ELSE false END recentlyReported, 
         CASE WHEN Devices.connectedToInternetTime > DATE_ADD(SYSDATE(), INTERVAL -1 MINUTE) THEN true ELSE false END connectedToInternet, 
-        Devices.*, Competitions.name as competitionName FROM Devices LEFT JOIN Competitions ON Devices.competitionId = Competitions.id';
+        Devices.*, Competitions.name as competitionName, DeviceStatuses.batteryLevel, DeviceStatuses.createdTime as batteryLevelTime 
+        FROM Devices LEFT JOIN Competitions ON Devices.competitionId = Competitions.id
+        JOIN DeviceStatuses ON (DeviceStatuses.Id = (SELECT Id FROM DeviceStatuses WHERE BTAddress = Devices.BTAddress ORDER BY createdTime DESC LIMIT 1))';
+
     $sqlParam = [];
     $sort = $this->get('helper')->getSort($cls, $request);
     $limit = $this->get('helper')->getLimit($request);

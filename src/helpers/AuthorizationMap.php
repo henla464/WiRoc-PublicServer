@@ -45,6 +45,7 @@ class AuthorizationMap {
 
         $this->apiKeyRoutesArray = array(
             'postCreateTables',
+            'postUpdateDatabaseSchema',
             'getDeviceUpdateDeviceName',
             'getDeviceSetBatteryIsLow',
             'getDeviceSetBatteryIsNormal',

@@ -375,13 +375,38 @@
               );
             });
 
-            $("#reloadSwitch").click(function () {
+            // --- BEGIN: Persist reload switch and interval input ---
+            function saveReloadSettings() {
+              var toggle = $("#reloadSwitch").prop("checked");
+              var interval = $("#intervalSeconds").val();
+              localStorage.setItem("reloadSwitch", toggle ? "1" : "0");
+              localStorage.setItem("intervalSeconds", interval);
+            }
+
+            function restoreReloadSettings() {
+              var toggle = localStorage.getItem("reloadSwitch");
+              var interval = localStorage.getItem("intervalSeconds");
+              if (toggle !== null) {
+                $("#reloadSwitch").prop("checked", toggle === "1");
+              }
+              if (interval !== null) {
+                $("#intervalSeconds").val(interval);
+              }
+            }
+
+            restoreReloadSettings();
+
+            $("#reloadSwitch").on("change", function () {
+              saveReloadSettings();
               setupInterval();
             });
 
-            $("#intervalSeconds").change(function () {
+            $("#intervalSeconds").on("input", function () {
+              saveReloadSettings();
               setupInterval();
             });
+            // --- END: Persist reload switch and interval input ---
+
             loadTable();
           });
         });

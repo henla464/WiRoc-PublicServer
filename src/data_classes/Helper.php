@@ -195,11 +195,9 @@ class Helper
 				wirocPythonVersion varchar(20), wirocBLEAPIVersion varchar(20), hardwareVersion varchar(20), reportTime datetime, connectedToInternetTime datetime, updateTime datetime, 
 				createdTime datetime, FOREIGN KEY(competitionId) REFERENCES Competitions(id), PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
-		$sql = 'ALTER TABLE DeviceStatuses ADD COLUMN IF NOT EXISTS (allLoraPunchesSentOK boolean)';
-		$stmt = $this->db->query($sql);
-		$sql = 'ALTER TABLE DeviceStatuses ADD COLUMN IF NOT EXISTS (noOfLoraMsgSentNotAcked int)';
-		$stmt = $this->db->query($sql);
-		$sql = 'CREATE TABLE IF NOT EXISTS DeviceStatuses (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), batteryLevel int, siStationNumber int, noOfLoraMsgSentNotAcked int, allLoraPunchesSentOK boolean, updateTime datetime, createdTime datetime, PRIMARY KEY (id))';
+		$sql = 'CREATE TABLE IF NOT EXISTS DeviceStatuses (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), batteryLevel int, siStationNumber int, noOfLoraMsgSentNotAcked int, allLoraPunchesSentOK boolean, internalSRRREDEnabled boolean,
+            internalSRRREDAckEnabled boolean, internalSRRBLUEEnabled boolean, internalSRRBLUEAckEnabled boolean, SRRDongleREDFound boolean, SRRDongleREDAckEnabled boolean, SRRDongleBLUEFound boolean, SRRDongleBLUEAckEnabled boolean, internalSRRREDDirection boolean,
+            internalSRRBLUEDirection boolean, tcpIPSirapEnabled boolean, serialPortBaudRate boolean, serialPortDirection boolean, siMasterConnectedOnUSB1 boolean, siMasterConnectedOnUSB2 boolean, updateTime datetime, createdTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
 		$sql = 'CREATE TABLE IF NOT EXISTS MessageStats (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), adapterInstance varchar(50), 
 				messageType varchar(50), status varchar(50), noOfMessages int, createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
@@ -242,4 +240,33 @@ class Helper
 		$res->message = "Tables created";
 		return $res;
 	}
+
+	public function UpdateDatabaseSchema() {
+        $columns = [
+            "internalSRRREDEnabled boolean",
+            "internalSRRREDAckEnabled boolean",
+            "internalSRRBLUEEnabled boolean",
+            "internalSRRBLUEAckEnabled boolean",
+            "SRRDongleREDFound boolean",
+            "SRRDongleREDAckEnabled boolean",
+            "SRRDongleBLUEFound boolean",
+            "SRRDongleBLUEAckEnabled boolean",
+            "internalSRRREDDirection boolean",
+            "internalSRRBLUEDirection boolean",
+            "tcpIPSirapEnabled boolean",
+            "serialPortBaudRate boolean",
+            "serialPortDirection boolean",
+            "siMasterConnectedOnUSB1 boolean",
+            "siMasterConnectedOnUSB2 boolean"
+        ];
+        foreach ($columns as $col) {
+            $sql = "ALTER TABLE DeviceStatuses ADD COLUMN IF NOT EXISTS $col";
+            $stmt = $this->db->query($sql);
+        }
+        $res = new CommandResponse();
+        $res->code = 0;
+        $res->message = "DeviceStatuses columns added";
+        return $res;
+    }
+	
 }

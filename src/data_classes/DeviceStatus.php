@@ -34,7 +34,82 @@ class DeviceStatus
      * @SWG\Property()
      */
 	public $allLoraPunchesSentOK;
-
+    /**
+     * @var boolean
+     * @SWG\Property()
+     */
+	public $internalSRRREDEnabled;
+     /**
+     * @var boolean
+     * @SWG\Property()
+     */
+	public $internalSRRREDAckEnabled;
+    /**
+     * @var boolean
+     * @SWG\Property()
+     */
+	public $internalSRRBLUEEnabled;
+    /**
+     * @var boolean
+     * @SWG\Property()
+     */
+    public $internalSRRBLUEAckEnabled;
+    /**
+     * @var boolean
+     * @SWG\Property()
+     */    
+    public $SRRDongleREDFound;
+    /**
+     * @var boolean
+     * @SWG\Property()
+     */    
+    public $SRRDongleREDAckEnabled;
+    /**
+     * @var boolean
+     * @SWG\Property()
+     */
+    public $SRRDongleBLUEFound;
+    /**
+     * @var boolean
+     * @SWG\Property()
+     */
+    public $SRRDongleBLUEAckEnabled;
+    /**
+     * @var boolean
+     * @SWG\Property()
+     */
+    public  $internalSRRREDDirection; 
+    /**
+     * @var boolean
+     * @SWG\Property()
+     */
+    public  $internalSRRBLUEDirection;
+    /**
+     * @var boolean
+     * @SWG\Property()
+     */
+    public  $tcpIPSirapEnabled;
+    /**
+     * @var boolean
+     * @SWG\Property()
+     */
+    public  $serialPortBaudRate;
+    /**
+     * @var boolean
+     * @SWG\Property()
+     */
+    public  $serialPortDirection;
+    /**
+     * @var boolean
+     * @SWG\Property()
+     */
+    public  $siMasterConnectedOnUSB1;
+    /**
+     * @var boolean
+     * @SWG\Property()
+     */
+    public  $siMasterConnectedOnUSB2;
+    
 
 	public $updateTime;
     public $createdTime;

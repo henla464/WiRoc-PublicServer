@@ -290,6 +290,36 @@ $app->post('/api/v1/CreateTables', function (Request $request, Response $respons
 	return $response;
 })->setName("postCreateTables");
 
+/**
+     * @SWG\Post(
+     *     path="/api/v1/UpdateDatabaseSchema",
+     *     description="Update tables, add columns if they don't exist",
+     *     operationId="postUpdateDatabaseSchema",
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=200,
+     *         description="command response",
+     *         @SWG\Schema(
+     *             ref="#/definitions/CommandResponse"
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+$app->post('/api/v1/UpdateDatabaseSchema', function (Request $request, Response $response) {
+	$response->getBody()->write(json_encode($this->get('helper')->UpdateDatabaseSchema()));
+	return $response;
+})->setName("postUpdateDatabaseSchema");
+
 
 
 # USERS

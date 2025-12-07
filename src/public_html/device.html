@@ -52,14 +52,13 @@
 
     <div id="nav-placeholder"></div>
     <div class="container-fluid gx-2">
-      <h1 id="deviceName">WiRoc Device</h1>
-      <h4 id="deviceBTAddress">()</h4>
-      Competition: <span id="competitionName"></span
-      ><button
+      <h1><span id="deviceName">WiRoc Device</span><button
         class="btn fa fa-pencil edititem"
         data-bs-toggle="modal"
-        data-bs-target="#additem"
-      ></button>
+        data-bs-target="#editdevice"
+      ></button></h1>
+      <h4 id="deviceBTAddress">()</h4>
+      Competition: <span id="competitionName"></span>
       <br />
       Battery:
       <i
@@ -71,16 +70,10 @@
       >&nbsp;<span id="batteryIsLowWarningTime"></span>&nbsp;&nbsp;<span
         id="deviceBattery"
       ></span>
-      <!-- <button
-        class="btn fa fa-area-chart"
-        data-bs-toggle="modal"
-        data-bs-target="#batteryChartModal"
-      ></button> -->
       <br />
       Control numbers: <span id="deviceSIStationNumber"></span>
       <br />
-      Remote devices: <span id="remoteDevices"></span>
-      <br />
+      Remote WiRoc devices: <span id="remoteDevices"></span>
       <span
         id="remoteDeviceBatteryLowWarning"
         style="display: none; background-color: red"
@@ -88,7 +81,10 @@
       >
       <span id="remoteDeviceBatteryLowWarningTime"></span>
       <br />
-
+      Connected USB devices: <span id="connectedDevices"></span>
+      <br />
+      Internal SRR: <span id="internalSRRs"></span>
+      <br />
       <div style="min-height: 400px">
         <canvas id="batteryChart"></canvas>
       </div>
@@ -233,7 +229,7 @@
         };
 
         var btAddressOfDevice = $.urlParam("devicebt");
-        var modalHtmlFileName = "connecttocompetitionmodal.html";
+        var modalHtmlFileName = "editdevicemodal.html";
         var competitionTableName = "Competitions";
         var tableName = "Devices";
 
@@ -490,6 +486,84 @@
                 uniqueSIStationNumber.join(", ");
               $("#deviceSIStationNumber").text(uniqueSIStationNumberString);
 
+              var connectedDevicesString = '';
+              if (latestStatuses[0].SRRDongleREDFound == '1')
+              {
+                connectedDevicesString += 'SRR Dongle - RED';
+                if (latestStatuses[0].SRRDongleREDAckEnabled)
+                {
+                  connectedDevicesString += ' (ACK)';
+                } else {
+                  connectedDevicesString += ' (NO ACK)';
+                }
+                connectedDevicesString += ' | ';
+              }
+              if (latestStatuses[0].SRRDongleBLUEFound == '1')
+              {
+                connectedDevicesString += 'SRR Dongle - BLUE';
+                if (latestStatuses[0].SRRDongleBLUEAckEnabled)
+                {
+                  connectedDevicesString += ' (ACK)';
+                } else {
+                  connectedDevicesString += ' (NO ACK)';
+                }
+                connectedDevicesString += ' | ';
+              }
+              if (latestStatuses[0].siMasterConnectedOnUSB1 == '1')
+              {
+                connectedDevicesString += 'USB SI Device 1';
+                connectedDevicesString += ' | ';
+              }
+              if (latestStatuses[0].siMasterConnectedOnUSB2 == '1')
+              {
+                connectedDevicesString += 'USB SI Device 2';
+                connectedDevicesString += ' | ';
+              }
+              if (connectedDevicesString.length > 0)
+              {
+                connectedDevicesString = connectedDevicesString.substring(0,connectedDevicesString.length - 3);
+              }
+              $("#connectedDevices").text(connectedDevicesString);
+
+              var internalSRRs = '';
+              if (latestStatuses[0].internalSRRREDEnabled == '1')
+              {
+                internalSRRs += 'SRR RED Enabled';
+                if (latestStatuses[0].internalSRRREDDirection == '1')
+                {
+                  internalSRRs += ' (Sender)';
+                } else {
+                  if (latestStatuses[0].internalSRRREDAckEnabled)
+                  {
+                    internalSRRs += ' (ACK)';
+                  } else {
+                    internalSRRs += ' (NO ACK)';
+                  }
+                }
+                internalSRRs += ' | ';
+              }
+              if (latestStatuses[0].internalSRRBLUEEnabled == '1')
+              {
+                internalSRRs += 'SRR BLUE Enabled';
+                if (latestStatuses[0].internalSRRBLUEDirection == '1')
+                {
+                  internalSRRs += ' (Sender)';
+                } else {
+                  if (latestStatuses[0].internalSRRBLUEAckEnabled)
+                  {
+                    internalSRRs += ' (ACK)';
+                  } else {
+                    internalSRRs += ' (NO ACK)';
+                  }
+                }
+                internalSRRs += ' | ';
+              }               
+              if (internalSRRs.length > 0)
+              {
+                internalSRRs = internalSRRs.substring(0,internalSRRs.length - 3);
+              }
+              $("#internalSRRs").text(internalSRRs);
+              
               loadBatteryChart(latestStatuses);
             }
           });
@@ -505,7 +579,8 @@
             dataType: "json",
           }).then(function (device) {
             $("#competitionInput").val(device.competitionId);
-            $("#deviceName").text(device.name);
+            $("#descriptionInput").val(device.description);
+            $("#deviceName").text(device.name + "  |  " + device.description);
             $("#deviceBTAddress").text("(" + btAddressOfDevice + ")");
             if (device.batteryIsLow == 1) {
               $("#batteryIsLowWarning").show();
@@ -664,9 +739,9 @@
         }
 
         function setupAddItem() {
-          var addItemForm = $("#addItemForm");
+          var editDeviceForm = $("#editDeviceForm");
           $("#buttonAddItem").click(function () {
-            if (addItemForm[0].checkValidity()) {
+            if (editDeviceForm[0].checkValidity()) {
               var competitionId = $("#competitionInput").val();
 
               var postItemData = "";
@@ -689,7 +764,7 @@
               }).then(
                 function (item) {
                   $("#errorAlert").addClass("collapse");
-                  var itemModalElement = document.querySelector("#additem");
+                  var itemModalElement = document.querySelector("#editdevice");
                   var itemModal =
                     bootstrap.Modal.getOrCreateInstance(itemModalElement);
                   itemModal.hide();
@@ -703,7 +778,7 @@
                 }
               );
             } else {
-              addItemForm[0].classList.add("was-validated");
+              editDeviceForm[0].classList.add("was-validated");
             }
           });
         }
@@ -749,7 +824,7 @@
             loadAggregated();
             loadMessages();
             loadRemoteDevices();
-            setupAddItem();
+            //setupAddItem();
             setupDeleteMessageStats();
 
             getIsLoggedIn(function (isLoggedIn) {
@@ -770,17 +845,35 @@
           $("#addnewitem-modal-placeholder").load(
             modalHtmlFileName,
             function () {
-              $("#additem").on("shown.bs.modal", function () {
-                $("#competitionInput").trigger("focus");
+              $("#editdevice").on("shown.bs.modal", function () {
+                $("#descriptionInput").trigger("focus");
               });
 
               loadDevice();
 
-              var addItemForm = $("#addItemForm");
-              $("#buttonAddItem").click(function () {
-                if (addItemForm[0].checkValidity()) {
-                  var competitionId = $("#competitionInput").val();
+              var editDeviceForm = $("#editDeviceForm");
+              $("#buttonSaveDevice").click(function () {
+                if (editDeviceForm[0].checkValidity()) {
+                  var description = $("#descriptionInput").val();
+                  var btAddress = btAddressOfDevice;
+                  $.ajax({
+                    url: "/api/v1/Devices",
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({
+                      BTAddress: btAddress,
+                      description: description,
+                    }),
+                    success: function (response) {
+                      $("#editdevice").modal("hide");
+                      location.reload();
+                    },
+                    error: function () {
+                      $("#errorAlert").removeClass("collapse");
+                    },
+                  });
 
+                  var competitionId = $("#competitionInput").val();
                   var postItemData = JSON.stringify({
                     competitionId: competitionId,
                   });
@@ -798,7 +891,8 @@
                   }).then(
                     function (item) {
                       $("#errorAlert").addClass("collapse");
-                      var itemModalElement = document.querySelector("#additem");
+                      var itemModalElement =
+                        document.querySelector("#editdevice");
                       var itemModal =
                         bootstrap.Modal.getOrCreateInstance(itemModalElement);
                       itemModal.hide();
@@ -815,7 +909,7 @@
                     }
                   );
                 } else {
-                  addItemForm[0].classList.add("was-validated");
+                  editDeviceForm[0].reportValidity();
                 }
               });
             }

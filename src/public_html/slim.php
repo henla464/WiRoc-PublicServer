@@ -1015,7 +1015,8 @@ $app->post('/api/v1/Devices', function (Request $request, Response $response) {
     
     $objectArrayForUpdateReportTime = [];
     $objectArrayForUpdateReportTime['BTAddress'] = $objectArray['BTAddress'];
-    $sql = "UPDATE {$cls::$tableName} SET `reportTime` = NOW(), `updateTime` = NOW() WHERE BTAddress = :BTAddress";
+    // removed setting of reportTime here, as it is set in the SetConnectedToInternetTime endpoint and in the postDeviceStatus endpoint
+    $sql = "UPDATE {$cls::$tableName} SET `updateTime` = NOW() WHERE BTAddress = :BTAddress";
     $this->get('helper')->RunSql($sql, $objectArrayForUpdateReportTime);
     
     $routeContext = RouteContext::fromRequest($request);
@@ -1144,7 +1145,7 @@ $app->post('/api/v1/Devices/{BTAddress}/SetConnectedToInternetTime', function (R
 # DEVICESTATUS 
 /**
      * @SWG\Get(
-     *     path="/api/v1/Devices/{BTAddress}/DeviceStatuses?sort={sort}&limit={limit}&limitToCreatedTimeWithinSeconds={limitSeconds}",
+     *     path="/api/v1/Devices/{BTAddress}/DeviceStatuses?sort={sort}&limit={limit}&limitToCreatedTimeWithinSeconds={limitToCreatedTimeWithinSeconds}",
      *     description="Returns all statuses of a device",
      *     operationId="getDeviceStatuses",
      *     @SWG\Parameter(

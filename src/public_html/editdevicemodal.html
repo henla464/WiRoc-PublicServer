@@ -1,0 +1,61 @@
+<div
+  class="modal fade"
+  id="editdevice"
+  tabindex="-1"
+  aria-labelledby="modalTitle"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">Edit Device</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body additem-form">
+        <form id="editDeviceForm" class="needs-validation" novalidate>
+          <div class="form-group mb-3">
+            <label for="competitionInput" class="form-label">Competition</label>
+            <select
+              class="form-select"
+              id="competitionInput"
+              aria-label="Select competition"
+              required
+            >
+              <option disabled selected value="">Select competition</option>
+              <!-- Options will be populated dynamically -->
+            </select>
+            <div class="invalid-feedback">Please select a competition.</div>
+          </div>
+          <div class="form-group mb-3">
+            <label for="descriptionInput" class="form-label">Description</label>
+            <input
+              type="text"
+              class="form-control"
+              id="descriptionInput"
+              placeholder="Enter device description"
+              required
+            />
+            <div class="invalid-feedback">Please enter a description.</div>
+          </div>
+          <div class="alert alert-danger collapse" id="errorAlert" role="alert">
+            Could not save, error while saving to database
+          </div>
+          <div class="form-group d-flex">
+            <button
+              type="button"
+              id="buttonSaveDevice"
+              class="submit btn btn-primary btn-lg ms-auto"
+            >
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

@@ -59,7 +59,8 @@ class AuthorizationMap {
             'getWiRocPython2Releases',
             'getWiRocBLEAPIReleases',
             'getWiRocBLEAPIReleaseUpgradeScripts',
-            'getWiRocPython2ReleaseUpgradeScripts');
+            'getWiRocPython2ReleaseUpgradeScripts',
+	    'deleteDeviceById');
 
             //'postCreateTables', 'postReleaseStatus', 
             //'deleteReleaseStatus', 'postWiRocPython2Release', 

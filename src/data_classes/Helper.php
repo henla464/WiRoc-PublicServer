@@ -243,29 +243,15 @@ class Helper
 
 	public function UpdateDatabaseSchema() {
         $columns = [
-            "internalSRRREDEnabled boolean",
-            "internalSRRREDAckEnabled boolean",
-            "internalSRRBLUEEnabled boolean",
-            "internalSRRBLUEAckEnabled boolean",
-            "SRRDongleREDFound boolean",
-            "SRRDongleREDAckEnabled boolean",
-            "SRRDongleBLUEFound boolean",
-            "SRRDongleBLUEAckEnabled boolean",
-            "internalSRRREDDirection boolean",
-            "internalSRRBLUEDirection boolean",
-            "tcpIPSirapEnabled boolean",
-            "serialPortBaudRate boolean",
-            "serialPortDirection boolean",
-            "siMasterConnectedOnUSB1 boolean",
-            "siMasterConnectedOnUSB2 boolean"
+	    "hardwareVersion varchar(20)"
         ];
         foreach ($columns as $col) {
-            $sql = "ALTER TABLE DeviceStatuses ADD COLUMN IF NOT EXISTS $col";
+            $sql = "ALTER TABLE Devices ADD COLUMN IF NOT EXISTS $col";
             $stmt = $this->db->query($sql);
         }
         $res = new CommandResponse();
         $res->code = 0;
-        $res->message = "DeviceStatuses columns added";
+        $res->message = "Devices columns added";
         return $res;
     }
 	

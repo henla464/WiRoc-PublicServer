@@ -602,9 +602,9 @@ $app->get('/api/v1/DevicesView', function ($request, $response) use ($app) {
 	$cls = DeviceView::class;
 	$sql = 'SELECT CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -6 MINUTE) THEN true ELSE false END recentlyReported, 
         CASE WHEN Devices.connectedToInternetTime > DATE_ADD(SYSDATE(), INTERVAL -1 MINUTE) THEN true ELSE false END connectedToInternet, 
-        Devices.*, Competitions.name as competitionName, DeviceStatuses.batteryLevel, DeviceStatuses.createdTime as batteryLevelTime 
+        Devices.*, Competitions.name as competitionName, IFNULL(DeviceStatuses.batteryLevel, 0) as batteryLevel, IFNULL(DeviceStatuses.createdTime, "1980-01-01T00:00:08.000Z") as batteryLevelTime 
         FROM Devices LEFT JOIN Competitions ON Devices.competitionId = Competitions.id
-        JOIN DeviceStatuses ON (DeviceStatuses.Id = (SELECT Id FROM DeviceStatuses WHERE BTAddress = Devices.BTAddress ORDER BY createdTime DESC LIMIT 1))';
+        LEFT JOIN DeviceStatuses ON (DeviceStatuses.Id = (SELECT Id FROM DeviceStatuses WHERE BTAddress = Devices.BTAddress ORDER BY createdTime DESC LIMIT 1))';
 
     $sqlParam = [];
     $sort = $this->get('helper')->getSort($cls, $request);
@@ -969,6 +969,44 @@ $app->delete('/api/v1/Devices/{BTAddress}', function (Request $request, Response
 	$this->get('helper')->DeleteBySql("DELETE FROM {$cls::$tableName} WHERE BTAddress = :BTAddress", $objectArray);
     return $response->withStatus(204);
 })->setName('deleteDevice');
+
+/**
+     * @SWG\Delete(
+     *     path="/api/v1/Devices/DeleteById/{Id}",
+     *     description="Deletes a device",
+     *     operationId="deleteDeviceById",
+     *     @SWG\Parameter(
+     *         description="Id of device to delete",
+     *         in="path",
+     *         name="Id",
+     *         required=true,
+     *         type="string"
+     *     ),
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=204,
+     *         description="delete",
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+$app->delete('/api/v1/Devices/DeleteById/{Id}', function (Request $request, Response $response) {
+    $Id = $request->getAttribute('Id');
+    $cls = Device::class;
+    $objectArray = [];
+    $objectArray['Id'] = $Id;
+	$this->get('helper')->DeleteBySql("DELETE FROM {$cls::$tableName} WHERE id = :Id", $objectArray);
+    return $response->withStatus(204);
+})->setName('deleteDeviceById');
 
 /**
      * @SWG\Post(

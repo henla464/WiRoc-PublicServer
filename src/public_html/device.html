@@ -60,6 +60,12 @@
       <h4 id="deviceBTAddress">()</h4>
       Competition: <span id="competitionName"></span>
       <br />
+      WiRoc HW version: <span id="hwVersion"></span>
+      <br />
+      WiRoc version: <span id="wirocPythongVersion"></span>
+      <br />
+      WiRoc BLE version: <span id="wirocBLEVersion"></span>
+      <br />
       Battery:
       <i
         class="fa fa-exclamation-triangle"
@@ -582,6 +588,9 @@
             $("#descriptionInput").val(device.description);
             $("#deviceName").text(device.name + "  |  " + device.description);
             $("#deviceBTAddress").text("(" + btAddressOfDevice + ")");
+            $("#hwVersion").text(device.hardwareVersion);
+            $("#wirocPythongVersion").text(device.wirocPythonVersion);
+            $("#wirocBLEVersion").text(device.wirocBLEAPIVersion);
             if (device.batteryIsLow == 1) {
               $("#batteryIsLowWarning").show();
               $("#batteryIsLowWarningTime").text(

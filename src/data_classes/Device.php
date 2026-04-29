@@ -56,6 +56,11 @@ class Device
      * @SWG\Property()
      */
     public $hardwareVersion;
+    /**
+     * @var string
+     * @SWG\Property()
+     */
+    public $releaseStatusKeyName; /* this device will only see new firmwares with this release status or higher */
     public $reportTime;
     public $connectedToInternetTime;
     public $updateTime;
@@ -82,6 +87,25 @@ class Device
  * 		@SWG\Property(property="connectedToInternetTime", format="date-time", type="string"),
  * 		@SWG\Property(property="updateTime", format="date-time", type="string"),
  * 		@SWG\Property(property="createdTime", format="date-time", type="string")
+ *       )
+ *   }
+ * )
+ */
+
+/**
+ *  @SWG\Definition(
+ *   definition="DeviceUpdate",
+ *   type="object",
+ *   allOf={
+ *       @SWG\Schema(ref="#/definitions/NewDevice"),
+ *       @SWG\Schema(
+ * 		@SWG\Property(property="id", format="integer", type="integer"),
+ * 		@SWG\Property(property="BTAddress", type="string"),
+ * 		@SWG\Property(property="headBTAddress", type="string"),
+ * 		@SWG\Property(property="description", type="string"),
+ * 		@SWG\Property(property="wirocPythonVersion", type="string"),
+ * 		@SWG\Property(property="hardwareVersion", type="string"),
+ * 		@SWG\Property(property="releaseStatusKeyName", type="string")
  *       )
  *   }
  * )

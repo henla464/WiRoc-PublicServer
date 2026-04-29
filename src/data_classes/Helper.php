@@ -184,7 +184,8 @@ class Helper
 		//$sql = 'DROP TABLE Users';
 		//$stmt = $this->db->query($sql);
 		
-		
+		$sql = 'ALTER TABLE Devices ADD COLUMN releaseStatusKeyName varchar(50)';
+		$stmt = $this->db->query($sql);
 
 		$sql = 'CREATE TABLE IF NOT EXISTS Competitions (id int NOT NULL AUTO_INCREMENT, name varchar(50), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
@@ -192,7 +193,7 @@ class Helper
 		$sql = 'CREATE TABLE IF NOT EXISTS Devices (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), headBTAddress varchar(50), description varchar(255), 
 				name varchar(50), nameUpdateTime datetime, relayPathNo int, competitionId int, competitionIdSetByUserId int,
 				batteryIsLow boolean, batteryIsLowTime datetime, batteryIsLowReceived boolean, batteryIsLowReceivedTime datetime,
-				wirocPythonVersion varchar(20), wirocBLEAPIVersion varchar(20), hardwareVersion varchar(20), reportTime datetime, connectedToInternetTime datetime, updateTime datetime, 
+				wirocPythonVersion varchar(20), wirocBLEAPIVersion varchar(20), hardwareVersion varchar(20), releaseStatusKeyName varchar(50), reportTime datetime, connectedToInternetTime datetime, updateTime datetime, 
 				createdTime datetime, FOREIGN KEY(competitionId) REFERENCES Competitions(id), PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
 		$sql = 'CREATE TABLE IF NOT EXISTS DeviceStatuses (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50), batteryLevel int, siStationNumber int, noOfLoraMsgSentNotAcked int, allLoraPunchesSentOK boolean, internalSRRREDEnabled boolean,

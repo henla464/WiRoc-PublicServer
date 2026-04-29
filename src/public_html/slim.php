@@ -23,7 +23,7 @@ if (PHP_SAPI == 'cli-server') {
 
     $file = __DIR__ . $url['path'];
     // check the file types, only serve standard files
-    if (preg_match('/\.(?:png|js|jpg|jpeg|gif|css|html|css|js|htm)$/', $file)) {
+    if (preg_match('/\.(?:png|js|jpg|jpeg|gif|css|html|css|js|htm|xz)$/', $file)) {
         // does the file exist? If so, return it
         if (is_file($file)) {
             return false;
@@ -1065,6 +1065,85 @@ $app->post('/api/v1/Devices', function (Request $request, Response $response) {
 })->setName("postDevices");
 
 /**
+     * @SWG\Patch(
+     *     path="/api/v1/Device",
+     *     description="Updates a device",
+     *     operationId="patchDevice",
+     *     @SWG\Parameter(
+     *         name="device",
+     *         in="body",
+     *         description="Device to update",
+     *         required=true,
+     *         @SWG\Schema(ref="#/definitions/DeviceUpdate"),
+     *     ),
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=200,
+     *         description="Device response",
+     *         @SWG\Schema(
+     *             ref="#/definitions/CommandResponse"
+     *         ),
+     *     ),
+     *     @SWG\Response(
+     *         response="default",
+     *         description="unexpected error",
+     *         @SWG\Schema(
+     *             ref="#/definitions/ErrorModel"
+     *         )
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+    $app->patch('/api/v1/Device', function (Request $request, Response $response) {
+        $objectArray = json_decode($request->getBody(), true);
+          
+        $deviceId = $objectArray['id'];
+        if (isset($deviceId)) {
+            unset($objectArray['id']);
+        } else {
+            $BTAddress = $objectArray['BTAddress'];
+            if (isset($BTAddress)) {
+                unset($objectArray['BTAddress']);
+
+                $cls = Device::class;
+                $sql = "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress";
+                $device = $this->get('helper')->GetBySql($cls, $sql, ['BTAddress'=>$BTAddress]);
+                $deviceId = $device->id;
+            } else {
+                $res = new CommandResponse();
+                $res->code = 2;
+                $res->message = "No device identifier supplied";
+                $response->getBody()->write(json_encode($res));
+                return $response;
+            }
+        }    
+        
+
+        $cls = Device::class;
+        try {
+            $this->get('helper')->Update($cls, $objectArray, $cls::$tableName, $deviceId);
+        } catch (PDOException $e) {
+            if ($e->getCode() == "23000")
+            {
+                $res = new CommandResponse();
+                $res->code = 1;
+                $res->message = $e->getMessage();
+                $response->getBody()->write(json_encode($res));
+                return $response;
+            }
+            throw $e;
+        }
+           
+        $res = new CommandResponse();
+        $res->code = 0;
+        $res->message = "Device updated";
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    })->setName("patchDevice");
+
+/**
      * @SWG\Post(
      *     path="/api/v1/Devices/{BTAddress}/SetConnectedToInternetTime",
      *     description="Set the connectedToInternetTime property to sysdate",
@@ -1717,7 +1796,7 @@ $app->post('/api/v1/LogArchives', function (Request $request, Response $response
 # WiRocPython2Releases
 /**
  * @SWG\Get(
- *     path="/api/v1/WiRocPython2Releases?sort={sort}&limit={limit}&hwVersion={hwVersion}&hwRevision={hwRevision}",
+ *     path="/api/v1/WiRocPython2Releases?sort={sort}&limit={limit}&hwVersion={hwVersion}&hwRevision={hwRevision}&BTAddress={BTAddress}",
  *     description="Returns all releases of WiRocPython2",
  *     operationId="getWiRocPython2Releases",
  *     @SWG\Parameter(
@@ -1748,6 +1827,13 @@ $app->post('/api/v1/LogArchives', function (Request $request, Response $response
 *         required=false,
 *         type="string"
 *     ),
+*     @SWG\Parameter(
+*         description="BT Address of device to get relevant releases for (checks releaseStatusKeyName of the device)",
+*         in="path",
+*         name="BTAddress",
+*         required=false,
+*         type="string"
+*     ),
 *     produces={"application/json"},
 *     @SWG\Response(
 *         response=200,
@@ -1770,20 +1856,41 @@ $app->post('/api/v1/LogArchives', function (Request $request, Response $response
 * )
 */
 $app->get('/api/v1/WiRocPython2Releases', function ($request, $response) use ($app) {
+    // find the device to get sortOrder of the releaseStatusKeyName
+    $BTAddress = $request->getQueryParams()['BTAddress'] ?? '';
+    $releaseStatusSortOrder = 0;
+    if ($BTAddress != '') {
+        $cls = Device::class;
+        $releaseStatusKeyName = '';
+        $sql = "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress";
+        $device = $this->get('helper')->GetBySql($cls, $sql, ['BTAddress'=>$BTAddress]);
+        if ($device) {
+            $releaseStatusKeyName = $device->releaseStatusKeyName;
+        }
+        if ($releaseStatusKeyName != '') {
+            $cls = ReleaseStatus::class;
+            $sql = 'SELECT ReleaseStatuses.sortOrder FROM ReleaseStatuses WHERE ReleaseStatuses.keyName = :keyName';
+            $sqlParams['keyName'] = $releaseStatusKeyName;
+            $releaseStatus = $this->get('helper')->GetAllBySql($cls, $sql, $sqlParams, $request);
+            if ($releaseStatus && count($releaseStatus) > 0) {
+                $releaseStatusSortOrder = $releaseStatus[0]->sortOrder;
+            }
+        }
+    }
+
     $cls = WiRocPython2Release::class;
     $limit = $this->get('helper')->getLimit($request);
     $sort = $this->get('helper')->getSort($cls, $request);
     $hwVersion = $request->getQueryParams()['hwVersion'] ?? '';
     $hwRevision = $request->getQueryParams()['hwRevision'] ?? '';
+
     $sqlParams = [];
     $sql = 'SELECT WiRocPython2Releases.*, ReleaseStatuses.displayName as releaseStatusDisplayName, ReleaseStatuses.keyName as releaseStatusKeyName FROM WiRocPython2Releases LEFT JOIN ReleaseStatuses ON WiRocPython2Releases.releaseStatusId = ReleaseStatuses.id';
-    if (ctype_digit($hwVersion) || ctype_digit($hwRevision))
-    {
-        $sql .= ' WHERE ';
-    }
+    $sql .= ' WHERE ReleaseStatuses.sortOrder >= :releaseStatusSortOrder';
+    $sqlParams['releaseStatusSortOrder'] = $releaseStatusSortOrder;
     if (ctype_digit($hwVersion))
     {
-        $sql .= ' WiRocPython2Releases.minHWVersion <= :hwVersion and :hwVersion <= WiRocPython2Releases.maxHWVersion';
+        $sql .= ' and (WiRocPython2Releases.minHWVersion <= :hwVersion and :hwVersion <= WiRocPython2Releases.maxHWVersion)';
         $sqlParams['hwVersion'] = $hwVersion;
     }
     if (ctype_digit($hwVersion) && ctype_digit($hwRevision))
@@ -1960,7 +2067,7 @@ $app->delete('/api/v1/WiRocPython2Releases/{releaseId}', function (Request $requ
 # WiRocBLEAPIReleases
 /**
  * @SWG\Get(
- *     path="/api/v1/WiRocBLEAPIReleases?sort={sort}&limit={limit}&hwVersion={hwVersion}&hwRevision={hwRevision}",
+ *     path="/api/v1/WiRocBLEAPIReleases?sort={sort}&limit={limit}&hwVersion={hwVersion}&hwRevision={hwRevision}&BTAddress={BTAddress}",
  *     description="Returns all releases of WiRocBLEAPI",
  *     operationId="getWiRocBLEAPIReleases",
  *     @SWG\Parameter(
@@ -1991,6 +2098,13 @@ $app->delete('/api/v1/WiRocPython2Releases/{releaseId}', function (Request $requ
  *         required=false,
  *         type="string"
  *     ),
+ *      @SWG\Parameter(
+ *         description="BTAddress of device to get relevant releases for (checks releaseStatusKeyName of the device)",
+ *         in="path",
+ *         name="BTAddress",
+ *         required=false,
+ *         type="string"
+ *     ),
  *     produces={"application/json"},
  *     @SWG\Response(
  *         response=200,
@@ -2013,20 +2127,41 @@ $app->delete('/api/v1/WiRocPython2Releases/{releaseId}', function (Request $requ
  * )
  */
 $app->get('/api/v1/WiRocBLEAPIReleases', function ($request, $response) use ($app) {
+    // find the device to get sortOrder of the releaseStatusKeyName
+    $BTAddress = $request->getQueryParams()['BTAddress'] ?? '';
+    $releaseStatusSortOrder = 0;
+    if ($BTAddress != '') {
+        $cls = Device::class;
+        $releaseStatusKeyName = '';
+        $sql = "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress";
+        $device = $this->get('helper')->GetBySql($cls, $sql, ['BTAddress'=>$BTAddress]);
+        if ($device) {
+            $releaseStatusKeyName = $device->releaseStatusKeyName;
+        }
+        if ($releaseStatusKeyName != '') {
+            $cls = ReleaseStatus::class;
+            $sql = 'SELECT ReleaseStatuses.sortOrder FROM ReleaseStatuses WHERE ReleaseStatuses.keyName = :keyName';
+            $sqlParams['keyName'] = $releaseStatusKeyName;
+            $releaseStatus = $this->get('helper')->GetAllBySql($cls, $sql, $sqlParams, $request);
+            if ($releaseStatus && count($releaseStatus) > 0) {
+                $releaseStatusSortOrder = $releaseStatus[0]->sortOrder;
+            }
+        }
+    }
+
     $cls = WiRocBLEAPIRelease::class;
     $limit = $this->get('helper')->getLimit($request);
     $sort = $this->get('helper')->getSort($cls, $request);
     $hwVersion = $request->getQueryParams()['hwVersion'] ?? '';
     $hwRevision = $request->getQueryParams()['hwRevision'] ?? '';
+    $btAddress = $request->getQueryParams()['btAddress'] ?? '';
     $sqlParams = [];
     $sql = 'SELECT WiRocBLEAPIReleases.*, ReleaseStatuses.displayName as releaseStatusDisplayName, ReleaseStatuses.keyName as releaseStatusKeyName FROM WiRocBLEAPIReleases LEFT JOIN ReleaseStatuses ON WiRocBLEAPIReleases.releaseStatusId = ReleaseStatuses.id';
-    if (ctype_digit($hwVersion) || ctype_digit($hwRevision))
-    {
-        $sql .= ' WHERE ';
-    }
+    $sql .= ' WHERE ReleaseStatuses.sortOrder >= :releaseStatusSortOrder';
+    $sqlParams['releaseStatusSortOrder'] = $releaseStatusSortOrder;
     if (ctype_digit($hwVersion))
     {
-        $sql .= ' WiRocBLEAPIReleases.minHWVersion <= :hwVersion and :hwVersion <= WiRocBLEAPIReleases.maxHWVersion';
+        $sql .= ' and (WiRocBLEAPIReleases.minHWVersion <= :hwVersion and :hwVersion <= WiRocBLEAPIReleases.maxHWVersion)';
         $sqlParams['hwVersion'] = $hwVersion;
     }
     if (ctype_digit($hwVersion) && ctype_digit($hwRevision))

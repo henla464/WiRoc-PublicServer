@@ -75,6 +75,7 @@ class AuthorizationMap {
             'getDeviceSetBatteryIsLowReceived',
             'deleteDevice',
             'postDevices',
+            'patchDevice',
             'postDeviceSetConnectedToInternetTime',
             'postDeviceStatus',
             'postMessageStat',

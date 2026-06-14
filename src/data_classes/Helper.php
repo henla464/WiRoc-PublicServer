@@ -235,6 +235,11 @@ class Helper
 		$sql = 'CREATE TABLE IF NOT EXISTS WiRocPython2ReleaseUpgradeScripts (id int NOT NULL AUTO_INCREMENT, releaseId int,  scriptText varchar(5000), scriptNote varchar(255), createdTime datetime, 
 				updateTime datetime, FOREIGN KEY(releaseId) REFERENCES WiRocPython2Releases(id), PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
+
+		$sql = 'CREATE TABLE IF NOT EXISTS DeviceAccesses (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50) NOT NULL, UserId int NOT NULL,
+				GrantedAt datetime, GrantedByUserId int, updateTime datetime, createdTime datetime, PRIMARY KEY (id),
+				UNIQUE INDEX idx_deviceaccess_btaddress_userid (BTAddress, UserId))';
+		$stmt = $this->db->query($sql);
 		
 		$res = new CommandResponse();
 		$res->code = 0;
@@ -250,6 +255,11 @@ class Helper
             $sql = "ALTER TABLE Devices ADD COLUMN IF NOT EXISTS $col";
             $stmt = $this->db->query($sql);
         }
+        $sql = "CREATE TABLE IF NOT EXISTS DeviceAccesses (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50) NOT NULL, UserId int NOT NULL,
+                GrantedAt datetime, GrantedByUserId int, updateTime datetime, createdTime datetime, PRIMARY KEY (id),
+                UNIQUE INDEX idx_deviceaccess_btaddress_userid (BTAddress, UserId))";
+        $stmt = $this->db->query($sql);
+
         $res = new CommandResponse();
         $res->code = 0;
         $res->message = "Devices columns added";

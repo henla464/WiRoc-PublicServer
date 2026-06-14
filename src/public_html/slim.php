@@ -1241,6 +1241,16 @@ $app->post('/api/v1/Devices/{BTAddress}/SetConnectedToInternetTime', function (R
             return $response->withStatus(401);
         }
 
+        $deviceAccessCls = DeviceAccess::class;
+        $checkSql = "SELECT * FROM {$deviceAccessCls::$tableName} WHERE BTAddress = :BTAddress AND UserId = :UserId";
+        $access = $this->get('helper')->GetBySql($deviceAccessCls, $checkSql, [
+            'BTAddress' => $BTAddress,
+            'UserId' => $_SESSION['userId']
+        ]);
+        if (!$access) {
+            return $response->withStatus(403);
+        }
+
         $updateObjectArray = [];
         $updateObjectArray['BTAddress'] = $BTAddress;
         $updateObjectArray['competitionId'] = $objectArray['competitionId'];
@@ -1501,9 +1511,26 @@ $app->post('/api/v1/DeviceStatuses', function (Request $request, Response $respo
      */
 $app->delete('/api/v1/Devices/{BTAddress}/DeviceStatuses/DeleteByBTAddress', function (Request $request, Response $response) {
 	$BTAddress = $request->getAttribute('BTAddress');
+
+    if ($BTAddress != 'all') {
+        $deviceAccessCls = DeviceAccess::class;
+        $checkSql = "SELECT * FROM {$deviceAccessCls::$tableName} WHERE BTAddress = :BTAddress AND UserId = :UserId";
+        $access = $this->get('helper')->GetBySql($deviceAccessCls, $checkSql, [
+            'BTAddress' => $BTAddress,
+            'UserId' => $_SESSION['userId']
+        ]);
+        if (!$access) {
+            return $response->withStatus(403);
+        }
+    } else {
+        if (empty($_SESSION['userIsAdmin'])) {
+            return $response->withStatus(403);
+        }
+    }
+
     $objectArray = [];
     if ($BTAddress == 'all') {
-		$this->get('helper')->DeleteBySql('DELETE FROM DeviceStatuses', $objectArray);
+        $this->get('helper')->DeleteBySql('DELETE FROM DeviceStatuses', $objectArray);
 	} else {
 		$objectArray['BTAddress'] = $BTAddress;
 		$this->get('helper')->DeleteBySql('DELETE FROM DeviceStatuses WHERE BTAddress = :BTAddress', $objectArray);
@@ -1744,15 +1771,223 @@ $app->post('/api/v1/MessageStats', function (Request $request, Response $respons
      */
 $app->delete('/api/v1/Devices/{BTAddress}/MessageStats/DeleteByBTAddress', function (Request $request, Response $response) {
 	$BTAddress = $request->getAttribute('BTAddress');
+
+    if ($BTAddress != 'all') {
+        $deviceAccessCls = DeviceAccess::class;
+        $checkSql = "SELECT * FROM {$deviceAccessCls::$tableName} WHERE BTAddress = :BTAddress AND UserId = :UserId";
+        $access = $this->get('helper')->GetBySql($deviceAccessCls, $checkSql, [
+            'BTAddress' => $BTAddress,
+            'UserId' => $_SESSION['userId']
+        ]);
+        if (!$access) {
+            return $response->withStatus(403);
+        }
+    } else {
+        if (empty($_SESSION['userIsAdmin'])) {
+            return $response->withStatus(403);
+        }
+    }
+
     $objectArray = [];
     if ($BTAddress == 'all') {
-		$this->get('helper')->DeleteBySql('DELETE FROM MessageStats', $objectArray);
+        $this->get('helper')->DeleteBySql('DELETE FROM MessageStats', $objectArray);
 	} else {
 		$objectArray['BTAddress'] = $BTAddress;
 		$this->get('helper')->DeleteBySql('DELETE FROM MessageStats WHERE BTAddress = :BTAddress', $objectArray);
 	}
     return $response->withStatus(204);
 })->setName("deleteMessageStatsByBTAddress");
+
+
+# DEVICEACCESS 
+/**
+     * @SWG\Post(
+     *     path="/api/v1/DeviceAccess/grant",
+     *     description="Grant device access to a user. Called from WiRoc Config mobile app after BLE connection.",
+     *     operationId="postDeviceAccessGrant",
+     *     produces={"application/json"},
+     *     @SWG\Parameter(
+     *         name="body",
+     *         in="body",
+     *         description="Grant request",
+     *         required=true,
+     *         @SWG\Schema(ref="#/definitions/DeviceAccessGrantRequest"),
+     *     ),
+     *     @SWG\Response(
+     *         response=200,
+     *         description="command response",
+     *         @SWG\Schema(
+     *             ref="#/definitions/CommandResponse"
+     *         ),
+     *     ),
+     *     security={
+     *       {"api_key": {}}
+     *     }
+     * )
+     */
+$app->post('/api/v1/DeviceAccess/grant', function (Request $request, Response $response) {
+    $objectArray = json_decode($request->getBody(), true);
+    
+    if (!isset($objectArray['UserEmail'], $objectArray['UserPassword'], $objectArray['BTAddress'])) {
+        $res = new CommandResponse();
+        $res->code = 1;
+        $res->message = "Missing required fields: UserEmail, UserPassword, BTAddress";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(400);
+    }
+    
+    $pepper = $this->get('config')['pepper'];
+    $pwd_peppered = hash_hmac("sha256", $objectArray['UserPassword'], $pepper);
+    
+    $userCls = User::class;
+    $sql = "SELECT * FROM {$userCls::$tableName} WHERE Email = :Email";
+    $user = $this->get('helper')->GetBySql($userCls, $sql, ['Email' => $objectArray['UserEmail']]);
+    
+    if ($user == null || !password_verify($pwd_peppered, $user->hashedPassword)) {
+        $res = new CommandResponse();
+        $res->code = 2;
+        $res->message = "Invalid credentials";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(401);
+    }
+    
+    $deviceAccessCls = DeviceAccess::class;
+    $checkSql = "SELECT * FROM {$deviceAccessCls::$tableName} WHERE BTAddress = :BTAddress AND UserId = :UserId";
+    $existing = $this->get('helper')->GetBySql($deviceAccessCls, $checkSql, [
+        'BTAddress' => $objectArray['BTAddress'],
+        'UserId' => $user->id
+    ]);
+    
+    if ($existing) {
+        $res = new CommandResponse();
+        $res->code = 0;
+        $res->message = "Access already granted";
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    }
+    
+    $insertSql = "INSERT INTO {$deviceAccessCls::$tableName} (BTAddress, UserId, GrantedAt, GrantedByUserId, createdTime) VALUES (:BTAddress, :UserId, NOW(), :GrantedByUserId, NOW())";
+    $this->get('helper')->RunSql($insertSql, [
+        'BTAddress' => $objectArray['BTAddress'],
+        'UserId' => $user->id,
+        'GrantedByUserId' => $user->id
+    ]);
+    
+    $res = new CommandResponse();
+    $res->code = 0;
+    $res->message = "Device access granted";
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("postDeviceAccessGrant");
+
+
+/**
+     * @SWG\Post(
+     *     path="/api/v1/DeviceAccess/revoke",
+     *     description="Revoke device access from a user. The requesting user must have access to the device.",
+     *     operationId="postDeviceAccessRevoke",
+     *     produces={"application/json"},
+     *     @SWG\Parameter(
+     *         name="body",
+     *         in="body",
+     *         description="Revoke request",
+     *         required=true,
+     *         @SWG\Schema(ref="#/definitions/DeviceAccessRevokeRequest"),
+     *     ),
+     *     @SWG\Response(
+     *         response=200,
+     *         description="command response",
+     *         @SWG\Schema(
+     *             ref="#/definitions/CommandResponse"
+     *         ),
+     *     ),
+     *     security={
+     *       {}
+     *     }
+     * )
+     */
+$app->post('/api/v1/DeviceAccess/revoke', function (Request $request, Response $response) {
+    $objectArray = json_decode($request->getBody(), true);
+    $currentUserId = $_SESSION['userId'];
+    
+    if (!isset($objectArray['BTAddress'], $objectArray['UserId'])) {
+        $res = new CommandResponse();
+        $res->code = 1;
+        $res->message = "Missing required fields: BTAddress, UserId";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(400);
+    }
+    
+    $deviceAccessCls = DeviceAccess::class;
+    $checkSql = "SELECT * FROM {$deviceAccessCls::$tableName} WHERE BTAddress = :BTAddress AND UserId = :UserId";
+    $requesterAccess = $this->get('helper')->GetBySql($deviceAccessCls, $checkSql, [
+        'BTAddress' => $objectArray['BTAddress'],
+        'UserId' => $currentUserId
+    ]);
+    
+    if (!$requesterAccess) {
+        $res = new CommandResponse();
+        $res->code = 3;
+        $res->message = "You do not have access to this device";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(403);
+    }
+    
+    $deleteSql = "DELETE FROM {$deviceAccessCls::$tableName} WHERE BTAddress = :BTAddress AND UserId = :UserId";
+    $this->get('helper')->RunSql($deleteSql, [
+        'BTAddress' => $objectArray['BTAddress'],
+        'UserId' => $objectArray['UserId']
+    ]);
+    
+    $res = new CommandResponse();
+    $res->code = 0;
+    $res->message = "Device access revoked";
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("postDeviceAccessRevoke");
+
+
+/**
+     * @SWG\Get(
+     *     path="/api/v1/DeviceAccess",
+     *     description="Returns all device access entries for devices the current user has access to",
+     *     operationId="getDeviceAccesses",
+     *     produces={"application/json"},
+     *     @SWG\Response(
+     *         response=200,
+     *         description="device access response",
+     *         @SWG\Schema(
+     *             type="array",
+     *             @SWG\Items(ref="#/definitions/DeviceAccess")
+     *         ),
+     *     ),
+     *     security={
+     *       {}
+     *     }
+     * )
+     */
+$app->get('/api/v1/DeviceAccess', function (Request $request, Response $response) {
+    $currentUserId = $_SESSION['userId'];
+    
+    $deviceAccessCls = DeviceAccess::class;
+    $sql = "SELECT da.id, da.BTAddress, da.UserId, u.email AS UserEmail, da.GrantedAt, da.GrantedByUserId, da.updateTime, da.createdTime,
+                   d.name AS DeviceName
+            FROM {$deviceAccessCls::$tableName} da
+            JOIN Users u ON da.UserId = u.id
+            LEFT JOIN Devices d ON da.BTAddress = d.BTAddress
+            WHERE da.BTAddress IN (
+                SELECT BTAddress FROM {$deviceAccessCls::$tableName} WHERE UserId = :CurrentUserId
+            )
+            ORDER BY da.BTAddress, da.UserId";
+    
+    $entries = $this->get('helper')->GetAllBySql($deviceAccessCls, $sql, [
+        'CurrentUserId' => $currentUserId
+    ]);
+    
+    $response->getBody()->write(json_encode($entries));
+    return $response;
+})->setName("getDeviceAccesses");
+
 
 
 

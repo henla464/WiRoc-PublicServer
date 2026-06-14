@@ -60,7 +60,8 @@ class AuthorizationMap {
             'getWiRocBLEAPIReleases',
             'getWiRocBLEAPIReleaseUpgradeScripts',
             'getWiRocPython2ReleaseUpgradeScripts',
-	    'deleteDeviceById');
+	    'deleteDeviceById',
+	    'postDeviceAccessGrant');
 
             //'postCreateTables', 'postReleaseStatus', 
             //'deleteReleaseStatus', 'postWiRocPython2Release', 
@@ -107,7 +108,9 @@ class AuthorizationMap {
             'deleteDeviceStatusesByBTAddress',
             'deleteMessageStatsByBTAddress',
             'postCompetition',
-            'deleteCompetition');
+            'deleteCompetition',
+            'postDeviceAccessRevoke',
+            'getDeviceAccesses');
     }
 
     public function needsAuthorization(ServerRequestInterface $request) {

@@ -54,6 +54,7 @@
     <div class="container-fluid gx-2">
       <h1><span id="deviceName">WiRoc Device</span><button
         class="btn fa fa-pencil edititem"
+        style="display:none"
         data-bs-toggle="modal"
         data-bs-target="#editdevice"
       ></button></h1>
@@ -792,9 +793,35 @@
           });
         }
 
-        function setupDeleteMessageStats() {
+        function checkDeviceAccess(callback) {
           getIsLoggedIn(function (isLoggedIn) {
-            if (isLoggedIn) {
+            if (!isLoggedIn) {
+              callback(false);
+              return;
+            }
+            $.ajax({
+              url: "/api/v1/DeviceAccess",
+              dataType: "json",
+            }).then(function (entries) {
+              var hasAccess = false;
+              if (entries) {
+                $.each(entries, function () {
+                  if (this.BTAddress === btAddressOfDevice) {
+                    hasAccess = true;
+                    return false;
+                  }
+                });
+              }
+              callback(hasAccess);
+            }, function () {
+              callback(false);
+            });
+          });
+        }
+
+        function setupDeleteMessageStats() {
+          checkDeviceAccess(function (hasAccess) {
+            if (hasAccess) {
               $("#btnDeleteMessageStats").show();
               $("#btnDeleteMessageStats").click(function () {
                 $.ajax({
@@ -836,8 +863,8 @@
             //setupAddItem();
             setupDeleteMessageStats();
 
-            getIsLoggedIn(function (isLoggedIn) {
-              if (isLoggedIn) {
+            checkDeviceAccess(function (hasAccess) {
+              if (hasAccess) {
                 $(".edititem").show();
               } else {
                 $(".edititem").hide();

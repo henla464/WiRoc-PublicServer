@@ -100,7 +100,8 @@ class AuthorizationMap {
             'getWiRocPython2ReleaseUpgradeScripts',
             'getWiRocPython2ReleaseUpgradeScript',
             'postWiRocPython2ReleaseUpgradeScript',
-            'deleteWiRocPython2ReleaseUpgradeScript');
+            'deleteWiRocPython2ReleaseUpgradeScript',
+            'postDeviceAccessGrantAsAdmin');
         
         $this->loggedInRoutesArray = array(
             'getLogout',

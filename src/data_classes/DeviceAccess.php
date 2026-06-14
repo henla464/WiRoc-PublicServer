@@ -69,3 +69,12 @@ class DeviceAccess
  * )
  */
 
+/**
+ *  @SWG\Definition(
+ *   definition="DeviceAccessGrantAdminRequest",
+ *   type="object",
+ *   required={"UserEmail", "BTAddress"},
+ *   @SWG\Property(property="UserEmail", type="string"),
+ *   @SWG\Property(property="BTAddress", type="string")
+ * )
+ */

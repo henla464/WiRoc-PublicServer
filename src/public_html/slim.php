@@ -1047,6 +1047,14 @@ $app->post('/api/v1/Devices', function (Request $request, Response $response) {
         return $response->withStatus(400);
     }
 
+    if (!preg_match('/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/', $objectArray['BTAddress'])) {
+        $res = new CommandResponse();
+        $res->code = 3;
+        $res->message = "Invalid BTAddress format. Expected format: 00:00:00:00:00:00";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(400);
+    }
+
     $objectArrayForSelect['BTAddress'] = $objectArray['BTAddress'];
 	$cls = Device::class;
     $id = $this->get('helper')->InsertOrUpdate($cls, $objectArray, $cls::$tableName, "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress", $objectArrayForSelect);
@@ -1099,6 +1107,15 @@ $app->post('/api/v1/Devices', function (Request $request, Response $response) {
     $app->patch('/api/v1/Device', function (Request $request, Response $response) {
         $objectArray = json_decode($request->getBody(), true);
           
+
+        $BTAddress = $objectArray['BTAddress'];
+        if (isset($BTAddress) && !preg_match('/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/', $BTAddress)) {
+            $res = new CommandResponse();
+            $res->code = 3;
+            $res->message = "Invalid BTAddress format. Expected format: 00:00:00:00:00:00";
+            $response->getBody()->write(json_encode($res));
+            return $response->withStatus(400);
+        }
         $deviceId = $objectArray['id'];
         if (isset($deviceId)) {
             unset($objectArray['id']);
@@ -1835,6 +1852,14 @@ $app->post('/api/v1/DeviceAccess/grant', function (Request $request, Response $r
         $response->getBody()->write(json_encode($res));
         return $response->withStatus(400);
     }
+
+    if (!preg_match('/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/', $objectArray['BTAddress'])) {
+        $res = new CommandResponse();
+        $res->code = 3;
+        $res->message = "Invalid BTAddress format. Expected format: 00:00:00:00:00:00";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(400);
+    }
     
     $pepper = $this->get('config')['pepper'];
     $pwd_peppered = hash_hmac("sha256", $objectArray['UserPassword'], $pepper);
@@ -1989,6 +2014,91 @@ $app->get('/api/v1/DeviceAccess', function (Request $request, Response $response
 })->setName("getDeviceAccesses");
 
 
+/**
+     * @SWG\Post(
+     *     path="/api/v1/DeviceAccess/grantAsAdmin",
+     *     description="Grant device access as admin. No password required since admin is already authenticated.",
+     *     operationId="postDeviceAccessGrantAsAdmin",
+     *     produces={"application/json"},
+     *     @SWG\Parameter(
+     *         name="body",
+     *         in="body",
+     *         description="Grant request (admin)",
+     *         required=true,
+     *         @SWG\Schema(ref="#/definitions/DeviceAccessGrantAdminRequest"),
+     *     ),
+     *     @SWG\Response(
+     *         response=200,
+     *         description="command response",
+     *         @SWG\Schema(
+     *             ref="#/definitions/CommandResponse"
+     *         ),
+     *     ),
+     *     security={
+     *       {}
+     *     }
+     * )
+     */
+$app->post('/api/v1/DeviceAccess/grantAsAdmin', function (Request $request, Response $response) {
+    $objectArray = json_decode($request->getBody(), true);
+
+    if (!isset($objectArray['UserEmail'], $objectArray['BTAddress'])) {
+        $res = new CommandResponse();
+        $res->code = 1;
+        $res->message = "Missing required fields: UserEmail, BTAddress";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(400);
+    }
+
+    if (!preg_match('/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/', $objectArray['BTAddress'])) {
+        $res = new CommandResponse();
+        $res->code = 3;
+        $res->message = "Invalid BTAddress format. Expected format: 00:00:00:00:00:00";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(400);
+    }
+
+    $userCls = User::class;
+    $sql = "SELECT * FROM {$userCls::$tableName} WHERE Email = :Email";
+    $user = $this->get('helper')->GetBySql($userCls, $sql, ['Email' => $objectArray['UserEmail']]);
+
+    if ($user == null) {
+        $res = new CommandResponse();
+        $res->code = 2;
+        $res->message = "User not found";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(404);
+    }
+
+    $deviceAccessCls = DeviceAccess::class;
+    $checkSql = "SELECT * FROM {$deviceAccessCls::$tableName} WHERE BTAddress = :BTAddress AND UserId = :UserId";
+    $existing = $this->get('helper')->GetBySql($deviceAccessCls, $checkSql, [
+        'BTAddress' => $objectArray['BTAddress'],
+        'UserId' => $user->id
+    ]);
+
+    if ($existing) {
+        $res = new CommandResponse();
+        $res->code = 0;
+        $res->message = "Access already granted";
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    }
+
+    $currentUserId = $_SESSION['userId'];
+    $insertSql = "INSERT INTO {$deviceAccessCls::$tableName} (BTAddress, UserId, GrantedAt, GrantedByUserId, createdTime) VALUES (:BTAddress, :UserId, NOW(), :GrantedByUserId, NOW())";
+    $this->get('helper')->RunSql($insertSql, [
+        'BTAddress' => $objectArray['BTAddress'],
+        'UserId' => $user->id,
+        'GrantedByUserId' => $currentUserId
+    ]);
+
+    $res = new CommandResponse();
+    $res->code = 0;
+    $res->message = "Device access granted";
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("postDeviceAccessGrantAsAdmin");
 
 
 /**

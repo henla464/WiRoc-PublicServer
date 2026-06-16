@@ -86,8 +86,10 @@
 											<input type="email" class="form-control" id="grantUserEmail" required>
 										</div>
 										<div class="mb-3">
-											<label for="grantBTAddress" class="form-label">BT Address</label>
-											<input type="text" class="form-control" id="grantBTAddress" required>
+											<label for="grantBTAddress" class="form-label">Device</label>
+											<select class="form-select" id="grantBTAddress" required>
+												<option value="">Select a device...</option>
+											</select>
 										</div>
 									</form>
 							</div>
@@ -148,6 +150,35 @@
                                 jqTable.tableFilter(optionsbasic);
                                 jqTable.tableFilter('reload');
 
+                                // Populate the grant dropdown with devices
+                                function populateDeviceDropdown(deviceList) {
+                                    var seenBT = {};
+                                    var selectEl = $('#grantBTAddress');
+                                    selectEl.find('option:not(:first)').remove();
+                                    $.each(deviceList, function() {
+                                        if (!seenBT[this.BTAddress]) {
+                                            seenBT[this.BTAddress] = true;
+                                            var display = (this.DeviceName || this.name || '') + ' (' + this.BTAddress + ')';
+                                            selectEl.append('<option value="' + this.BTAddress + '">' + display + '</option>');
+                                        }
+                                    });
+                                }
+
+                                getIsAdmin(function(isAdmin) {
+                                    if (isAdmin) {
+                                        // Admins can grant access to any device, so fetch all devices
+                                        $.ajax({
+                                            url: "/api/v1/Devices?sort=name",
+                                            dataType: "json"
+                                        }).then(function(allDevices) {
+                                            populateDeviceDropdown(allDevices);
+                                        });
+                                    } else {
+                                        // Non-admins can only grant access to devices they already have
+                                        populateDeviceDropdown(items);
+                                    }
+                                });
+
                                 getIsLoggedIn(function(isLoggedIn) {
                                     if (isLoggedIn) {
                                         $('.revokeaccess').show();
@@ -161,9 +192,9 @@
                 $(document).ready(function() {
 						$("#nav-placeholder").load("navigation.html", function() {
 
-							// Show grant button for admins
-							getIsAdmin(function(isAdmin) {
-								if (isAdmin) {
+							// Show grant button for logged-in users
+							getIsLoggedIn(function(isLoggedIn) {
+								if (isLoggedIn) {
 									$('#btnOpenGrantAccess').show();
 								}
 							});
@@ -179,7 +210,7 @@
 									var userEmail = $('#grantUserEmail').val();
 									var btAddress = $('#grantBTAddress').val();
 									$.ajax({
-										url: "/api/v1/" + tableName + "/grantAsAdmin",
+										url: "/api/v1/" + tableName + "/grantFromWeb",
 										method: "POST",
 										data: JSON.stringify({
 											"UserEmail": userEmail,

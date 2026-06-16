@@ -100,8 +100,7 @@ class AuthorizationMap {
             'getWiRocPython2ReleaseUpgradeScripts',
             'getWiRocPython2ReleaseUpgradeScript',
             'postWiRocPython2ReleaseUpgradeScript',
-            'deleteWiRocPython2ReleaseUpgradeScript',
-            'postDeviceAccessGrantAsAdmin');
+            'deleteWiRocPython2ReleaseUpgradeScript');
         
         $this->loggedInRoutesArray = array(
             'getLogout',
@@ -110,6 +109,7 @@ class AuthorizationMap {
             'deleteMessageStatsByBTAddress',
             'postCompetition',
             'deleteCompetition',
+            'postDeviceAccessGrantFromWeb',
             'postDeviceAccessRevoke',
             'getDeviceAccesses');
     }

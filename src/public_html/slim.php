@@ -1993,22 +1993,28 @@ $app->post('/api/v1/DeviceAccess/revoke', function (Request $request, Response $
      */
 $app->get('/api/v1/DeviceAccess', function (Request $request, Response $response) {
     $currentUserId = $_SESSION['userId'];
-    
+    $isAdmin = !empty($_SESSION['userIsAdmin']);
+
     $deviceAccessCls = DeviceAccess::class;
-    $sql = "SELECT da.id, da.BTAddress, da.UserId, u.email AS UserEmail, da.GrantedAt, da.GrantedByUserId, da.updateTime, da.createdTime,
+    $selectFields = "SELECT da.id, da.BTAddress, da.UserId, u.email AS UserEmail, da.GrantedAt, da.GrantedByUserId, da.updateTime, da.createdTime,
                    d.name AS DeviceName
             FROM {$deviceAccessCls::$tableName} da
             JOIN Users u ON da.UserId = u.id
-            LEFT JOIN Devices d ON da.BTAddress = d.BTAddress
-            WHERE da.BTAddress IN (
+            LEFT JOIN Devices d ON da.BTAddress = d.BTAddress";
+
+    if ($isAdmin) {
+        $sql = "$selectFields ORDER BY da.BTAddress, da.UserId";
+        $entries = $this->get('helper')->GetAllBySql($deviceAccessCls, $sql, []);
+    } else {
+        $sql = "$selectFields WHERE da.BTAddress IN (
                 SELECT BTAddress FROM {$deviceAccessCls::$tableName} WHERE UserId = :CurrentUserId
             )
             ORDER BY da.BTAddress, da.UserId";
-    
-    $entries = $this->get('helper')->GetAllBySql($deviceAccessCls, $sql, [
-        'CurrentUserId' => $currentUserId
-    ]);
-    
+        $entries = $this->get('helper')->GetAllBySql($deviceAccessCls, $sql, [
+            'CurrentUserId' => $currentUserId
+        ]);
+    }
+
     $response->getBody()->write(json_encode($entries));
     return $response;
 })->setName("getDeviceAccesses");
@@ -2016,16 +2022,16 @@ $app->get('/api/v1/DeviceAccess', function (Request $request, Response $response
 
 /**
      * @SWG\Post(
-     *     path="/api/v1/DeviceAccess/grantAsAdmin",
-     *     description="Grant device access as admin. No password required since admin is already authenticated.",
-     *     operationId="postDeviceAccessGrantAsAdmin",
+     *     path="/api/v1/DeviceAccess/grantFromWeb",
+     *     description="Grant device access from the website. No password required since the user is already authenticated. Admins can grant to any device; other users can only grant to devices they have access to.",
+     *     operationId="postDeviceAccessGrantFromWeb",
      *     produces={"application/json"},
      *     @SWG\Parameter(
      *         name="body",
      *         in="body",
      *         description="Grant request (admin)",
      *         required=true,
-     *         @SWG\Schema(ref="#/definitions/DeviceAccessGrantAdminRequest"),
+     *         @SWG\Schema(ref="#/definitions/DeviceAccessGrantWebRequest"),
      *     ),
      *     @SWG\Response(
      *         response=200,
@@ -2039,7 +2045,7 @@ $app->get('/api/v1/DeviceAccess', function (Request $request, Response $response
      *     }
      * )
      */
-$app->post('/api/v1/DeviceAccess/grantAsAdmin', function (Request $request, Response $response) {
+$app->post('/api/v1/DeviceAccess/grantFromWeb', function (Request $request, Response $response) {
     $objectArray = json_decode($request->getBody(), true);
 
     if (!isset($objectArray['UserEmail'], $objectArray['BTAddress'])) {
@@ -2086,6 +2092,24 @@ $app->post('/api/v1/DeviceAccess/grantAsAdmin', function (Request $request, Resp
     }
 
     $currentUserId = $_SESSION['userId'];
+
+    // Non-admin users must have access to the device to grant access to others
+    if (empty($_SESSION['userIsAdmin'])) {
+        $deviceAccessCls = DeviceAccess::class;
+        $checkSql = "SELECT * FROM {$deviceAccessCls::$tableName} WHERE BTAddress = :BTAddress AND UserId = :UserId";
+        $requesterAccess = $this->get('helper')->GetBySql($deviceAccessCls, $checkSql, [
+            'BTAddress' => $objectArray['BTAddress'],
+            'UserId' => $currentUserId
+        ]);
+        if (!$requesterAccess) {
+            $res = new CommandResponse();
+            $res->code = 4;
+            $res->message = "You do not have access to this device";
+            $response->getBody()->write(json_encode($res));
+            return $response->withStatus(403);
+        }
+    }
+
     $insertSql = "INSERT INTO {$deviceAccessCls::$tableName} (BTAddress, UserId, GrantedAt, GrantedByUserId, createdTime) VALUES (:BTAddress, :UserId, NOW(), :GrantedByUserId, NOW())";
     $this->get('helper')->RunSql($insertSql, [
         'BTAddress' => $objectArray['BTAddress'],
@@ -2098,7 +2122,7 @@ $app->post('/api/v1/DeviceAccess/grantAsAdmin', function (Request $request, Resp
     $res->message = "Device access granted";
     $response->getBody()->write(json_encode($res));
     return $response;
-})->setName("postDeviceAccessGrantAsAdmin");
+})->setName("postDeviceAccessGrantFromWeb");
 
 
 /**

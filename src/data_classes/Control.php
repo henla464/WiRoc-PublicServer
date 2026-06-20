@@ -39,6 +39,11 @@ class Control
      * @var float
      */
     public $mapY;
+    /**
+     * @SWG\Property()
+     * @var string
+     */
+    public $controlType;
 
 	public $updateTime;
     public $createdTime;

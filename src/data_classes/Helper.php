@@ -264,6 +264,14 @@ class Helper
 			$sql = 'ALTER TABLE Controls ADD COLUMN IF NOT EXISTS mapY double';
 			$stmt = $this->db->query($sql);
 
+			$sql = "ALTER TABLE Controls ADD COLUMN IF NOT EXISTS controlType varchar(20) DEFAULT 'Control'";
+			$stmt = $this->db->query($sql);
+
+			try { $this->db->exec("DROP INDEX idx_controls_competition_controlnumber ON Controls"); } catch (\Exception $e) {}
+			try { $this->db->exec("DROP INDEX idx_controls_competition_controlnumber_v2 ON Controls"); } catch (\Exception $e) {}
+			try { $this->db->exec("CREATE UNIQUE INDEX idx_controls_competition_controlnumber_v2 ON Controls (competitionId, controlType, controlNumber)"); } catch (\Exception $e) {}
+			try { $this->db->exec("UPDATE Controls SET controlType = 'Control' WHERE controlType IS NULL OR controlType = ''"); } catch (\Exception $e) {}
+
 			$sql = 'CREATE TABLE IF NOT EXISTS CompetitionMaps (id int NOT NULL AUTO_INCREMENT, competitionId int NOT NULL,
 					originalFileName varchar(255), storedFileName varchar(255), fileType varchar(10),
 					defaultZoom int, defaultCenterX double, defaultCenterY double,
@@ -325,6 +333,15 @@ class Helper
         $stmt = $this->db->query($sql);
         $sql = "ALTER TABLE Controls ADD COLUMN IF NOT EXISTS mapY double";
         $stmt = $this->db->query($sql);
+
+        $sql = "ALTER TABLE Controls ADD COLUMN IF NOT EXISTS controlType varchar(20) DEFAULT 'Control'";
+        $stmt = $this->db->query($sql);
+
+        // Recreate unique index to include controlType
+        try { $this->db->exec("DROP INDEX idx_controls_competition_controlnumber ON Controls"); } catch (\Exception $e) {}
+        try { $this->db->exec("DROP INDEX idx_controls_competition_controlnumber_v2 ON Controls"); } catch (\Exception $e) {}
+        try { $this->db->exec("CREATE UNIQUE INDEX idx_controls_competition_controlnumber_v2 ON Controls (competitionId, controlType, controlNumber)"); } catch (\Exception $e) {}
+        try { $this->db->exec("UPDATE Controls SET controlType = 'Control' WHERE controlType IS NULL OR controlType = ''"); } catch (\Exception $e) {}
 
         $res = new CommandResponse();
         $res->code = 0;

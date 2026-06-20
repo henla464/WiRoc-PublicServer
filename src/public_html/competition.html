@@ -296,20 +296,55 @@
             btAddress +
             '" style="width:auto;min-width:130px">';
           html += '<option value="">-</option>';
+
+          // Regular controls
           $.each(allControls, function () {
-            var selected =
-              deviceControlId && deviceControlId == this.id ? " selected" : "";
-            html +=
-              '<option value="' +
-              this.id +
-              '"' +
-              selected +
-              ">" +
-              this.controlNumber +
-              " - " +
-              this.name +
-              "</option>";
+            if (this.controlType == 'Control' || !this.controlType) {
+              var selected = deviceControlId && deviceControlId == this.id ? " selected" : "";
+              html += '<option value="id_' + this.id + '"' + selected + '>' + this.controlNumber + ' - ' + this.name + '</option>';
+            }
           });
+
+          // Dynamic Repeater options
+          var maxRepeater = 0;
+          $.each(allControls, function () {
+            if (this.controlType == 'Repeater' && this.controlNumber > maxRepeater) {
+              maxRepeater = this.controlNumber;
+            }
+          });
+          for (var r = 1; r <= maxRepeater + 1; r++) {
+            var rControl = null;
+            $.each(allControls, function () {
+              if (this.controlType == 'Repeater' && this.controlNumber == r) {
+                rControl = this;
+                return false;
+              }
+            });
+            var rId = rControl ? rControl.id : null;
+            var rSelected = rId && deviceControlId == rId ? " selected" : "";
+            html += '<option value="type_Repeater_' + r + '"' + rSelected + '>Repeater ' + r + '</option>';
+          }
+
+          // Dynamic Receiver options
+          var maxReceiver = 0;
+          $.each(allControls, function () {
+            if (this.controlType == 'Receiver' && this.controlNumber > maxReceiver) {
+              maxReceiver = this.controlNumber;
+            }
+          });
+          for (var rc = 1; rc <= maxReceiver + 1; rc++) {
+            var rcControl = null;
+            $.each(allControls, function () {
+              if (this.controlType == 'Receiver' && this.controlNumber == rc) {
+                rcControl = this;
+                return false;
+              }
+            });
+            var rcId = rcControl ? rcControl.id : null;
+            var rcSelected = rcId && deviceControlId == rcId ? " selected" : "";
+            html += '<option value="type_Receiver_' + rc + '"' + rcSelected + '>Receiver ' + rc + '</option>';
+          }
+
           html += "</select>";
           return html;
         }
@@ -628,27 +663,37 @@
           var halfScale = Math.pow(2, zoom / 2);
 
           $.each(controlLayers, function () {
-            // Circle: fixed map-unit radius — scales naturally with zoom
-            this.circle.setRadius(this.baseMapRadius);
+            // Circle: only for Control type
+            if (this.circle) {
+              this.circle.setRadius(this.baseMapRadius);
+            }
 
-            // Control number label: full-zoom text, positioned right of circle
-            var ctrlSize = Math.round(45 * fullScale);
+            // Label: full-zoom text, positioned right of circle/symbol
+            var isRole = this.controlType && this.controlType != 'Control';
+            var ctrlSize = Math.round((isRole ? 36 : 45) * fullScale);
             var ctrlAnchorY = Math.round(ctrlSize * 0.5);
             var ctrlPos = L.latLng(this.y, this.x + this.baseMapRadius * 1.2);
             this.ctrlLabel.setLatLng(ctrlPos);
-            this.ctrlLabel.setIcon(
-              L.divIcon({
-                className: "control-label-icon",
-                html:
-                  '<div style="color:#800080; font-size:' +
-                  ctrlSize +
-                  'px; font-weight:bold; line-height:1; white-space:nowrap;">' +
-                  this.controlNumber +
-                  "</div>",
+            this.ctrlLabel.setIcon(L.divIcon({
+              className: "control-label-icon",
+              html: '<div style="color:' + this.symbolColor + '; font-size:' + ctrlSize + 'px; font-weight:bold; line-height:1; white-space:nowrap;">' + this.displayLabel + '</div>',
+              iconSize: [0, 0],
+              iconAnchor: [0, ctrlAnchorY],
+            }));
+
+            // Symbol icon for Repeater/Receiver
+            if (this.symbolMarker) {
+              var symSize = Math.round(36 * fullScale);
+              var symChar = this.controlType == 'Repeater' ? '▲' : '■'; // ▲ or ■
+              var symHtml = '<div style="color:' + this.symbolColor + '; font-size:' + symSize + 'px; line-height:1;">' + symChar + '</div>';
+              this.symbolMarker.setLatLng(L.latLng(this.y, this.x));
+              this.symbolMarker.setIcon(L.divIcon({
+                className: "role-symbol",
+                html: symHtml,
                 iconSize: [0, 0],
-                iconAnchor: [0, ctrlAnchorY],
-              }),
-            );
+                iconAnchor: [Math.round(symSize * 0.5), Math.round(symSize * 0.55)]
+              }));
+            }
 
             // Device info card: half-zoom text, concatenated device names
             if (this.devLabel && this.devNames) {
@@ -711,6 +756,7 @@
                   description: this.description,
                   mapX: this.mapX,
                   mapY: this.mapY,
+                  controlType: this.controlType || 'Control',
                   devices: []
                 };
               }
@@ -743,14 +789,11 @@
               var devices = this.devices;
               var controlId = this.id;
 
-              // Popup: shows all devices assigned to this control
+              // Popup: shows all devices assigned
+              var typeLabel = this.controlType || "Control";
               var popupHtml =
                 "<div>" +
-                "<b>Control " +
-                this.controlNumber +
-                ": " +
-                (this.controlName || "") +
-                "</b><br/>";
+                "<b>" + typeLabel + " " + this.controlNumber + ": " + (this.controlName || "") + "</b><br/>";
               if (this.description) {
                 popupHtml += "Description: " + this.description + "<br/>";
               }
@@ -775,15 +818,34 @@
               }
               popupHtml += "</div>";
 
-              // Purple circle
-              var circle = L.circle([cy, cx], {
-                radius: baseMapRadius,
-                color: "#800080",
-                fillOpacity: 0,
-                weight: 4,
-              }).addTo(controlGroup);
+              // Symbol based on controlType
+              var symbolColor;
+              var circle = null;   // L.circle for Control
+              var symbolMarker = null; // divIcon marker for Repeater/Receiver
+              if (this.controlType == 'Repeater' || this.controlType == 'Receiver') {
+                symbolColor = this.controlType == 'Repeater' ? '#0066CC' : '#228B22';
+                symbolMarker = L.marker([cy, cx], {
+                  icon: L.divIcon({
+                    className: "role-symbol",
+                    html: "",
+                    iconSize: [0, 0],
+                    iconAnchor: [0, 0],
+                  }),
+                  interactive: false,
+                }).addTo(controlGroup);
+              } else {
+                symbolColor = '#800080';
+                circle = L.circle([cy, cx], {
+                  radius: baseMapRadius,
+                  color: symbolColor,
+                  fillOpacity: 0,
+                  weight: 4,
+                }).addTo(controlGroup);
+              }
 
-              // Control number label (interactive=false)
+              // Label: control type + number (e.g. "1", "Rep 1", "Rec 1")
+              var displayLabel = (this.controlType && this.controlType != 'Control')
+                ? ((this.controlType == 'Repeater' ? 'Rep ' : 'Rec ') + this.controlNumber) : ('' + this.controlNumber);
               var ctrlLabel = L.marker([cy, cx], {
                 icon: L.divIcon({
                   className: "control-label-icon",
@@ -816,13 +878,17 @@
 
               var layerEntry = {
                 circle: circle,
+                symbolMarker: symbolMarker,
                 ctrlLabel: ctrlLabel,
                 devLabel: devLabel,
                 devNames: devNames,
                 baseMapRadius: baseMapRadius,
                 x: cx,
                 y: cy,
+                controlType: this.controlType || 'Control',
                 controlNumber: this.controlNumber,
+                displayLabel: displayLabel,
+                symbolColor: symbolColor,
               };
               var layerIdx = controlLayers.length;
               controlLayers.push(layerEntry);
@@ -844,7 +910,8 @@
                     var pos = e.target.getLatLng();
                     var entry = controlLayers[idx];
                     if (entry) {
-                      entry.circle.setLatLng(pos);
+                      if (entry.circle) entry.circle.setLatLng(pos);
+                      if (entry.symbolMarker) entry.symbolMarker.setLatLng(pos);
                       entry.ctrlLabel.setLatLng(pos);
                       if (entry.devLabel) entry.devLabel.setLatLng(pos);
                       entry.x = pos.lng;
@@ -1078,15 +1145,22 @@
             $(document).on("change", ".device-control-select", function () {
               var select = $(this);
               var btAddress = select.data("btaddress");
-              var controlId = select.val();
+              var rawVal = select.val();
+              var postData;
+
+              if (!rawVal) {
+                postData = { controlId: null };
+              } else if (rawVal.indexOf("id_") === 0) {
+                postData = { controlId: parseInt(rawVal.substring(3)) };
+              } else if (rawVal.indexOf("type_") === 0) {
+                var parts = rawVal.split("_");
+                postData = { controlType: parts[1], controlNumber: parseInt(parts[2]) };
+              }
+
               $.ajax({
                 url: "/api/v1/Devices/" + btAddress + "/SetControl",
                 method: "POST",
-                data: JSON.stringify(
-                  controlId
-                    ? { controlId: parseInt(controlId) }
-                    : { controlId: null },
-                ),
+                data: JSON.stringify(postData),
                 dataType: "json",
               }).then(
                 function () {
@@ -1094,10 +1168,13 @@
                   setTimeout(function () {
                     select.removeClass("is-valid");
                   }, 1500);
-                  // Refresh control markers on map without full rebuild
-                  if (mapInstance && mapImgWidth > 0) {
-                    placeControlsOnMap(mapImgWidth, mapImgHeight);
-                  }
+                  // Refresh allControls and rebuild dropdowns + map
+                  loadControlsTable(competitionId, function() {
+                    loadDeviceTable();
+                    if (mapInstance && mapImgWidth > 0) {
+                      placeControlsOnMap(mapImgWidth, mapImgHeight);
+                    }
+                  });
                 },
                 function (fail) {
                   select.addClass("is-invalid");

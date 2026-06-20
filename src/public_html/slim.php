@@ -3370,7 +3370,7 @@ $app->delete('/api/v1/WiRocPython2ReleaseUpgradeScripts/{scriptId}', function (R
  */
 $app->get('/api/v1/Competitions/{competitionId}/Controls/withDevices', function (Request $request, Response $response) {
     $competitionId = $request->getAttribute('competitionId');
-    $sql = "SELECT c.id, c.controlNumber, c.name as controlName, c.description, c.mapX, c.mapY,
+    $sql = "SELECT c.id, c.controlNumber, c.name as controlName, c.description, c.mapX, c.mapY, c.controlType,
                    d.id as deviceId, d.name as deviceName, d.BTAddress as deviceBTAddress,
                    d.batteryIsLow, IFNULL(ds.batteryLevel, 0) as batteryLevel
             FROM Controls c
@@ -4056,11 +4056,13 @@ $app->post('/api/v1/Controls', function (Request $request, Response $response) {
         return $response->withStatus(403);
     }
 
-    // Check uniqueness of controlNumber within competition
+    // Check uniqueness of controlNumber+controlType within competition
     if (!array_key_exists("id", $objectArray) || $objectArray['id'] == null) {
-        $checkSql = "SELECT * FROM {$cls::$tableName} WHERE competitionId = :competitionId AND controlNumber = :controlNumber";
+        $checkType = isset($objectArray['controlType']) ? $objectArray['controlType'] : 'Control';
+        $checkSql = "SELECT * FROM {$cls::$tableName} WHERE competitionId = :competitionId AND controlType = :controlType AND controlNumber = :controlNumber";
         $existing = $this->get('helper')->GetBySql($cls, $checkSql, [
             'competitionId' => $competitionId,
+            'controlType' => $checkType,
             'controlNumber' => $objectArray['controlNumber']
         ]);
         if ($existing) {
@@ -4195,9 +4197,45 @@ $app->post('/api/v1/Devices/{BTAddress}/SetControl', function (Request $request,
         return $response->withStatus(404);
     }
 
-    // Verify the control belongs to the device's competition (or clearing)
     $controlId = !empty($objectArray['controlId']) ? $objectArray['controlId'] : null;
-    if ($controlId !== null) {
+    $controlType = !empty($objectArray['controlType']) ? $objectArray['controlType'] : null;
+    $controlNumber = !empty($objectArray['controlNumber']) ? $objectArray['controlNumber'] : null;
+
+    // Find-or-create control for Repeater/Receiver
+    if ($controlType && $controlNumber && in_array($controlType, ['Repeater', 'Receiver'])) {
+        $controlCls = Control::class;
+        $sql = "SELECT * FROM {$controlCls::$tableName} WHERE competitionId = :competitionId AND controlType = :controlType AND controlNumber = :controlNumber";
+        $control = $this->get('helper')->GetBySql($controlCls, $sql, [
+            'competitionId' => $device->competitionId,
+            'controlType' => $controlType,
+            'controlNumber' => $controlNumber
+        ]);
+        if ($control) {
+            $controlId = $control->id;
+        } else {
+            // Auto-create the Repeater/Receiver control; if old unique index still present, catch and re-query
+            try {
+                $insertData = [
+                    'competitionId' => $device->competitionId,
+                    'controlNumber' => $controlNumber,
+                    'controlType' => $controlType,
+                    'name' => $controlType . ' ' . $controlNumber
+                ];
+                $controlId = $this->get('helper')->Insert($controlCls, $insertData, $controlCls::$tableName);
+            } catch (\PDOException $e) {
+                // Duplicate key — control was created by another request or old index prevents insert
+                $control = $this->get('helper')->GetBySql($controlCls, $sql, [
+                    'competitionId' => $device->competitionId,
+                    'controlType' => $controlType,
+                    'controlNumber' => $controlNumber
+                ]);
+                if ($control) $controlId = $control->id;
+            }
+        }
+    }
+
+    // Verify regular control if controlId was given directly
+    if ($controlId !== null && !$controlType) {
         $controlCls = Control::class;
         $control = $this->get('helper')->Get($controlCls, $controlCls::$tableName, $controlId);
         if (!$control || $control->competitionId != $device->competitionId) {

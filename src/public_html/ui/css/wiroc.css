@@ -116,3 +116,8 @@
 .drag-target {
   cursor: move !important;
 }
+
+.role-symbol {
+  background: transparent !important;
+  border: none !important;
+}

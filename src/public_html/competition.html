@@ -818,7 +818,12 @@
               if (hasEditAccess) {
                 var dragMarker = L.marker([cy, cx], {
                   draggable: true,
-                  opacity: 0,
+                  icon: L.divIcon({
+                    className: "drag-target",
+                    html: "",
+                    iconSize: [100, 100],
+                    iconAnchor: [50, 50],
+                  }),
                   _isControlMarker: true,
                 }).addTo(mapInstance);
                 dragMarker.bindPopup(popupHtml);

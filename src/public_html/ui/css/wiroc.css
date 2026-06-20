@@ -112,3 +112,7 @@
   border: none !important;
   cursor: pointer !important;
 }
+
+.drag-target {
+  cursor: move !important;
+}

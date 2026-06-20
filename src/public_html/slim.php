@@ -52,6 +52,7 @@ $container->set('config', function () {
     $config['db']['pass']   = $ini_array['database']['database_password'];
     $config['db']['dbname'] = $ini_array['database']['database_name'];
     $config['upload']['log_archive_upload_directory'] = $ini_array['upload']['log_archive_upload_directory'];
+    $config['upload']['map_upload_directory'] = $ini_array['upload']['map_upload_directory'] ?? 'Maps/';
     $config['pepper'] = $ini_array['user']['pepper'];
     $config['api_key'] = $ini_array['api']['api_key'];
     $config['smtp']['username'] = $ini_array['smtp']['username'];
@@ -3353,6 +3354,303 @@ $app->delete('/api/v1/WiRocPython2ReleaseUpgradeScripts/{scriptId}', function (R
 })->setName("deleteWiRocPython2ReleaseUpgradeScript");
 
 
+# COMPETITION MAP
+/**
+ * @SWG\Get(
+ *     path="/api/v1/Competitions/{competitionId}/Map",
+ *     description="Get map metadata for a competition",
+ *     operationId="getCompetitionMap",
+ *     @SWG\Parameter(
+ *         description="ID of the Competition",
+ *         format="int64", in="path", name="competitionId", required=true, type="integer"
+ *     ),
+ *     @SWG\Response(response=200, description="Map metadata"),
+ *     security={ {"api_key": {}} }
+ * )
+ */
+$app->get('/api/v1/Competitions/{competitionId}/Map', function (Request $request, Response $response) {
+    $competitionId = $request->getAttribute('competitionId');
+    $cls = CompetitionMap::class;
+    $sql = "SELECT * FROM {$cls::$tableName} WHERE competitionId = :competitionId";
+    $map = $this->get('helper')->GetBySql($cls, $sql, ['competitionId' => $competitionId]);
+
+    if (!$map) {
+        $res = new \stdClass();
+        $res->exists = false;
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    }
+
+    $res = new \stdClass();
+    $res->exists = true;
+    $res->id = $map->id;
+    $res->competitionId = $map->competitionId;
+    $res->originalFileName = $map->originalFileName;
+    $res->fileType = $map->fileType;
+    $res->defaultZoom = $map->defaultZoom;
+    $res->defaultCenterX = $map->defaultCenterX;
+    $res->defaultCenterY = $map->defaultCenterY;
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("getCompetitionMap");
+
+/**
+ * @SWG\Get(
+ *     path="/api/v1/Competitions/{competitionId}/Map/file",
+ *     description="Get the map image file for a competition",
+ *     operationId="getCompetitionMapFile",
+ *     @SWG\Parameter(
+ *         description="ID of the Competition",
+ *         format="int64", in="path", name="competitionId", required=true, type="integer"
+ *     ),
+ *     @SWG\Response(response=200, description="Map image file"),
+ *     security={ {"api_key": {}} }
+ * )
+ */
+$app->get('/api/v1/Competitions/{competitionId}/Map/file', function (Request $request, Response $response) {
+    $competitionId = $request->getAttribute('competitionId');
+    $cls = CompetitionMap::class;
+    $sql = "SELECT * FROM {$cls::$tableName} WHERE competitionId = :competitionId";
+    $map = $this->get('helper')->GetBySql($cls, $sql, ['competitionId' => $competitionId]);
+
+    if (!$map || !$map->storedFileName) {
+        return $response->withStatus(404);
+    }
+
+    $targetDir = $this->get('config')['upload']['map_upload_directory'];
+    $filePath = $targetDir . $map->storedFileName;
+
+    if (!file_exists($filePath)) {
+        return $response->withStatus(404);
+    }
+
+    $response->getBody()->write(file_get_contents($filePath));
+    $contentType = 'image/png';
+    if ($map->fileType === 'jpeg' || $map->fileType === 'jpg') {
+        $contentType = 'image/jpeg';
+    }
+    return $response->withHeader('Content-Type', $contentType)
+                    ->withHeader('Cache-Control', 'public, max-age=86400');
+})->setName("getCompetitionMapFile");
+
+/**
+ * @SWG\Post(
+ *     path="/api/v1/Competitions/{competitionId}/Map",
+ *     description="Upload a map file. Requires competition edit access.",
+ *     operationId="postCompetitionMap",
+ *     @SWG\Parameter(
+ *         description="ID of the Competition",
+ *         format="int64", in="path", name="competitionId", required=true, type="integer"
+ *     ),
+ *     @SWG\Response(response=200, description="Map uploaded"),
+ *     security={ {} }
+ * )
+ */
+$app->post('/api/v1/Competitions/{competitionId}/Map', function (Request $request, Response $response) {
+    $competitionId = $request->getAttribute('competitionId');
+
+    // Verify competition edit access
+    $compCls = Competition::class;
+    $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $competitionId);
+    if (!$competition) {
+        return $response->withStatus(404);
+    }
+    $isCreator = $competition->createdByUserId == $_SESSION['userId'];
+    $compAccess = null;
+    try {
+        $compAccessCls = CompetitionAccess::class;
+        $sql = "SELECT * FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
+        $compAccess = $this->get('helper')->GetBySql($compAccessCls, $sql, [
+            'competitionId' => $competitionId, 'UserId' => $_SESSION['userId']
+        ]);
+    } catch (\PDOException $e) {}
+    if (!$compAccess && !$isCreator && empty($_SESSION['userIsAdmin'])) {
+        return $response->withStatus(403);
+    }
+
+    $files = $request->getUploadedFiles();
+    if (empty($files['mapfile'])) {
+        $res = new CommandResponse();
+        $res->code = 1;
+        $res->message = "No file uploaded";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(400);
+    }
+
+    $uploadedFile = $files['mapfile'];
+    if ($uploadedFile->getError() !== UPLOAD_ERR_OK) {
+        $res = new CommandResponse();
+        $res->code = 2;
+        $res->message = "Upload error";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(400);
+    }
+
+    $originalName = $uploadedFile->getClientFilename();
+    $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+    $allowedExts = ['png'];
+    if (!in_array($ext, $allowedExts)) {
+        $res = new CommandResponse();
+        $res->code = 3;
+        $res->message = "Unsupported file type. Allowed: PNG";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(400);
+    }
+
+    $targetDir = $this->get('config')['upload']['map_upload_directory'];
+    if (!is_dir($targetDir)) {
+        mkdir($targetDir, 0755, true);
+    }
+
+    $uuid = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+        mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+        mt_rand(0, 0x0fff) | 0x4000, mt_rand(0, 0x3fff) | 0x8000,
+        mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+    );
+    $storedName = $uuid . '.' . $ext;
+    $uploadedFile->moveTo($targetDir . $storedName);
+
+    // Delete old map if exists
+    $mapCls = CompetitionMap::class;
+    $oldSql = "SELECT * FROM {$mapCls::$tableName} WHERE competitionId = :competitionId";
+    $oldMap = $this->get('helper')->GetBySql($mapCls, $oldSql, ['competitionId' => $competitionId]);
+    if ($oldMap) {
+        $oldPath = $targetDir . $oldMap->storedFileName;
+        if (file_exists($oldPath)) {
+            unlink($oldPath);
+        }
+        $this->get('helper')->Delete($oldMap->id, $mapCls::$tableName);
+    }
+
+    // Insert new map record
+    $objectArray = [
+        'competitionId' => $competitionId,
+        'originalFileName' => $originalName,
+        'storedFileName' => $storedName,
+        'fileType' => $ext
+    ];
+    $id = $this->get('helper')->Insert($mapCls, $objectArray, $mapCls::$tableName);
+
+    $res = new CommandResponse();
+    $res->code = 0;
+    $res->message = "Map uploaded";
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("postCompetitionMap");
+
+/**
+ * @SWG\Patch(
+ *     path="/api/v1/Competitions/{competitionId}/Map",
+ *     description="Save default view state (zoom + center). Requires competition edit access.",
+ *     operationId="patchCompetitionMap",
+ *     @SWG\Parameter(
+ *         description="ID of the Competition",
+ *         format="int64", in="path", name="competitionId", required=true, type="integer"
+ *     ),
+ *     @SWG\Parameter(
+ *         name="body", in="body", required=true,
+ *         @SWG\Schema(ref="#/definitions/CompetitionMapViewState"),
+ *     ),
+ *     @SWG\Response(response=200, description="View state saved"),
+ *     security={ {} }
+ * )
+ */
+$app->patch('/api/v1/Competitions/{competitionId}/Map', function (Request $request, Response $response) {
+    $competitionId = $request->getAttribute('competitionId');
+    $objectArray = json_decode($request->getBody(), true);
+
+    // Verify competition edit access
+    $compCls = Competition::class;
+    $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $competitionId);
+    if (!$competition) {
+        return $response->withStatus(404);
+    }
+    $isCreator = $competition->createdByUserId == $_SESSION['userId'];
+    $compAccess = null;
+    try {
+        $compAccessCls = CompetitionAccess::class;
+        $sql = "SELECT * FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
+        $compAccess = $this->get('helper')->GetBySql($compAccessCls, $sql, [
+            'competitionId' => $competitionId, 'UserId' => $_SESSION['userId']
+        ]);
+    } catch (\PDOException $e) {}
+    if (!$compAccess && !$isCreator && empty($_SESSION['userIsAdmin'])) {
+        return $response->withStatus(403);
+    }
+
+    $mapCls = CompetitionMap::class;
+    $oldSql = "SELECT * FROM {$mapCls::$tableName} WHERE competitionId = :competitionId";
+    $map = $this->get('helper')->GetBySql($mapCls, $oldSql, ['competitionId' => $competitionId]);
+    if (!$map) {
+        $res = new CommandResponse();
+        $res->code = 1;
+        $res->message = "No map exists for this competition";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(404);
+    }
+
+    $updateData = [];
+    if (isset($objectArray['zoom'])) $updateData['defaultZoom'] = $objectArray['zoom'];
+    if (isset($objectArray['centerX'])) $updateData['defaultCenterX'] = $objectArray['centerX'];
+    if (isset($objectArray['centerY'])) $updateData['defaultCenterY'] = $objectArray['centerY'];
+    $this->get('helper')->Update($mapCls, $updateData, $mapCls::$tableName, $map->id);
+
+    $res = new CommandResponse();
+    $res->code = 0;
+    $res->message = "View state saved";
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("patchCompetitionMap");
+
+/**
+ * @SWG\Delete(
+ *     path="/api/v1/Competitions/{competitionId}/Map",
+ *     description="Delete a competition map. Requires competition edit access.",
+ *     operationId="deleteCompetitionMap",
+ *     @SWG\Parameter(
+ *         description="ID of the Competition",
+ *         format="int64", in="path", name="competitionId", required=true, type="integer"
+ *     ),
+ *     @SWG\Response(response=204, description="deleted"),
+ *     security={ {} }
+ * )
+ */
+$app->delete('/api/v1/Competitions/{competitionId}/Map', function (Request $request, Response $response) {
+    $competitionId = $request->getAttribute('competitionId');
+
+    // Verify competition edit access
+    $compCls = Competition::class;
+    $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $competitionId);
+    if (!$competition) {
+        return $response->withStatus(404);
+    }
+    $isCreator = $competition->createdByUserId == $_SESSION['userId'];
+    $compAccess = null;
+    try {
+        $compAccessCls = CompetitionAccess::class;
+        $sql = "SELECT * FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
+        $compAccess = $this->get('helper')->GetBySql($compAccessCls, $sql, [
+            'competitionId' => $competitionId, 'UserId' => $_SESSION['userId']
+        ]);
+    } catch (\PDOException $e) {}
+    if (!$compAccess && !$isCreator && empty($_SESSION['userIsAdmin'])) {
+        return $response->withStatus(403);
+    }
+
+    $mapCls = CompetitionMap::class;
+    $oldSql = "SELECT * FROM {$mapCls::$tableName} WHERE competitionId = :competitionId";
+    $map = $this->get('helper')->GetBySql($mapCls, $oldSql, ['competitionId' => $competitionId]);
+    if ($map) {
+        $targetDir = $this->get('config')['upload']['map_upload_directory'];
+        $filePath = $targetDir . $map->storedFileName;
+        if (file_exists($filePath)) {
+            unlink($filePath);
+        }
+        $this->get('helper')->Delete($map->id, $mapCls::$tableName);
+    }
+
+    return $response->withStatus(204);
+})->setName("deleteCompetitionMap");
 # Competitions
 /**
  * @SWG\Get(
@@ -4047,6 +4345,8 @@ $app->post('/api/v1/CompetitionAccess/revoke', function (Request $request, Respo
     $response->getBody()->write(json_encode($res));
     return $response;
 })->setName("postCompetitionAccessRevoke");
+
+
 
 
 function GUID()

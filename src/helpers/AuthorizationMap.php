@@ -35,6 +35,8 @@ class AuthorizationMap {
             'getCompetition',
             'getControls',
             'getControl',
+            'getCompetitionMap',
+            'getCompetitionMapFile',
             'postPasswordRecovery',
             'postSetNewPassword');
 
@@ -119,7 +121,10 @@ class AuthorizationMap {
             'deleteControl',
             'postCompetitionAccessGrant',
             'postCompetitionAccessRevoke',
-            'getCompetitionAccesses');
+            'getCompetitionAccesses',
+            'postCompetitionMap',
+            'patchCompetitionMap',
+            'deleteCompetitionMap');
     }
 
     public function needsAuthorization(ServerRequestInterface $request) {

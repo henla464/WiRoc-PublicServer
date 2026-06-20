@@ -3357,6 +3357,91 @@ $app->delete('/api/v1/WiRocPython2ReleaseUpgradeScripts/{scriptId}', function (R
 # COMPETITION MAP
 /**
  * @SWG\Get(
+ *     path="/api/v1/Competitions/{competitionId}/Controls/withDevices",
+ *     description="Returns all controls for a competition with their associated WiRoc device info",
+ *     operationId="getCompetitionControlsWithDevices",
+ *     @SWG\Parameter(
+ *         description="ID of the Competition",
+ *         format="int64", in="path", name="competitionId", required=true, type="integer"
+ *     ),
+ *     @SWG\Response(response=200, description="Controls with device info"),
+ *     security={ {"api_key": {}} }
+ * )
+ */
+$app->get('/api/v1/Competitions/{competitionId}/Controls/withDevices', function (Request $request, Response $response) {
+    $competitionId = $request->getAttribute('competitionId');
+    $sql = "SELECT c.id, c.controlNumber, c.name as controlName, c.description, c.mapX, c.mapY,
+                   d.id as deviceId, d.name as deviceName, d.BTAddress as deviceBTAddress,
+                   d.batteryIsLow, IFNULL(ds.batteryLevel, 0) as batteryLevel
+            FROM Controls c
+            LEFT JOIN Devices d ON d.controlId = c.id
+            LEFT JOIN DeviceStatuses ds ON (ds.Id = (SELECT Id FROM DeviceStatuses WHERE BTAddress = d.BTAddress ORDER BY createdTime DESC LIMIT 1))
+            WHERE c.competitionId = :competitionId
+            ORDER BY c.controlNumber";
+    $entries = $this->get('helper')->GetAllBySql(Control::class, $sql, ['competitionId' => $competitionId]);
+    $response->getBody()->write(json_encode($entries));
+    return $response;
+})->setName("getCompetitionControlsWithDevices");
+
+/**
+ * @SWG\Patch(
+ *     path="/api/v1/Controls/{controlId}/MapPosition",
+ *     description="Update a control's position on the map. Requires competition edit access.",
+ *     operationId="patchControlMapPosition",
+ *     @SWG\Parameter(
+ *         description="ID of the Control",
+ *         format="int64", in="path", name="controlId", required=true, type="integer"
+ *     ),
+ *     @SWG\Parameter(
+ *         name="body", in="body", required=true,
+ *         @SWG\Schema(
+ *             required={"mapX", "mapY"},
+ *             @SWG\Property(property="mapX", type="number"),
+ *             @SWG\Property(property="mapY", type="number")
+ *         ),
+ *     ),
+ *     @SWG\Response(response=200, description="Position saved"),
+ *     security={ {} }
+ * )
+ */
+$app->patch('/api/v1/Controls/{controlId}/MapPosition', function (Request $request, Response $response) {
+    $controlId = $request->getAttribute('controlId');
+    $objectArray = json_decode($request->getBody(), true);
+
+    $controlCls = Control::class;
+    $control = $this->get('helper')->Get($controlCls, $controlCls::$tableName, $controlId);
+    if (!$control) {
+        return $response->withStatus(404);
+    }
+
+    // Verify competition edit access
+    $compCls = Competition::class;
+    $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $control->competitionId);
+    $isCreator = $competition && $competition->createdByUserId == $_SESSION['userId'];
+    $compAccess = null;
+    try {
+        $compAccessCls = CompetitionAccess::class;
+        $sql = "SELECT * FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
+        $compAccess = $this->get('helper')->GetBySql($compAccessCls, $sql, [
+            'competitionId' => $control->competitionId, 'UserId' => $_SESSION['userId']
+        ]);
+    } catch (\PDOException $e) {}
+    if (!$compAccess && !$isCreator && empty($_SESSION['userIsAdmin'])) {
+        return $response->withStatus(403);
+    }
+
+    $updateData = ['mapX' => $objectArray['mapX'], 'mapY' => $objectArray['mapY']];
+    $this->get('helper')->Update($controlCls, $updateData, $controlCls::$tableName, $controlId);
+
+    $res = new CommandResponse();
+    $res->code = 0;
+    $res->message = "Position saved";
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("patchControlMapPosition");
+
+/**
+ * @SWG\Get(
  *     path="/api/v1/Competitions/{competitionId}/Map",
  *     description="Get map metadata for a competition",
  *     operationId="getCompetitionMap",

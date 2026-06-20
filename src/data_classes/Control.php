@@ -29,6 +29,16 @@ class Control
      * @var string
      */
     public $description;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $mapX;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $mapY;
 
 	public $updateTime;
     public $createdTime;

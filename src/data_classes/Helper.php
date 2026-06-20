@@ -259,6 +259,11 @@ class Helper
 			$sql = 'ALTER TABLE Devices ADD COLUMN IF NOT EXISTS controlId int';
 			$stmt = $this->db->query($sql);
 
+			$sql = 'ALTER TABLE Controls ADD COLUMN IF NOT EXISTS mapX double';
+			$stmt = $this->db->query($sql);
+			$sql = 'ALTER TABLE Controls ADD COLUMN IF NOT EXISTS mapY double';
+			$stmt = $this->db->query($sql);
+
 			$sql = 'CREATE TABLE IF NOT EXISTS CompetitionMaps (id int NOT NULL AUTO_INCREMENT, competitionId int NOT NULL,
 					originalFileName varchar(255), storedFileName varchar(255), fileType varchar(10),
 					defaultZoom int, defaultCenterX double, defaultCenterY double,
@@ -314,6 +319,11 @@ class Helper
                 updateTime datetime, createdTime datetime,
                 FOREIGN KEY(competitionId) REFERENCES Competitions(id), PRIMARY KEY (id),
                 UNIQUE INDEX idx_competitionmaps_competitionid (competitionId))';
+        $stmt = $this->db->query($sql);
+
+        $sql = "ALTER TABLE Controls ADD COLUMN IF NOT EXISTS mapX double";
+        $stmt = $this->db->query($sql);
+        $sql = "ALTER TABLE Controls ADD COLUMN IF NOT EXISTS mapY double";
         $stmt = $this->db->query($sql);
 
         $res = new CommandResponse();

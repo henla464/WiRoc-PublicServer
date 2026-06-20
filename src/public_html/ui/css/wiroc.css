@@ -92,3 +92,23 @@
 .bg-top {
  background-color: darkgrey;
 }
+
+.control-label-icon {
+  background: transparent !important;
+  border: none !important;
+}
+.control-label-icon div {
+  pointer-events: none;
+}
+
+.leaflet-div-icon {
+  overflow: visible !important;
+}
+
+.device-info-card {
+  width: auto !important;
+  height: auto !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+}

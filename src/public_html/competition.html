@@ -628,49 +628,45 @@
             // Circle: fixed map-unit radius — scales naturally with zoom
             this.circle.setRadius(this.baseMapRadius);
 
-            // Control number label: text sized to match zoom, positioned at fixed offset in map units
+            // Control number label: full-zoom text, positioned right of circle
             var ctrlSize = Math.round(45 * fullScale);
-            this.ctrlLabel.setLatLng([
-              this.y,
-              this.x + this.baseMapRadius * 1.2,
-            ]);
-            this.ctrlLabel.setIcon(
-              L.divIcon({
-                className: "control-label-icon",
-                html:
-                  '<div style="color:#800080; font-size:' +
-                  ctrlSize +
-                  'px; font-weight:bold; line-height:1; white-space:nowrap;">' +
-                  this.controlNumber +
-                  "</div>",
-                iconSize: [0, 0],
-                iconAnchor: [0, Math.round(ctrlSize * 0.5)],
-              }),
-            );
+            var ctrlAnchorY = Math.round(ctrlSize * 0.5);
+            var ctrlPos = L.latLng(this.y, this.x + this.baseMapRadius * 1.2);
+            this.ctrlLabel.setLatLng(ctrlPos);
+            this.ctrlLabel.setIcon(L.divIcon({
+              className: "control-label-icon",
+              html: '<div style="color:#800080; font-size:' + ctrlSize + 'px; font-weight:bold; line-height:1; white-space:nowrap;">' + this.controlNumber + '</div>',
+              iconSize: [0, 0],
+              iconAnchor: [0, ctrlAnchorY]
+            }));
 
-            // Device info card: half-zoom scale, white bg, black text
+            // Device info card: half-zoom text.
+            // Position in screen space: lower-left aligned with the bottom of the control number label.
             if (this.deviceName) {
               var hdrSize = Math.round(20 * halfScale);
-              var devHtml =
-                '<div style="display:inline-block; background:#fff; border:1px solid #ccc; border-radius:3px; padding:2px 6px; white-space:nowrap;">' +
-                '<span style="color:#333; font-size:' +
-                hdrSize +
-                'px; font-weight:bold;">' +
-                this.deviceName +
-                "</span>" +
-                "</div>";
-              this.devLabel.setLatLng([
-                this.y + this.baseMapRadius * 1.5,
-                this.x + this.baseMapRadius * 1.2,
-              ]);
-              this.devLabel.setIcon(
-                L.divIcon({
-                  className: "device-info-card",
-                  html: devHtml,
-                  iconSize: [0, 0],
-                  iconAnchor: [0, 0],
-                }),
-              );
+              var devHtml = '<div style="display:inline-block; background:#fff; border:1px solid #ccc; border-radius:3px; padding:2px 6px; white-space:nowrap;">'
+                + '<span style="color:#333; font-size:' + hdrSize + 'px; font-weight:bold;">' + this.deviceName + '</span>'
+                + '</div>';
+
+              // Convert control number position to container (screen) pixels
+              var ctrlPoint = mapInstance.latLngToContainerPoint(ctrlPos);
+              // Bottom edge of control number: anchor is ctrlAnchorY from top, so bottom is ctrlSize - ctrlAnchorY below the map position
+              var ctrlTextBottom = ctrlPoint.y + (ctrlSize - ctrlAnchorY);
+              // Left edge of control number
+              var ctrlTextLeft = ctrlPoint.x;
+              // Top edge of control number text
+              var ctrlTextTop = ctrlPoint.y - ctrlAnchorY;
+              // Place device card above: anchor at its bottom edge, positioned at the control number's top minus gap
+              var devContainerPoint = L.point(ctrlTextLeft, ctrlTextTop - 4);
+              var devLatLng = mapInstance.containerPointToLatLng(devContainerPoint);
+
+              this.devLabel.setLatLng(devLatLng);
+              this.devLabel.setIcon(L.divIcon({
+                className: "device-info-card",
+                html: devHtml,
+                iconSize: [0, 0],
+                iconAnchor: [0, Math.round(hdrSize * 1.3)]
+              }));
             }
           });
         }

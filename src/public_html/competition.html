@@ -642,7 +642,7 @@
 
             // Device info card: half-zoom text.
             // Position in screen space: lower-left aligned with the bottom of the control number label.
-            if (this.deviceName) {
+            if (this.deviceName && this.popupHost) {
               var hdrSize = Math.round(20 * halfScale);
               var devHtml = '<div style="display:inline-block; background:#fff; border:1px solid #ccc; border-radius:3px; padding:2px 6px; white-space:nowrap;">'
                 + '<span style="color:#333; font-size:' + hdrSize + 'px; font-weight:bold;">' + this.deviceName + '</span>'
@@ -660,8 +660,8 @@
               var devContainerPoint = L.point(ctrlTextLeft, ctrlTextTop - 4);
               var devLatLng = mapInstance.containerPointToLatLng(devContainerPoint);
 
-              this.devLabel.setLatLng(devLatLng);
-              this.devLabel.setIcon(L.divIcon({
+              this.popupHost.setLatLng(devLatLng);
+              this.popupHost.setIcon(L.divIcon({
                 className: "device-info-card",
                 html: devHtml,
                 iconSize: [0, 0],
@@ -722,7 +722,7 @@
               if (this.description) {
                 popupHtml += "Description: " + this.description + "<br/>";
               }
-              if (this.deviceName) {
+              if (this.deviceName && this.popupHost) {
                 popupHtml +=
                   '<br/><b>WiRoc Device:</b> <a href="device.html?devicebt=' +
                   (this.deviceBTAddress || "") +
@@ -748,8 +748,6 @@
                 weight: 4,
                 _isControlMarker: true,
               }).addTo(mapInstance);
-              circle.bindPopup(popupHtml);
-
               // Control number label (interactive=false)
               var ctrlLabel = L.marker([cy, cx], {
                 icon: L.divIcon({
@@ -763,11 +761,11 @@
               }).addTo(mapInstance);
 
               // Device info card (white bg, black text, clickable)
-              var devLabel = null;
+              var popupHost = circle;
               if (this.deviceName) {
-                devLabel = L.marker([cy, cx], {
+                popupHost = L.marker([cy, cx], {
                   icon: L.divIcon({
-                    className: "",
+                    className: "device-info-card",
                     html: "",
                     iconSize: [0, 0],
                     iconAnchor: [0, 0],
@@ -775,13 +773,15 @@
                   _isControlMarker: true,
                   interactive: true,
                 }).addTo(mapInstance);
-                devLabel.bindPopup(popupHtml);
+                popupHost.bindPopup(popupHtml, { offset: L.point(50, -60) });
+              } else {
+                circle.bindPopup(popupHtml);
               }
 
               var layerEntry = {
                 circle: circle,
                 ctrlLabel: ctrlLabel,
-                devLabel: devLabel,
+                popupHost: this.deviceName ? popupHost : null,
                 baseMapRadius: baseMapRadius,
                 x: cx,
                 y: cy,
@@ -831,6 +831,16 @@
           });
         }
 
+        function adjustPopupSizes() {
+          if (!mapInstance) return;
+          var zoom = mapInstance.getZoom();
+          var halfScale = Math.pow(2, zoom / 2);
+          $(".leaflet-popup-content-wrapper").css("transform", "scale(" + halfScale + ")");
+          $(".leaflet-popup-content-wrapper").css("transform-origin", "top right");
+          $(".leaflet-popup-tip").css("transform", "scale(" + halfScale + ")");
+          $(".leaflet-popup-tip").css("transform-origin", "bottom center");
+        }
+
         function initMap(meta) {
           var img = new Image();
           img.onload = function () {
@@ -865,6 +875,17 @@
 
             // Place control markers on the map
             placeControlsOnMap(w, h);
+
+            // Scale popups with half-zoom rate; close on zoom so anchor resets
+            mapInstance.on("zoomend", function() {
+              adjustPopupSizes();
+              $.each(controlLayers, function() {
+                if (this.popupHost) this.popupHost.closePopup();
+              });
+            });
+            mapInstance.on("popupopen", function(e) {
+              adjustPopupSizes();
+            });
 
             $("#btnSaveMapView").show();
             $("#btnDeleteMap").show();

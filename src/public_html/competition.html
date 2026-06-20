@@ -455,8 +455,11 @@
         var competitionId = $.urlParam("competitionId");
         var allControls = [];
         var mapInstance = null;
-        var mapMeta = null;
+        var controlGroup = null;
         var hasEditAccess = false;
+        var mapImgWidth = 0;
+        var mapImgHeight = 0;
+        var placingControls = false;
 
         function checkControlsAccess(competition) {
           getIsLoggedIn(function (isLoggedIn) {
@@ -691,18 +694,20 @@
         }
 
         function placeControlsOnMap(imageW, imageH) {
+          if (placingControls) return;
+          placingControls = true;
           $.ajax({
             url:
               "/api/v1/Competitions/" + competitionId + "/Controls/withDevices",
             dataType: "json",
           }).then(function (controls) {
-            if (!mapInstance) return;
+            if (!mapInstance) { placingControls = false; return; }
 
-            mapInstance.eachLayer(function (layer) {
-              if (layer._isControlMarker) {
-                mapInstance.removeLayer(layer);
-              }
-            });
+            // Remove old control group and create a fresh one
+            if (controlGroup) {
+              mapInstance.removeLayer(controlGroup);
+            }
+            controlGroup = L.layerGroup().addTo(mapInstance);
             controlLayers = [];
 
             var baseMapRadius = imageW * 0.024;
@@ -714,7 +719,6 @@
             var spacingX = imageW / (cols + 1);
             var spacingY = imageH / (rows + 1);
             var gridIndex = 0;
-
             $.each(controls, function (index) {
               var cx, cy;
               if (this.mapX != null && this.mapY != null) {
@@ -732,7 +736,7 @@
 
               // Popup for clicking on the circle or device card (expanded info)
               var popupHtml =
-                '<div>' +
+                "<div>" +
                 "<b>Control " +
                 this.controlNumber +
                 ": " +
@@ -741,9 +745,10 @@
               if (this.description) {
                 popupHtml += "Description: " + this.description + "<br/>";
               }
-              if (this.deviceName && this.popupHost) {
+              popupHtml += "<br/>";
+              if (this.deviceName && this.deviceName !== "undefined") {
                 popupHtml +=
-                  '<br/><b>WiRoc Device:</b> <a href="device.html?devicebt=' +
+                  '<b>WiRoc Device:</b> <a href="device.html?devicebt=' +
                   (this.deviceBTAddress || "") +
                   '">' +
                   this.deviceName +
@@ -755,7 +760,7 @@
                   popupHtml += ' <span style="color:red">(LOW)</span>';
                 popupHtml += "<br/>";
               } else {
-                popupHtml += "<br/><em>No device assigned</em><br/>";
+                popupHtml += "<em>No device assigned</em><br/>";
               }
               popupHtml += "</div>";
 
@@ -765,8 +770,7 @@
                 color: "#800080",
                 fillOpacity: 0,
                 weight: 4,
-                _isControlMarker: true,
-              }).addTo(mapInstance);
+              }).addTo(controlGroup);
               // Control number label (interactive=false)
               var ctrlLabel = L.marker([cy, cx], {
                 icon: L.divIcon({
@@ -775,9 +779,8 @@
                   iconSize: [0, 0],
                   iconAnchor: [0, 0],
                 }),
-                _isControlMarker: true,
                 interactive: false,
-              }).addTo(mapInstance);
+              }).addTo(controlGroup);
 
               // Device info card (white bg, black text, clickable)
               var popupHost = circle;
@@ -791,7 +794,7 @@
                   }),
                   _isControlMarker: true,
                   interactive: true,
-                }).addTo(mapInstance);
+                }).addTo(controlGroup);
                 popupHost.bindPopup(popupHtml, {
                   className: "device-info-card-popup",
                   autoPan: false,
@@ -824,8 +827,7 @@
                     iconSize: [100, 100],
                     iconAnchor: [50, 50],
                   }),
-                  _isControlMarker: true,
-                }).addTo(mapInstance);
+                }).addTo(controlGroup);
                 dragMarker.bindPopup(popupHtml);
 
                 (function (idx) {
@@ -854,8 +856,9 @@
             });
 
             adjustControlSizes();
-            mapInstance.off("zoomend", adjustControlSizes);
-            mapInstance.on("zoomend", adjustControlSizes);
+            placingControls = false;
+          }).fail(function () {
+            placingControls = false;
           });
         }
 
@@ -866,8 +869,14 @@
           var fontSize = Math.round(14 * halfScale) + "px";
           var w = Math.round(280 * halfScale) + "px";
           $(".device-info-card-popup").css("font-size", fontSize);
-          $(".device-info-card-popup .leaflet-popup-content-wrapper").css({ width: w, maxWidth: "none" });
-          $(".device-info-card-popup .leaflet-popup-content").css({ width: "auto", maxWidth: "none" });
+          $(".device-info-card-popup .leaflet-popup-content-wrapper").css({
+            width: w,
+            maxWidth: "none",
+          });
+          $(".device-info-card-popup .leaflet-popup-content").css({
+            width: "auto",
+            maxWidth: "none",
+          });
         }
 
         function initMap(meta) {
@@ -875,6 +884,8 @@
           img.onload = function () {
             var w = img.naturalWidth;
             var h = img.naturalHeight;
+            mapImgWidth = w;
+            mapImgHeight = h;
 
             // Use Leaflet CRS.Simple for pixel-based coordinates
             mapInstance = L.map("map", {
@@ -907,6 +918,7 @@
 
             // Scale popup font with half-zoom; close on zoom so position recalculates
             mapInstance.on("zoomend", function () {
+              adjustControlSizes();
               adjustPopupSizes();
               $.each(controlLayers, function () {
                 if (this.popupHost) this.popupHost.closePopup();
@@ -1084,6 +1096,10 @@
                   setTimeout(function () {
                     select.removeClass("is-valid");
                   }, 1500);
+                  // Refresh control markers on map without full rebuild
+                  if (mapInstance && mapImgWidth > 0) {
+                    placeControlsOnMap(mapImgWidth, mapImgHeight);
+                  }
                 },
                 function (fail) {
                   select.addClass("is-invalid");
@@ -1149,7 +1165,13 @@
                         bootstrap.Modal.getOrCreateInstance(itemModalElement);
                       itemModal.hide();
                       $("#controlUpdatedAlert").removeClass("collapse");
-                      loadControlsTable(competitionId);
+                      loadControlsTable(competitionId, function () {
+                        loadDeviceTable();
+                      });
+                      // Refresh controls on map
+                      if (mapInstance && mapImgWidth > 0) {
+                        placeControlsOnMap(mapImgWidth, mapImgHeight);
+                      }
                     },
                     function (fail) {
                       var errorMsg =
@@ -1197,11 +1219,21 @@
                 }).then(
                   function () {
                     modalDiv.modal("hide");
-                    loadControlsTable(competitionId);
+                    loadControlsTable(competitionId, function () {
+                      loadDeviceTable();
+                    });
+                    if (mapInstance && mapImgWidth > 0) {
+                      placeControlsOnMap(mapImgWidth, mapImgHeight);
+                    }
                   },
                   function () {
                     modalDiv.modal("hide");
-                    loadControlsTable(competitionId);
+                    loadControlsTable(competitionId, function () {
+                      loadDeviceTable();
+                    });
+                    if (mapInstance && mapImgWidth > 0) {
+                      placeControlsOnMap(mapImgWidth, mapImgHeight);
+                    }
                   },
                 );
               });

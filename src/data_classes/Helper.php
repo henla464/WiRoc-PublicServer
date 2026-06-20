@@ -241,6 +241,23 @@ class Helper
 				UNIQUE INDEX idx_deviceaccess_btaddress_userid (BTAddress, UserId))';
 		$stmt = $this->db->query($sql);
 		
+
+			$sql = 'CREATE TABLE IF NOT EXISTS CompetitionAccesses (id int NOT NULL AUTO_INCREMENT, competitionId int NOT NULL, UserId int NOT NULL,
+					GrantedAt datetime, GrantedByUserId int, updateTime datetime, createdTime datetime, PRIMARY KEY (id),
+					UNIQUE INDEX idx_competitionaccess_competition_userid (competitionId, UserId))';
+			$stmt = $this->db->query($sql);
+
+			$sql = 'CREATE TABLE IF NOT EXISTS Controls (id int NOT NULL AUTO_INCREMENT, competitionId int NOT NULL, controlNumber int NOT NULL,
+					name varchar(50), description varchar(255), updateTime datetime, createdTime datetime,
+					FOREIGN KEY(competitionId) REFERENCES Competitions(id), PRIMARY KEY (id),
+					UNIQUE INDEX idx_controls_competition_controlnumber (competitionId, controlNumber))';
+			$stmt = $this->db->query($sql);
+
+			$sql = 'ALTER TABLE Competitions ADD COLUMN IF NOT EXISTS createdByUserId int';
+			$stmt = $this->db->query($sql);
+
+			$sql = 'ALTER TABLE Devices ADD COLUMN IF NOT EXISTS controlId int';
+			$stmt = $this->db->query($sql);
 		$res = new CommandResponse();
 		$res->code = 0;
 		$res->message = "Tables created";
@@ -258,6 +275,28 @@ class Helper
         $sql = "CREATE TABLE IF NOT EXISTS DeviceAccesses (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50) NOT NULL, UserId int NOT NULL,
                 GrantedAt datetime, GrantedByUserId int, updateTime datetime, createdTime datetime, PRIMARY KEY (id),
                 UNIQUE INDEX idx_deviceaccess_btaddress_userid (BTAddress, UserId))";
+        $stmt = $this->db->query($sql);
+
+        $sql = 'CREATE TABLE IF NOT EXISTS CompetitionAccesses (id int NOT NULL AUTO_INCREMENT, competitionId int NOT NULL, UserId int NOT NULL,
+                GrantedAt datetime, GrantedByUserId int, updateTime datetime, createdTime datetime, PRIMARY KEY (id),
+                UNIQUE INDEX idx_competitionaccess_competition_userid (competitionId, UserId))';
+        $stmt = $this->db->query($sql);
+
+        $sql = 'CREATE TABLE IF NOT EXISTS Controls (id int NOT NULL AUTO_INCREMENT, competitionId int NOT NULL, controlNumber int NOT NULL,
+                name varchar(50), description varchar(255), updateTime datetime, createdTime datetime,
+                FOREIGN KEY(competitionId) REFERENCES Competitions(id), PRIMARY KEY (id),
+                UNIQUE INDEX idx_controls_competition_controlnumber (competitionId, controlNumber))';
+        $stmt = $this->db->query($sql);
+
+        $columns2 = [
+            "createdByUserId int",
+            "controlId int"
+        ];
+        foreach ($columns2 as $col) {
+            $sql = "ALTER TABLE Devices ADD COLUMN IF NOT EXISTS $col";
+            $stmt = $this->db->query($sql);
+        }
+        $sql = "ALTER TABLE Competitions ADD COLUMN IF NOT EXISTS createdByUserId int";
         $stmt = $this->db->query($sql);
 
         $res = new CommandResponse();

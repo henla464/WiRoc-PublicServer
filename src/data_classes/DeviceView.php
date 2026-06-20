@@ -55,6 +55,8 @@ class DeviceView
     public $reportTime;
 	public $updateTime;
     public $createdTime;
+    public $controlNumber;
+    public $controlName;
     public $batteryLevel;
     public $batteryLevelTime;
 }

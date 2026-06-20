@@ -109,6 +109,7 @@
                 <script src="libs/TableFilter/TableFilter.js" type="text/javascript"></script>
                 <script src="libs/TableSorter/js/jquery.tablesorter.min.js" type="text/javascript"></script>
                 <script src="libs/TableSorter/js/jquery.tablesorter.widgets.min.js" type="text/javascript"></script>
+      <script src="navinit.js"></script>
 
                 <script>
                 var tableName = "DeviceAccess";
@@ -191,6 +192,7 @@
 
                 $(document).ready(function() {
 						$("#nav-placeholder").load("navigation.html", function() {
+            initNavigation();
 
 							// Show grant button for logged-in users
 							getIsLoggedIn(function(isLoggedIn) {

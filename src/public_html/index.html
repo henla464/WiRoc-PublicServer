@@ -122,12 +122,8 @@
         src="libs/TableSorter/js/jquery.tablesorter.widgets.min.js"
         type="text/javascript"
       ></script>
+      <script src="navinit.js"></script>
 
-      <!-- Option 2: Separate Popper and Bootstrap JS -->
-      <!--
-        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
-        -->
       <script>
         $.urlParam = function (name) {
           var results = new RegExp("[\?&]" + name + "=([^&#]*)").exec(
@@ -136,20 +132,6 @@
 
           return results !== null ? results[1] || 0 : false;
         };
-
-        function loadHeader(competitionId) {
-          $.ajax({
-            url: "/api/v1/Competitions/" + competitionId,
-          }).then(
-            function (data) {
-              const competition = JSON.parse(data);
-              $("#header").text(
-                "WiRoc Devices for competition: " + competition.name
-              );
-            },
-            function (fail) {}
-          );
-        }
 
         function hasUpdatedInLastMinutes(dateString, minutes) {
           const inputTime = new Date(dateString).getTime();
@@ -173,10 +155,6 @@
 
         function loadTable() {
           var urlDeviceView = "/api/v1/DevicesView?sort=createdTime desc";
-          if (competitionId) {
-            urlDeviceView += "&limitToCompetitionId=" + competitionId;
-            loadHeader(competitionId);
-          }
           var globeIcon =
             '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-globe2" viewBox="0 0 16 16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm7.5-6.923c-.67.204-1.335.82-1.887 1.855-.143.268-.276.56-.395.872.705.157 1.472.257 2.282.287V1.077zM4.249 3.539c.142-.384.304-.744.481-1.078a6.7 6.7 0 0 1 .597-.933A7.01 7.01 0 0 0 3.051 3.05c.362.184.763.349 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9.124 9.124 0 0 1-1.565-.667A6.964 6.964 0 0 0 1.018 7.5h2.49zm1.4-2.741a12.344 12.344 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332zM8.5 5.09V7.5h2.99a12.342 12.342 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.612 13.612 0 0 1 7.5 10.91V8.5H4.51zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741H8.5zm-3.282 3.696c.12.312.252.604.395.872.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a6.696 6.696 0 0 1-.598-.933 8.853 8.853 0 0 1-.481-1.079 8.38 8.38 0 0 0-1.198.49 7.01 7.01 0 0 0 2.276 1.522zm-1.383-2.964A13.36 13.36 0 0 1 3.508 8.5h-2.49a6.963 6.963 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667zm6.728 2.964a7.009 7.009 0 0 0 2.275-1.521 8.376 8.376 0 0 0-1.197-.49 8.853 8.853 0 0 1-.481 1.078 6.688 6.688 0 0 1-.597.933zM8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855.143-.268.276-.56.395-.872A12.63 12.63 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.963 6.963 0 0 0 14.982 8.5h-2.49a13.36 13.36 0 0 1-.437 3.008zM14.982 7.5a6.963 6.963 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008h2.49zM11.27 2.461c.177.334.339.694.482 1.078a8.368 8.368 0 0 0 1.196-.49 7.01 7.01 0 0 0-2.275-1.52c.218.283.418.597.597.932zm-.488 1.343a7.765 7.765 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/></svg>';
           var greenCircle =
@@ -185,7 +163,7 @@
             '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-circle-fill" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="red"/></svg>';
 
           var sortList = null;
-          if ($("#WiRocDevices").hasClass("tablesorter")) {
+          if (document.querySelector("#WiRocDevices.tablesorter")) {
             sortList = $("#WiRocDevices")[0].config.sortList;
           }
           $("#WiRocDevices tbody").empty();
@@ -223,22 +201,20 @@
               );
             });
 
-            if (!$("#WiRocDevices").hasClass("tablesorter")) {
+            if (!document.querySelector("#WiRocDevices.tablesorter")) {
               $("#WiRocDevices").tablesorter({
                 theme: "bootstrap",
                 widgets: ["zebra"],
               });
             } else {
-              // If tablesorter is already initialized, just update and apply the sort
               $("#WiRocDevices").trigger("update");
               if (sortList) {
                 $("#WiRocDevices").trigger("sorton", [sortList]);
               }
             }
 
-            if (!$("#WiRocDevices").hasClass("tableFilter")) {
-              // Initialize table filter only once
-              var tooltip = 'Quotes (") match phrases...'; // your tooltip text
+            if (!document.querySelector("#WiRocDevices.tableFilter")) {
+              var tooltip = 'Quotes (") match phrases...';
               var optionsbasic = {
                 columnFilters: [
                   { columnName: "Alive", inputType: "None" },
@@ -273,39 +249,9 @@
               };
               $("#WiRocDevices").tableFilter(optionsbasic);
             }
-            /*
-            var tooltip =
-              'Quotes (") match phrases. (not) excludes a match from the results. (or) can be used to do Or searches. I.e. [red or blue] will match either red or blue. Numeric values support >=, >, <=, <, = and != operators.';
-            // Initialise Plugin
-            var optionsbasic = {
-              columnFilters: [
-                { columnName: "Alive", inputType: "None" },
-                { columnName: "Internet", inputType: "None" },
-                {
-                  columnName: "Name",
-                  inputType: "text",
-                  toolTipMessage: tooltip,
-                },
-                {
-                  columnName: "BT Address",
-                  inputType: "text",
-                  toolTipMessage: tooltip,
-                },
-                {
-                  columnName: "Last contact",
-                  inputType: "text",
-                  toolTipMessage: tooltip,
-                },
-              ],
-              enableCookies: false,
-            };
-
-            $("#WiRocDevices").tableFilter(optionsbasic);
-            */
           });
         }
 
-        var competitionId = $.urlParam("competitionId");
         var intervalId = null;
 
         function setupInterval() {
@@ -359,23 +305,20 @@
                   }
                 });
               } else {
-                //Validate Form
                 signUpForm[0].reportValidity();
               }
             });
           });
 
           $("#nav-placeholder").load("navigation.html", function () {
+            initNavigation();
             $.each($(".navbar").find(".nav-link"), function () {
-              console.log($(this).attr("href"));
-              console.log(window.location.pathname);
               $(this).toggleClass(
                 "active",
                 window.location.pathname.indexOf($(this).attr("href")) > -1
               );
             });
 
-            // --- BEGIN: Persist reload switch and interval input ---
             function saveReloadSettings() {
               var toggle = $("#reloadSwitch").prop("checked");
               var interval = $("#intervalSeconds").val();
@@ -406,7 +349,6 @@
               saveReloadSettings();
               setupInterval();
             });
-            // --- END: Persist reload switch and interval input ---
 
             loadTable();
           });

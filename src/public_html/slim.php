@@ -175,6 +175,7 @@ $app->get('/api/v1/login', function($request, $response, $args) use ($app) {
 	    $res->message = "Login OK";
         $res->isLoggedIn = true;
         $res->isAdmin = $_SESSION['userIsAdmin'];
+            $res->userId = $_SESSION['userId'];
     }
 	$response->getBody()->write(json_encode($res));
     return $response;
@@ -221,6 +222,7 @@ $app->post('/api/v1/login', function($request, $response, $args) use ($app) {
 		$res->message = "Login OK";
         $res->isLoggedIn = true;
         $res->isAdmin = $user->isAdmin == null ? false : $user->isAdmin;
+			$res->userId = $_SESSION['userId'];
   		$response->getBody()->write(json_encode($res));
 		return $response;
 	}
@@ -601,9 +603,10 @@ $app->get('/api/v1/Devices', function ($request, $response) use ($app) {
 $app->get('/api/v1/DevicesView', function ($request, $response) use ($app) {
 	$cls = DeviceView::class;
 	$sql = 'SELECT CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -6 MINUTE) THEN true ELSE false END recentlyReported, 
-        CASE WHEN Devices.connectedToInternetTime > DATE_ADD(SYSDATE(), INTERVAL -1 MINUTE) THEN true ELSE false END connectedToInternet, 
-        Devices.*, Competitions.name as competitionName, IFNULL(DeviceStatuses.batteryLevel, 0) as batteryLevel, IFNULL(DeviceStatuses.createdTime, "1980-01-01T00:00:08.000Z") as batteryLevelTime 
+        CASE WHEN Devices.connectedToInternetTime > DATE_ADD(SYSDATE(), INTERVAL -1 MINUTE) THEN true ELSE false END connectedToInternet,
+        Devices.*, Competitions.name as competitionName, Controls.controlNumber as controlNumber, Controls.name as controlName, IFNULL(DeviceStatuses.batteryLevel, 0) as batteryLevel, IFNULL(DeviceStatuses.createdTime, "1980-01-01T00:00:08.000Z") as batteryLevelTime
         FROM Devices LEFT JOIN Competitions ON Devices.competitionId = Competitions.id
+        LEFT JOIN Controls ON Devices.controlId = Controls.id
         LEFT JOIN DeviceStatuses ON (DeviceStatuses.Id = (SELECT Id FROM DeviceStatuses WHERE BTAddress = Devices.BTAddress ORDER BY createdTime DESC LIMIT 1))';
 
     $sqlParam = [];
@@ -619,15 +622,15 @@ $app->get('/api/v1/DevicesView', function ($request, $response) use ($app) {
         $sql .= ' WHERE ';
     }
     if (trim($headBTAddress) != '') {
-        $sql .= 'headBTAddress = :headBTAddress';
+        $sql .= 'Devices.headBTAddress = :headBTAddress';
         $sqlParam['headBTAddress'] = $headBTAddress;
     }
     if (trim($headBTAddress) != '' && trim($competitionId) != '') {
         $sql .= ' AND ';
     }
     if (trim($competitionId) != '') {
-        $sql .= 'competitionId = :competitionId';
-        $sqlParam['competitionId'] = $competitionId; 
+        $sql .= 'Devices.competitionId = :competitionId';
+        $sqlParam['competitionId'] = $competitionId;
     }
     $sql .= $sort . ' ' . $limit;
     
@@ -1258,23 +1261,58 @@ $app->post('/api/v1/Devices/{BTAddress}/SetConnectedToInternetTime', function (R
             return $response->withStatus(401);
         }
 
-        $deviceAccessCls = DeviceAccess::class;
-        $checkSql = "SELECT * FROM {$deviceAccessCls::$tableName} WHERE BTAddress = :BTAddress AND UserId = :UserId";
-        $access = $this->get('helper')->GetBySql($deviceAccessCls, $checkSql, [
-            'BTAddress' => $BTAddress,
-            'UserId' => $_SESSION['userId']
-        ]);
-        if (!$access) {
+        // Admins bypass DeviceAccess check
+        if (empty($_SESSION['userIsAdmin'])) {
+            $deviceAccessCls = DeviceAccess::class;
+            $checkSql = "SELECT * FROM {$deviceAccessCls::$tableName} WHERE BTAddress = :BTAddress AND UserId = :UserId";
+            $access = $this->get('helper')->GetBySql($deviceAccessCls, $checkSql, [
+                'BTAddress' => $BTAddress,
+                'UserId' => $_SESSION['userId']
+            ]);
+            if (!$access) {
+                return $response->withStatus(403);
+            }
+        }
+
+        // Verify user has access to the new competition
+        $newCompetitionId = $objectArray['competitionId'];
+        // Check if user is the creator of the competition
+        $compCls = Competition::class;
+        $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $newCompetitionId);
+        $isCreator = $competition && $competition->createdByUserId == $_SESSION['userId'];
+
+        // Also check CompetitionAccesses (handle case where table doesn't exist yet)
+        $compAccess = null;
+        try {
+            $compAccessCls = CompetitionAccess::class;
+            $compCheckSql = "SELECT * FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
+            $compAccess = $this->get('helper')->GetBySql($compAccessCls, $compCheckSql, [
+                'competitionId' => $newCompetitionId,
+                'UserId' => $_SESSION['userId']
+            ]);
+        } catch (\PDOException $e) {
+            // Table may not exist yet; fall through to isCreator check only
+        }
+
+        if (!$compAccess && !$isCreator && empty($_SESSION['userIsAdmin'])) {
             return $response->withStatus(403);
         }
 
+        // Check if competition is changing; if so, clear controlId
+        $currentDevice = $this->get('helper')->GetBySql($cls, "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress", ['BTAddress' => $BTAddress]);
+        $competitionChanged = $currentDevice && $currentDevice->competitionId != $newCompetitionId;
+
         $updateObjectArray = [];
         $updateObjectArray['BTAddress'] = $BTAddress;
-        $updateObjectArray['competitionId'] = $objectArray['competitionId'];
+        $updateObjectArray['competitionId'] = $newCompetitionId;
         $userId = $_SESSION['userId'];
         $updateObjectArray['competitionIdSetByUserId'] = $userId;
         
-        $sql = "UPDATE {$cls::$tableName} SET `competitionId` = :competitionId, `competitionIdSetByUserId` = :competitionIdSetByUserId, `updateTime` = NOW() WHERE BTAddress = :BTAddress";
+        if ($competitionChanged) {
+            $sql = "UPDATE {$cls::$tableName} SET `competitionId` = :competitionId, `competitionIdSetByUserId` = :competitionIdSetByUserId, `controlId` = NULL, `updateTime` = NOW() WHERE BTAddress = :BTAddress";
+        } else {
+            $sql = "UPDATE {$cls::$tableName} SET `competitionId` = :competitionId, `competitionIdSetByUserId` = :competitionIdSetByUserId, `updateTime` = NOW() WHERE BTAddress = :BTAddress";
+        }
         $this->get('helper')->RunSql($sql, $updateObjectArray);
           
         $routeContext = RouteContext::fromRequest($request);
@@ -3448,8 +3486,15 @@ $app->post('/api/v1/Competitions', function (Request $request, Response $respons
     $objectArrayForSelect = [];
     if (array_key_exists("id", $objectArray)) {
         $objectArrayForSelect['id'] = $objectArray['id'];
+        // Verify the current user is the creator or admin
+        $existing = $this->get('helper')->GetBySql($cls, "SELECT * FROM {$cls::$tableName} WHERE id = :id", $objectArrayForSelect);
+        if ($existing && $existing->createdByUserId != $_SESSION['userId'] && empty($_SESSION['userIsAdmin'])) {
+            return $response->withStatus(403);
+        }
     } else {
         $objectArrayForSelect['id'] = -1;
+        // Set the creator
+        $objectArray['createdByUserId'] = $_SESSION['userId'];
     }
     $id = $this->get('helper')->InsertOrUpdate($cls, $objectArray, $cls::$tableName, "SELECT * FROM {$cls::$tableName} WHERE id = :id", $objectArrayForSelect);
   
@@ -3492,9 +3537,516 @@ $app->post('/api/v1/Competitions', function (Request $request, Response $respons
 $app->delete('/api/v1/Competitions/{competitionId}', function (Request $request, Response $response) {
     $id = $request->getAttribute('competitionId');
     $cls = Competition::class;
+    // Verify the current user is the creator or admin
+    $competition = $this->get('helper')->Get($cls, $cls::$tableName, $id);
+    if ($competition && $competition->createdByUserId != $_SESSION['userId'] && empty($_SESSION['userIsAdmin'])) {
+        return $response->withStatus(403);
+    }
     $this->get('helper')->Delete($id, $cls::$tableName);
     return $response->withStatus(204);
 })->setName("deleteCompetition");
+
+
+# CONTROLS
+/**
+ * @SWG\Get(
+ *     path="/api/v1/Controls?competitionId={competitionId}&sort={sort}&limit={limit}",
+ *     description="Returns all Controls, optionally filtered by competitionId",
+ *     operationId="getControls",
+ *     produces={"application/json"},
+ *     @SWG\Parameter(
+ *         description="Filter by competitionId",
+ *         in="path",
+ *         name="competitionId",
+ *         required=false,
+ *         type="string"
+ *     ),
+ *     @SWG\Response(
+ *         response=200,
+ *         description="Controls response",
+ *         @SWG\Schema(
+ *             type="array",
+ *             @SWG\Items(ref="#/definitions/Control")
+ *         ),
+ *     ),
+ *     security={
+ *       {"api_key": {}}
+ *     }
+ * )
+ */
+$app->get('/api/v1/Controls', function ($request, $response) use ($app) {
+    $cls = Control::class;
+    $queryParams = $request->getQueryParams();
+    $competitionId = $queryParams['competitionId'] ?? '';
+    $sort = $this->get('helper')->getSort($cls, $request);
+    $limit = $this->get('helper')->getLimit($request);
+    if (trim($competitionId) != '' && ctype_digit($competitionId)) {
+        $sql = "SELECT * FROM {$cls::$tableName} WHERE competitionId = :competitionId " . $sort . " " . $limit;
+        $response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, ['competitionId'=>$competitionId])));
+    } else {
+        $response->getBody()->write(json_encode($this->get('helper')->GetAll($cls, $cls::$tableName, $request)));
+    }
+    return $response;
+})->setName("getControls");
+
+/**
+ * @SWG\Get(
+ *     path="/api/v1/Controls/{controlId}",
+ *     description="Gets a Control",
+ *     operationId="getControl",
+ *     produces={"application/json"},
+ *     @SWG\Parameter(
+ *         description="ID of the Control",
+ *         format="int64",
+ *         in="path",
+ *         name="controlId",
+ *         required=true,
+ *         type="integer"
+ *     ),
+ *     @SWG\Response(
+ *         response=200,
+ *         description="Control response",
+ *         @SWG\Schema(ref="#/definitions/Control")
+ *     ),
+ *     security={
+ *       {"api_key": {}}
+ *     }
+ * )
+ */
+$app->get('/api/v1/Controls/{controlId}', function (Request $request, Response $response) {
+    $cls = Control::class;
+    $id = $request->getAttribute('controlId');
+    $control = $this->get('helper')->Get($cls, $cls::$tableName, $id);
+    if ($control == false) {
+        return $response->withStatus(404);
+    }
+    $response->getBody()->write(json_encode($control));
+    return $response;
+})->setName("getControl");
+
+/**
+ * @SWG\Post(
+ *     path="/api/v1/Controls",
+ *     description="Adds or updates a Control. Requires competition access.",
+ *     operationId="postControl",
+ *     produces={"application/json"},
+ *     @SWG\Parameter(
+ *         name="control",
+ *         in="body",
+ *         description="Control to add/update",
+ *         required=true,
+ *         @SWG\Schema(ref="#/definitions/NewControl"),
+ *     ),
+ *     @SWG\Response(
+ *         response=200,
+ *         description="Control response",
+ *         @SWG\Schema(ref="#/definitions/Control")
+ *     ),
+ *     security={
+ *       {}
+ *     }
+ * )
+ */
+$app->post('/api/v1/Controls', function (Request $request, Response $response) {
+    $cls = Control::class;
+    $objectArray = json_decode($request->getBody(), true);
+
+    // Verify the user has access to the competition
+    $competitionId = $objectArray['competitionId'];
+    $compCls = Competition::class;
+    $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $competitionId);
+    $isCreator = $competition && $competition->createdByUserId == $_SESSION['userId'];
+
+    $compAccess = null;
+    try {
+        $compAccessCls = CompetitionAccess::class;
+        $compCheckSql = "SELECT * FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
+        $compAccess = $this->get('helper')->GetBySql($compAccessCls, $compCheckSql, [
+            'competitionId' => $competitionId,
+            'UserId' => $_SESSION['userId']
+        ]);
+    } catch (\PDOException $e) {
+        // Table may not exist yet
+    }
+
+    if (!$compAccess && !$isCreator && empty($_SESSION['userIsAdmin'])) {
+        return $response->withStatus(403);
+    }
+
+    // Check uniqueness of controlNumber within competition
+    if (!array_key_exists("id", $objectArray) || $objectArray['id'] == null) {
+        $checkSql = "SELECT * FROM {$cls::$tableName} WHERE competitionId = :competitionId AND controlNumber = :controlNumber";
+        $existing = $this->get('helper')->GetBySql($cls, $checkSql, [
+            'competitionId' => $competitionId,
+            'controlNumber' => $objectArray['controlNumber']
+        ]);
+        if ($existing) {
+            $res = new CommandResponse();
+            $res->code = 1;
+            $res->message = "Control number " . $objectArray['controlNumber'] . " already exists in this competition";
+            $response->getBody()->write(json_encode($res));
+            return $response->withStatus(400);
+        }
+    }
+
+    $objectArrayForSelect = [];
+    if (array_key_exists("id", $objectArray) && $objectArray['id'] != null) {
+        $objectArrayForSelect['id'] = $objectArray['id'];
+    } else {
+        $objectArrayForSelect['id'] = -1;
+    }
+    $id = $this->get('helper')->InsertOrUpdate($cls, $objectArray, $cls::$tableName, "SELECT * FROM {$cls::$tableName} WHERE id = :id", $objectArrayForSelect);
+
+    $routeContext = RouteContext::fromRequest($request);
+    $routeParser = $routeContext->getRouteParser();
+    $url = $routeParser->relativeUrlFor('getControl', ['controlId' => $id]);
+    return $response->withStatus(303)->withHeader('Location', $url);
+})->setName("postControl");
+
+/**
+ * @SWG\Delete(
+ *     path="/api/v1/Controls/{controlId}",
+ *     description="Delete a Control",
+ *     operationId="deleteControl",
+ *     @SWG\Parameter(
+ *         description="ID of the Control",
+ *         format="int64",
+ *         in="path",
+ *         name="controlId",
+ *         required=true,
+ *         type="integer"
+ *     ),
+ *     @SWG\Response(response=204, description="deleted"),
+ *     security={
+ *       {}
+ *     }
+ * )
+ */
+$app->delete('/api/v1/Controls/{controlId}', function (Request $request, Response $response) {
+    $id = $request->getAttribute('controlId');
+    $cls = Control::class;
+    $control = $this->get('helper')->Get($cls, $cls::$tableName, $id);
+    if (!$control) {
+        return $response->withStatus(404);
+    }
+    // Verify the user has access to the competition
+    $compCls = Competition::class;
+    $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $control->competitionId);
+    $isCreator = $competition && $competition->createdByUserId == $_SESSION['userId'];
+
+    $compAccess = null;
+    try {
+        $compAccessCls = CompetitionAccess::class;
+        $compCheckSql = "SELECT * FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
+        $compAccess = $this->get('helper')->GetBySql($compAccessCls, $compCheckSql, [
+            'competitionId' => $control->competitionId,
+            'UserId' => $_SESSION['userId']
+        ]);
+    } catch (\PDOException $e) {
+        // Table may not exist yet
+    }
+
+    if (!$compAccess && !$isCreator && empty($_SESSION['userIsAdmin'])) {
+        return $response->withStatus(403);
+    }
+    $this->get('helper')->Delete($id, $cls::$tableName);
+    return $response->withStatus(204);
+})->setName("deleteControl");
+
+
+# DEVICE CONTROL ASSIGNMENT
+/**
+ * @SWG\Post(
+ *     path="/api/v1/Devices/{BTAddress}/SetControl",
+ *     description="Set the controlId for a device",
+ *     operationId="postDeviceSetControl",
+ *     produces={"application/json"},
+ *     @SWG\Parameter(
+ *         name="body",
+ *         in="body",
+ *         description="Control assignment object",
+ *         required=true,
+ *         @SWG\Schema(
+ *             required={"controlId"},
+ *             @SWG\Property(property="controlId", type="integer")
+ *         ),
+ *     ),
+ *     @SWG\Parameter(
+ *         description="BT Address of device to update",
+ *         in="path",
+ *         name="BTAddress",
+ *         required=true,
+ *         type="string"
+ *     ),
+ *     @SWG\Response(response=200, description="device response"),
+ *     security={
+ *       {}
+ *     }
+ * )
+ */
+$app->post('/api/v1/Devices/{BTAddress}/SetControl', function (Request $request, Response $response) {
+    $objectArray = json_decode($request->getBody(), true);
+    $BTAddress = $request->getAttribute('BTAddress');
+    $cls = Device::class;
+
+    if (!isset($_SESSION['userId'])) {
+        return $response->withStatus(401);
+    }
+
+    // Admins bypass DeviceAccess check
+    if (empty($_SESSION['userIsAdmin'])) {
+        $deviceAccessCls = DeviceAccess::class;
+        $checkSql = "SELECT * FROM {$deviceAccessCls::$tableName} WHERE BTAddress = :BTAddress AND UserId = :UserId";
+        $access = $this->get('helper')->GetBySql($deviceAccessCls, $checkSql, [
+            'BTAddress' => $BTAddress,
+            'UserId' => $_SESSION['userId']
+        ]);
+        if (!$access) {
+            return $response->withStatus(403);
+        }
+    }
+
+    // Get the device to check its competition
+    $device = $this->get('helper')->GetBySql($cls, "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress", ['BTAddress' => $BTAddress]);
+    if (!$device) {
+        return $response->withStatus(404);
+    }
+
+    // Verify the control belongs to the device's competition (or clearing)
+    $controlId = !empty($objectArray['controlId']) ? $objectArray['controlId'] : null;
+    if ($controlId !== null) {
+        $controlCls = Control::class;
+        $control = $this->get('helper')->Get($controlCls, $controlCls::$tableName, $controlId);
+        if (!$control || $control->competitionId != $device->competitionId) {
+            $res = new CommandResponse();
+            $res->code = 1;
+            $res->message = "Control does not belong to the device's competition";
+            $response->getBody()->write(json_encode($res));
+            return $response->withStatus(400);
+        }
+    }
+
+    $updateObjectArray = [];
+    $updateObjectArray['BTAddress'] = $BTAddress;
+    if ($controlId !== null) {
+        $sql = "UPDATE {$cls::$tableName} SET `controlId` = :controlId, `updateTime` = NOW() WHERE BTAddress = :BTAddress";
+        $updateObjectArray['controlId'] = $controlId;
+    } else {
+        $sql = "UPDATE {$cls::$tableName} SET `controlId` = NULL, `updateTime` = NOW() WHERE BTAddress = :BTAddress";
+    }
+    $this->get('helper')->RunSql($sql, $updateObjectArray);
+
+    $routeContext = RouteContext::fromRequest($request);
+    $routeParser = $routeContext->getRouteParser();
+    $btAddressUrl = str_replace(':','%3A', $BTAddress);
+    $url = $routeParser->relativeUrlFor('getDevice', ['BTAddress' => $btAddressUrl]);
+    return $response->withStatus(303)->withHeader('Location', $url);
+})->setName("postDeviceSetControl");
+
+
+# COMPETITION ACCESS
+/**
+ * @SWG\Get(
+ *     path="/api/v1/CompetitionAccess",
+ *     description="Returns competition access entries for competitions the current user created or has access to. Admins see all.",
+ *     operationId="getCompetitionAccesses",
+ *     produces={"application/json"},
+ *     @SWG\Response(
+ *         response=200,
+ *         description="competition access response",
+ *         @SWG\Schema(
+ *             type="array",
+ *             @SWG\Items(ref="#/definitions/CompetitionAccess")
+ *         ),
+ *     ),
+ *     security={
+ *       {}
+ *     }
+ * )
+ */
+$app->get('/api/v1/CompetitionAccess', function (Request $request, Response $response) {
+    $currentUserId = $_SESSION['userId'];
+    $isAdmin = !empty($_SESSION['userIsAdmin']);
+
+    try {
+        $compAccessCls = CompetitionAccess::class;
+        $selectFields = "SELECT ca.id, ca.competitionId, ca.UserId, u.email AS UserEmail, ca.GrantedAt, ca.GrantedByUserId, ca.updateTime, ca.createdTime,
+                       c.name AS CompetitionName
+                FROM {$compAccessCls::$tableName} ca
+                JOIN Users u ON ca.UserId = u.id
+                JOIN Competitions c ON ca.competitionId = c.id";
+
+        if ($isAdmin) {
+            $sql = "$selectFields ORDER BY ca.competitionId, ca.UserId";
+            $entries = $this->get('helper')->GetAllBySql($compAccessCls, $sql, []);
+        } else {
+            $sql = "$selectFields WHERE ca.competitionId IN (
+                    SELECT id FROM Competitions WHERE createdByUserId = :CurrentUserId
+                )
+                ORDER BY ca.competitionId, ca.UserId";
+            $entries = $this->get('helper')->GetAllBySql($compAccessCls, $sql, [
+                'CurrentUserId' => $currentUserId
+            ]);
+        }
+    } catch (\PDOException $e) {
+        // Table may not exist yet; return empty array
+        $entries = [];
+    }
+
+    $response->getBody()->write(json_encode($entries));
+    return $response;
+})->setName("getCompetitionAccesses");
+
+/**
+ * @SWG\Post(
+ *     path="/api/v1/CompetitionAccess/grant",
+ *     description="Grant competition access to a user. Only the competition creator can grant access.",
+ *     operationId="postCompetitionAccessGrant",
+ *     produces={"application/json"},
+ *     @SWG\Parameter(
+ *         name="body",
+ *         in="body",
+ *         description="Grant request",
+ *         required=true,
+ *         @SWG\Schema(ref="#/definitions/CompetitionAccessGrantRequest"),
+ *     ),
+ *     @SWG\Response(
+ *         response=200,
+ *         description="command response",
+ *         @SWG\Schema(ref="#/definitions/CommandResponse")
+ *     ),
+ *     security={
+ *       {}
+ *     }
+ * )
+ */
+$app->post('/api/v1/CompetitionAccess/grant', function (Request $request, Response $response) {
+    $objectArray = json_decode($request->getBody(), true);
+
+    if (!isset($objectArray['competitionId'], $objectArray['UserEmail'])) {
+        $res = new CommandResponse();
+        $res->code = 1;
+        $res->message = "Missing required fields: competitionId, UserEmail";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(400);
+    }
+
+    // Verify the current user is the creator of the competition or admin
+    $compCls = Competition::class;
+    $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $objectArray['competitionId']);
+    if (!$competition) {
+        $res = new CommandResponse();
+        $res->code = 2;
+        $res->message = "Competition not found";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(404);
+    }
+    if ($competition->createdByUserId != $_SESSION['userId'] && empty($_SESSION['userIsAdmin'])) {
+        return $response->withStatus(403);
+    }
+
+    // Find the user by email
+    $userCls = User::class;
+    $sql = "SELECT * FROM {$userCls::$tableName} WHERE Email = :Email";
+    $user = $this->get('helper')->GetBySql($userCls, $sql, ['Email' => $objectArray['UserEmail']]);
+    if ($user == null) {
+        $res = new CommandResponse();
+        $res->code = 3;
+        $res->message = "User not found";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(404);
+    }
+
+    // Check if access already granted
+    $compAccessCls = CompetitionAccess::class;
+    $checkSql = "SELECT * FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
+    $existing = $this->get('helper')->GetBySql($compAccessCls, $checkSql, [
+        'competitionId' => $objectArray['competitionId'],
+        'UserId' => $user->id
+    ]);
+    if ($existing) {
+        $res = new CommandResponse();
+        $res->code = 0;
+        $res->message = "Access already granted";
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    }
+
+    $insertSql = "INSERT INTO {$compAccessCls::$tableName} (competitionId, UserId, GrantedAt, GrantedByUserId, createdTime) VALUES (:competitionId, :UserId, NOW(), :GrantedByUserId, NOW())";
+    $this->get('helper')->RunSql($insertSql, [
+        'competitionId' => $objectArray['competitionId'],
+        'UserId' => $user->id,
+        'GrantedByUserId' => $_SESSION['userId']
+    ]);
+
+    $res = new CommandResponse();
+    $res->code = 0;
+    $res->message = "Competition access granted";
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("postCompetitionAccessGrant");
+
+/**
+ * @SWG\Post(
+ *     path="/api/v1/CompetitionAccess/revoke",
+ *     description="Revoke competition access from a user. Only the competition creator can revoke access.",
+ *     operationId="postCompetitionAccessRevoke",
+ *     produces={"application/json"},
+ *     @SWG\Parameter(
+ *         name="body",
+ *         in="body",
+ *         description="Revoke request",
+ *         required=true,
+ *         @SWG\Schema(ref="#/definitions/CompetitionAccessRevokeRequest"),
+ *     ),
+ *     @SWG\Response(
+ *         response=200,
+ *         description="command response",
+ *         @SWG\Schema(ref="#/definitions/CommandResponse")
+ *     ),
+ *     security={
+ *       {}
+ *     }
+ * )
+ */
+$app->post('/api/v1/CompetitionAccess/revoke', function (Request $request, Response $response) {
+    $objectArray = json_decode($request->getBody(), true);
+
+    if (!isset($objectArray['competitionId'], $objectArray['UserId'])) {
+        $res = new CommandResponse();
+        $res->code = 1;
+        $res->message = "Missing required fields: competitionId, UserId";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(400);
+    }
+
+    // Verify the current user is the creator of the competition or admin
+    $compCls = Competition::class;
+    $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $objectArray['competitionId']);
+    if (!$competition) {
+        $res = new CommandResponse();
+        $res->code = 2;
+        $res->message = "Competition not found";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(404);
+    }
+    if ($competition->createdByUserId != $_SESSION['userId'] && empty($_SESSION['userIsAdmin'])) {
+        return $response->withStatus(403);
+    }
+
+    $compAccessCls = CompetitionAccess::class;
+    $deleteSql = "DELETE FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
+    $this->get('helper')->RunSql($deleteSql, [
+        'competitionId' => $objectArray['competitionId'],
+        'UserId' => $objectArray['UserId']
+    ]);
+
+    $res = new CommandResponse();
+    $res->code = 0;
+    $res->message = "Competition access revoked";
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("postCompetitionAccessRevoke");
 
 
 function GUID()

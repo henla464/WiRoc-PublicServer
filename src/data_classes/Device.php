@@ -37,6 +37,11 @@ class Device
     public $relayPathNo;
     public $competitionId;
     public $competitionIdSetByUserId;
+    /**
+     * @var int
+     * @SWG\Property()
+     */
+    public $controlId;
     public $batteryIsLow;
     public $batteryIsLowTime;
     public $batteryIsLowReceived;
@@ -79,6 +84,7 @@ class Device
  * 		@SWG\Property(property="nameUpdateTime", format="date-time", type="string"),
  * 		@SWG\Property(property="competitionId", type="integer"),
  * 		@SWG\Property(property="competitionIdSetByUserId", type="integer"),
+ * 		@SWG\Property(property="controlId", type="integer"),
  * 		@SWG\Property(property="batteryIsLow", type="boolean"),
  * 		@SWG\Property(property="batteryIsLowTime", format="date-time", type="string"),
  * 		@SWG\Property(property="batteryIsLowReceived", type="boolean"),

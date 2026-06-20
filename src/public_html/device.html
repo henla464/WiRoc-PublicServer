@@ -78,7 +78,8 @@
         id="deviceBattery"
       ></span>
       <br />
-      Control numbers: <span id="deviceSIStationNumber"></span>
+      Control numbers: <span id="deviceSIStationNumber"></span><br/>
+      Assigned control: <span id="deviceControl"></span>
       <br />
       Remote WiRoc devices: <span id="remoteDevices"></span>
       <span
@@ -92,8 +93,11 @@
       <br />
       Internal SRR: <span id="internalSRRs"></span>
       <br />
-      <div style="min-height: 400px">
+      <div style="position: relative; min-height: 400px">
         <canvas id="batteryChart"></canvas>
+        <div id="batteryChartNoData" style="display:none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #888; font-size: 1.2em; pointer-events: none;">
+          No status data available for the last 24 hours.
+        </div>
       </div>
 
       <button
@@ -211,6 +215,7 @@
         src="libs/TableSorter/js/jquery.tablesorter.widgets.min.js"
         type="text/javascript"
       ></script>
+      <script src="navinit.js"></script>
 
       <!-- Option 2: Separate Popper and Bootstrap JS -->
       <!--
@@ -241,18 +246,12 @@
         var tableName = "Devices";
 
         function loadBatteryChart(latestStatuses) {
-          // Battery chart
-          //let minCreateDate = Math.min.apply(null, latestStatuses.map(function (s) { return s.createdTime; }));
-          const minCreateDateStatusObj = latestStatuses.reduce((acc, loc) =>
-            acc.createdTime < loc.createdTime ? acc : loc
-          );
-          let minCreateDateTimeStr = minCreateDateStatusObj.createdTime;
-
           const ctx = document.getElementById("batteryChart");
-          // Only destroy if the chart exists and is a Chart.js instance
           if (ctx.chart) {
             ctx.chart.destroy();
           }
+
+          const hasData = latestStatuses && latestStatuses.length > 0;
 
           let todayDateTime = new Date();
           const yesterdayDateTime = new Date();
@@ -267,7 +266,16 @@
 
           var maxDateTime = new Date();
 
-          var minDateTimeStr = "";
+          var minDateTimeStr = yesterdayDateTime.toLocaleString("sv-SE");
+          var minCreateDateTimeStr = minDateTimeStr;
+
+          if (hasData) {
+            const minCreateDateStatusObj = latestStatuses.reduce((acc, loc) =>
+              acc.createdTime < loc.createdTime ? acc : loc
+            );
+            minCreateDateTimeStr = minCreateDateStatusObj.createdTime;
+          }
+
           var minCreateDateTime = new Date(minCreateDateTimeStr);
           if (yesterdayDateTime > minCreateDateTime) {
             minDateTimeStr = yesterdayDateTime.toLocaleString("sv-SE");
@@ -290,7 +298,9 @@
             x: s.createdTime,
             y: s.allLoraPunchesSentOK == 0 ? 1 : 0,
           }));
-          console.log(latestStatuses[0].allLoraPunchesSentOK);
+          if (hasData) {
+            console.log(latestStatuses[0].allLoraPunchesSentOK);
+          }
 
           const data = {
             labels: [yesterdayDateOnly, todayDateOnly, tomorrowDateOnly],
@@ -467,6 +477,21 @@
           new Chart(ctx, configBatteryChart);
         }
 
+        function loadControlsForCompetition(compId, selectedControlId) {
+          $("#controlInput").empty();
+          $("#controlInput").append('<option value="">No control</option>');
+          if (!compId) return;
+          $.ajax({
+            url: "/api/v1/Controls?competitionId=" + compId + "&sort=controlNumber",
+            dataType: "json"
+          }).then(function(controls) {
+            $.each(controls, function() {
+              var selected = (selectedControlId && this.id == selectedControlId) ? ' selected' : '';
+              $("#controlInput").append('<option value="' + this.id + '"' + selected + '>' + this.controlNumber + ' - ' + this.name + '</option>');
+            });
+          });
+        }
+
         function loadCompetition(compId) {
           $.ajax({
             url: "/api/v1/" + competitionTableName + "/" + compId,
@@ -485,6 +510,8 @@
             dataType: "json",
           }).then(function (latestStatuses) {
             if (latestStatuses.length > 0) {
+              $("#batteryChart").show();
+              $("#batteryChartNoData").hide();
               $("#deviceBattery").text(latestStatuses[0].batteryLevel + "%");
               const uniqueSIStationNumber = [
                 ...new Set(latestStatuses.map((stat) => stat.siStationNumber)),
@@ -572,6 +599,10 @@
               $("#internalSRRs").text(internalSRRs);
               
               loadBatteryChart(latestStatuses);
+              $("#batteryChartNoData").hide();
+            } else {
+              loadBatteryChart([]);
+              $("#batteryChartNoData").show();
             }
           });
         }
@@ -586,6 +617,22 @@
             dataType: "json",
           }).then(function (device) {
             $("#competitionInput").val(device.competitionId);
+            if (device.competitionId) {
+              loadControlsForCompetition(device.competitionId, device.controlId);
+            }
+            // Display assigned control
+            if (device.controlId) {
+              $.ajax({
+                url: "/api/v1/Controls/" + device.controlId,
+                dataType: "json"
+              }).then(function(ctrl) {
+                $("#deviceControl").text(ctrl.controlNumber + " - " + ctrl.name);
+              }, function() {
+                $("#deviceControl").text("Control #" + device.controlId);
+              });
+            } else {
+              $("#deviceControl").text("None");
+            }
             $("#descriptionInput").val(device.description);
             $("#deviceName").text(device.name + "  |  " + device.description);
             $("#deviceBTAddress").text("(" + btAddressOfDevice + ")");
@@ -799,22 +846,28 @@
               callback(false);
               return;
             }
-            $.ajax({
-              url: "/api/v1/DeviceAccess",
-              dataType: "json",
-            }).then(function (entries) {
-              var hasAccess = false;
-              if (entries) {
-                $.each(entries, function () {
-                  if (this.BTAddress === btAddressOfDevice) {
-                    hasAccess = true;
-                    return false;
-                  }
-                });
+            getIsAdmin(function (isAdmin) {
+              if (isAdmin) {
+                callback(true);
+                return;
               }
-              callback(hasAccess);
-            }, function () {
-              callback(false);
+              $.ajax({
+                url: "/api/v1/DeviceAccess",
+                dataType: "json",
+              }).then(function (entries) {
+                var hasAccess = false;
+                if (entries) {
+                  $.each(entries, function () {
+                    if (this.BTAddress === btAddressOfDevice) {
+                      hasAccess = true;
+                      return false;
+                    }
+                  });
+                }
+                callback(hasAccess);
+              }, function () {
+                callback(false);
+              });
             });
           });
         }
@@ -848,6 +901,7 @@
 
         $(document).ready(function () {
           $("#nav-placeholder").load("navigation.html", function () {
+            initNavigation();
             $.each($(".navbar").find(".nav-link"), function () {
               console.log($(this).attr("href"));
               console.log(window.location.pathname);
@@ -910,10 +964,12 @@
                   });
 
                   var competitionId = $("#competitionInput").val();
+                  var controlId = $("#controlInput").val();
                   var postItemData = JSON.stringify({
                     competitionId: competitionId,
                   });
 
+                  // Set competition first
                   $.ajax({
                     url:
                       "/api/v1/" +
@@ -926,18 +982,34 @@
                     dataType: "json",
                   }).then(
                     function (item) {
-                      $("#errorAlert").addClass("collapse");
-                      var itemModalElement =
-                        document.querySelector("#editdevice");
-                      var itemModal =
-                        bootstrap.Modal.getOrCreateInstance(itemModalElement);
-                      itemModal.hide();
-                      $("#itemUpdatedAlert").removeClass("collapse");
-                      var compName = $("#competitionInput")
-                        .find(":selected")
-                        .text();
-                      $("#competitionName").text(compName);
-                      //loadTable();
+                      // Now set the control if selected
+                      var selectedControlId = $("#controlInput").val();
+                      if (selectedControlId) {
+                        $.ajax({
+                          url: "/api/v1/" + tableName + "/" + btAddressOfDevice + "/SetControl",
+                          method: "POST",
+                          data: JSON.stringify({ controlId: parseInt(selectedControlId) }),
+                          dataType: "json"
+                        }).always(function() {
+                          $("#errorAlert").addClass("collapse");
+                          var itemModalElement = document.querySelector("#editdevice");
+                          var itemModal = bootstrap.Modal.getOrCreateInstance(itemModalElement);
+                          itemModal.hide();
+                          $("#itemUpdatedAlert").removeClass("collapse");
+                          var compName = $("#competitionInput").find(":selected").text();
+                          $("#competitionName").text(compName);
+                          location.reload();
+                        });
+                      } else {
+                        $("#errorAlert").addClass("collapse");
+                        var itemModalElement = document.querySelector("#editdevice");
+                        var itemModal = bootstrap.Modal.getOrCreateInstance(itemModalElement);
+                        itemModal.hide();
+                        $("#itemUpdatedAlert").removeClass("collapse");
+                        var compName = $("#competitionInput").find(":selected").text();
+                        $("#competitionName").text(compName);
+                        location.reload();
+                      }
                     },
                     function (fail) {
                       $("#errorAlert").text(JSON.stringify(fail));
@@ -961,6 +1033,12 @@
                 '<option value="' + this.id + '">' + this.name + "</option>"
               );
             });
+          });
+
+          // When competition changes, reload control dropdown
+          $(document).on("change", "#competitionInput", function() {
+            var compId = $(this).val();
+            loadControlsForCompetition(compId, null);
           });
 
           $(document).on("click", ".close", function () {

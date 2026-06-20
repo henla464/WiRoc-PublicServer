@@ -2,13 +2,23 @@
 use Swagger\Annotations as SWG;
 
 /**
- * @SWG\Definition(definition="NewCompetition", type="object", required={"name"})
+ * @SWG\Definition(definition="NewControl", type="object", required={"competitionId", "controlNumber", "name"})
  */
-class Competition
+class Control
 {
-	public static $tableName = 'Competitions';
+	public static $tableName = 'Controls';
 		
     public $id;
+    /**
+     * @SWG\Property()
+     * @var int
+     */
+    public $competitionId;
+    /**
+     * @SWG\Property()
+     * @var int
+     */
+    public $controlNumber;
     /**
      * @SWG\Property()
      * @var string
@@ -16,9 +26,9 @@ class Competition
     public $name;
     /**
      * @SWG\Property()
-     * @var int
+     * @var string
      */
-    public $createdByUserId;
+    public $description;
 
 	public $updateTime;
     public $createdTime;
@@ -26,14 +36,13 @@ class Competition
 
 /**
  *  @SWG\Definition(
- *   definition="Competition",
+ *   definition="Control",
  *   type="object",
  *   allOf={
- *       @SWG\Schema(ref="#/definitions/NewCompetition"),
+ *       @SWG\Schema(ref="#/definitions/NewControl"),
  *       @SWG\Schema(
  *           required={"id", "createdTime"},
  *           @SWG\Property(property="id", format="integer", type="integer"),
- * 			 @SWG\Property(property="createdByUserId", format="integer", type="integer"),
  * 			 @SWG\Property(property="updateTime", format="date-time", type="string"),
  * 			 @SWG\Property(property="createdTime", format="date-time", type="string")
  *       )

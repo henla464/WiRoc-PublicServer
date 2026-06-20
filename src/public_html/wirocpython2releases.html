@@ -82,6 +82,7 @@
                 <script src="libs/TableFilter/TableFilter.js" type="text/javascript"></script>
                 <script src="libs/TableSorter/js/jquery.tablesorter.min.js" type="text/javascript"></script>
                 <script src="libs/TableSorter/js/jquery.tablesorter.widgets.min.js" type="text/javascript"></script>
+      <script src="navinit.js"></script>
 
                 <!-- Option 2: Separate Popper and Bootstrap JS -->
                 <!--
@@ -240,6 +241,7 @@
                                 
 
                                 $("#nav-placeholder").load("navigation.html", function() {
+            initNavigation();
                                         loadTable();
                                 });
 

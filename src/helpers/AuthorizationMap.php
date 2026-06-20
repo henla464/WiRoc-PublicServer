@@ -33,6 +33,8 @@ class AuthorizationMap {
             'getMessageStat',
             'getCompetitions',
             'getCompetition',
+            'getControls',
+            'getControl',
             'postPasswordRecovery',
             'postSetNewPassword');
 
@@ -105,13 +107,19 @@ class AuthorizationMap {
         $this->loggedInRoutesArray = array(
             'getLogout',
             'postDeviceSetCompetition',
+            'postDeviceSetControl',
             'deleteDeviceStatusesByBTAddress',
             'deleteMessageStatsByBTAddress',
             'postCompetition',
             'deleteCompetition',
             'postDeviceAccessGrantFromWeb',
             'postDeviceAccessRevoke',
-            'getDeviceAccesses');
+            'getDeviceAccesses',
+            'postControl',
+            'deleteControl',
+            'postCompetitionAccessGrant',
+            'postCompetitionAccessRevoke',
+            'getCompetitionAccesses');
     }
 
     public function needsAuthorization(ServerRequestInterface $request) {

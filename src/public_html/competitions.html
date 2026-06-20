@@ -63,6 +63,7 @@
 				</div>
                 <div id="signup-modal-placeholder"></div>
                 <div id="addnewitem-modal-placeholder"></div>
+                <div id="competitionaccess-modal-placeholder"></div>
                 
                 <!-- Optional JavaScript; choose one of the two! -->
                 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -71,6 +72,7 @@
                 <script src="libs/TableFilter/TableFilter.js" type="text/javascript"></script>
                 <script src="libs/TableSorter/js/jquery.tablesorter.min.js" type="text/javascript"></script>
                 <script src="libs/TableSorter/js/jquery.tablesorter.widgets.min.js" type="text/javascript"></script>
+      <script src="navinit.js"></script>
 
                 <!-- Option 2: Separate Popper and Bootstrap JS -->
                 <!--
@@ -90,7 +92,7 @@
                         }).then(function(items) {
                                 jqTableTBody.empty();
                                 $.each(items, function() {
-                                        jqTableTBody.append('<tr><td>' + this.id + '</td><td><a href="index.html?competitionId=' + this.id + '">' + this.name + '</a></td><td><button class="btn fa fa-pencil edititem" data-id="' + this.id  + '" /></td><td><button class="deleteitem btn fa fa-trash" data-bs-toggle="modal" data-bs-target="#confirm-delete" data-id="' + this.id + '" /></td></tr>');
+                                        jqTableTBody.append('<tr><td>' + this.id + '</td><td><a href="competition.html?competitionId=' + this.id + '">' + this.name + '</a></td><td><button class="btn btn-secondary btn-sm accessitem" data-id="' + this.id + '" data-name="' + this.name + '">Access</button></td><td><button class="btn fa fa-pencil edititem" data-id="' + this.id  + '" /></td><td><button class="deleteitem btn fa fa-trash" data-bs-toggle="modal" data-bs-target="#confirm-delete" data-id="' + this.id + '" /></td></tr>');
                                 });
 
                                 jqTable.tablesorter({ theme: 'bootstrap'});
@@ -116,6 +118,7 @@
 
                 $(document).ready(function() {
 					$("#nav-placeholder").load("navigation.html", function() {
+            initNavigation();
 						
 						$("#addnewitem-modal-placeholder").load(modalHtmlFileName, function() {
 								$('#btnOpenAddItem').click(function() {
@@ -176,7 +179,72 @@
 													} else {
 															$('#itemUpdatedAlert').removeClass('collapse');
 													}
-													loadTable();
+														// Competition Access modal setup
+							$("#competitionaccess-modal-placeholder").load("competitionaccessmodal.html", function() {
+								$(document).on("click", ".accessitem", function(){
+									var compId = $(this).data('id');
+									var compName = $(this).data('name');
+									$("#modalTitle").text("Manage Access - " + compName);
+									$("#competitionaccess").data("competitionId", compId);
+									loadAccessTable(compId);
+									var accessModalElement = document.querySelector('#competitionaccess');
+									var accessModal = bootstrap.Modal.getOrCreateInstance(accessModalElement);
+									accessModal.show();
+								});
+
+								$("#buttonGrantAccess").click(function() {
+									var compId = $("#competitionaccess").data("competitionId");
+									var userEmail = $("#userEmailInput").val();
+									if (!userEmail) return;
+									$.ajax({
+										url: "/api/v1/CompetitionAccess/grant",
+										method: "POST",
+										data: JSON.stringify({ competitionId: compId, UserEmail: userEmail }),
+										dataType: "json"
+									}).then(function(res) {
+										$("#grantErrorAlert").addClass("collapse");
+										$("#grantSuccessAlert").removeClass("collapse");
+										$("#userEmailInput").val("");
+										loadAccessTable(compId);
+									}, function(fail) {
+										var msg = "Failed to grant access";
+										if (fail.responseJSON && fail.responseJSON.message) msg = fail.responseJSON.message;
+										$("#grantErrorAlert").text(msg).removeClass("collapse");
+										$("#grantSuccessAlert").addClass("collapse");
+									});
+								});
+
+								$(document).on("click", ".revokeaccess", function() {
+									var compId = $("#competitionaccess").data("competitionId");
+									var userId = $(this).data('userid');
+									$.ajax({
+										url: "/api/v1/CompetitionAccess/revoke",
+										method: "POST",
+										data: JSON.stringify({ competitionId: compId, UserId: userId }),
+										dataType: "json"
+									}).then(function(res) {
+										loadAccessTable(compId);
+									}, function(fail) {});
+								});
+							});
+
+							function loadAccessTable(compId) {
+								$.ajax({
+									url: "/api/v1/CompetitionAccess",
+									dataType: "json"
+								}).then(function(entries) {
+									$("#CompetitionAccesses tbody").empty();
+									if (entries) {
+										$.each(entries, function() {
+											if (this.competitionId == compId) {
+												$("#CompetitionAccesses tbody").append('<tr><td>' + this.UserEmail + '</td><td>' + this.GrantedAt + '</td><td><button class="btn btn-sm btn-danger revokeaccess" data-userid="' + this.UserId + '">Revoke</button></td></tr>');
+											}
+										});
+									}
+								});
+							}
+
+							loadTable();
 											}, function(fail) {
 													$('#errorAlert').text(JSON.stringify(fail));
 													$('#errorAlert').removeClass('collapse');     

@@ -1,0 +1,39 @@
+<div class="modal fade" id="competitionaccess" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                        <h5 class="modal-title" id="modalTitle">Manage Competition Access</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"/>
+                  </div>
+                  <div class="modal-body additem-form">
+                        <h6>Grant access to a user</h6>
+                        <form id="accessGrantForm" class="needs-validation mb-3" novalidate>
+                                <div class="row">
+                                        <div class="col-8">
+                                                <input type="email" class="form-control" id="userEmailInput" placeholder="User email" required>
+                                        </div>
+                                        <div class="col-4">
+                                                <button type="button" id="buttonGrantAccess" class="btn btn-secondary">Grant Access</button>
+                                        </div>
+                                </div>
+                                <div class="alert alert-danger collapse mt-2" id="grantErrorAlert" role="alert"></div>
+                                <div class="alert alert-success collapse mt-2" id="grantSuccessAlert" role="alert">Access granted!</div>
+                        </form>
+
+                        <h6>Users with access</h6>
+                        <div class="table-responsive">
+                                <table class="table table-striped table-hover table-sm" id="CompetitionAccesses">
+                                <thead>
+                                        <tr>
+                                                <th scope="col">User Email</th>
+                                                <th scope="col">Granted At</th>
+                                                <th scope="col"></th>
+                                        </tr>
+                                </thead>
+                                <tbody></tbody>
+                                </table>
+                        </div>
+                  </div>
+                </div>
+        </div>
+</div>

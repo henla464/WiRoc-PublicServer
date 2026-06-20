@@ -25,4 +25,9 @@ class LoginResponse
      * @var boolean
      */
     public $isAdmin;
+    /**
+     * @SWG\Property(format="integer");
+     * @var int
+     */
+    public $userId;
 }

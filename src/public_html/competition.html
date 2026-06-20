@@ -633,20 +633,32 @@
             var ctrlAnchorY = Math.round(ctrlSize * 0.5);
             var ctrlPos = L.latLng(this.y, this.x + this.baseMapRadius * 1.2);
             this.ctrlLabel.setLatLng(ctrlPos);
-            this.ctrlLabel.setIcon(L.divIcon({
-              className: "control-label-icon",
-              html: '<div style="color:#800080; font-size:' + ctrlSize + 'px; font-weight:bold; line-height:1; white-space:nowrap;">' + this.controlNumber + '</div>',
-              iconSize: [0, 0],
-              iconAnchor: [0, ctrlAnchorY]
-            }));
+            this.ctrlLabel.setIcon(
+              L.divIcon({
+                className: "control-label-icon",
+                html:
+                  '<div style="color:#800080; font-size:' +
+                  ctrlSize +
+                  'px; font-weight:bold; line-height:1; white-space:nowrap;">' +
+                  this.controlNumber +
+                  "</div>",
+                iconSize: [0, 0],
+                iconAnchor: [0, ctrlAnchorY],
+              }),
+            );
 
             // Device info card: half-zoom text.
             // Position in screen space: lower-left aligned with the bottom of the control number label.
             if (this.deviceName && this.popupHost) {
               var hdrSize = Math.round(20 * halfScale);
-              var devHtml = '<div style="display:inline-block; background:#fff; border:1px solid #ccc; border-radius:3px; padding:2px 6px; white-space:nowrap;">'
-                + '<span style="color:#333; font-size:' + hdrSize + 'px; font-weight:bold;">' + this.deviceName + '</span>'
-                + '</div>';
+              var devHtml =
+                '<div style="display:inline-block; background:#fff; border:1px solid #ccc; border-radius:3px; padding:2px 6px; white-space:nowrap;">' +
+                '<span style="color:#333; font-size:' +
+                hdrSize +
+                'px; font-weight:bold;">' +
+                this.deviceName +
+                "</span>" +
+                "</div>";
 
               // Convert control number position to container (screen) pixels
               var ctrlPoint = mapInstance.latLngToContainerPoint(ctrlPos);
@@ -658,16 +670,22 @@
               var ctrlTextTop = ctrlPoint.y - ctrlAnchorY;
               // Place device card above: top-left anchored, positioned so its bottom aligns at the control number's top minus gap
               var cardHeight = Math.round(hdrSize * 1.3);
-              var devContainerPoint = L.point(ctrlTextLeft, ctrlTextTop - 4 - cardHeight);
-              var devLatLng = mapInstance.containerPointToLatLng(devContainerPoint);
+              var devContainerPoint = L.point(
+                ctrlTextLeft,
+                ctrlTextTop - 4 - cardHeight,
+              );
+              var devLatLng =
+                mapInstance.containerPointToLatLng(devContainerPoint);
 
               this.popupHost.setLatLng(devLatLng);
-              this.popupHost.setIcon(L.divIcon({
-                className: "device-info-card",
-                html: devHtml,
-                iconSize: [0, 0],
-                iconAnchor: [0, 0]
-              }));
+              this.popupHost.setIcon(
+                L.divIcon({
+                  className: "device-info-card",
+                  html: devHtml,
+                  iconSize: [0, 0],
+                  iconAnchor: [0, 0],
+                }),
+              );
             }
           });
         }
@@ -714,7 +732,7 @@
 
               // Popup for clicking on the circle or device card (expanded info)
               var popupHtml =
-                '<div style="min-width:200px">' +
+                '<div>' +
                 "<b>Control " +
                 this.controlNumber +
                 ": " +
@@ -774,7 +792,11 @@
                   _isControlMarker: true,
                   interactive: true,
                 }).addTo(mapInstance);
-                popupHost.bindPopup(popupHtml, { autoPan: false, offset: L.point(0, 0) });
+                popupHost.bindPopup(popupHtml, {
+                  className: "device-info-card-popup",
+                  autoPan: false,
+                  offset: L.point(0, 0),
+                });
               } else {
                 circle.bindPopup(popupHtml);
               }
@@ -836,7 +858,11 @@
           if (!mapInstance) return;
           var zoom = mapInstance.getZoom();
           var halfScale = Math.pow(2, zoom / 2);
-          $(".leaflet-popup-content").css("font-size", Math.round(14 * halfScale) + "px");
+          var fontSize = Math.round(14 * halfScale) + "px";
+          var w = Math.round(280 * halfScale) + "px";
+          $(".device-info-card-popup").css("font-size", fontSize);
+          $(".device-info-card-popup .leaflet-popup-content-wrapper").css({ width: w, maxWidth: "none" });
+          $(".device-info-card-popup .leaflet-popup-content").css({ width: "auto", maxWidth: "none" });
         }
 
         function initMap(meta) {
@@ -875,20 +901,26 @@
             placeControlsOnMap(w, h);
 
             // Scale popup font with half-zoom; close on zoom so position recalculates
-            mapInstance.on("zoomend", function() {
+            mapInstance.on("zoomend", function () {
               adjustPopupSizes();
-              $.each(controlLayers, function() {
+              $.each(controlLayers, function () {
                 if (this.popupHost) this.popupHost.closePopup();
               });
             });
-            mapInstance.on("popupopen", function(e) {
+            mapInstance.on("popupopen", function (e) {
               adjustPopupSizes();
-              if (!e.popup._source || !e.popup._source.options.className ||
-                  !e.popup._source.options.className.match("device-info-card")) return;
+              if (
+                !e.popup._source ||
+                !e.popup._source.options.className ||
+                !e.popup._source.options.className.match("device-info-card")
+              )
+                return;
 
               // Position popup: bottom-left 15px above the marker's top-left
               var popupEl = e.popup.getElement();
-              var wrapper = popupEl.querySelector(".leaflet-popup-content-wrapper");
+              var wrapper = popupEl.querySelector(
+                ".leaflet-popup-content-wrapper",
+              );
               if (!wrapper) return;
               var w = wrapper.offsetWidth;
               var h = wrapper.offsetHeight;

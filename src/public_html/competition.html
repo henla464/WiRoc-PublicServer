@@ -782,7 +782,6 @@
                 fillOpacity: 0,
                 weight: 4,
               }).addTo(controlGroup);
-              circle.bindPopup(popupHtml);
 
               // Control number label (interactive=false)
               var ctrlLabel = L.marker([cy, cx], {
@@ -839,7 +838,6 @@
                     iconAnchor: [50, 50],
                   }),
                 }).addTo(controlGroup);
-                dragMarker.bindPopup(popupHtml);
 
                 (function (idx) {
                   dragMarker.on("drag", function (e) {

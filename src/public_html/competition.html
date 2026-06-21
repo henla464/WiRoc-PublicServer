@@ -359,7 +359,7 @@
 
         function loadHeader(competitionId) {
           $.ajax({
-            url: "/api/v1/Competitions/" + competitionId + "/Map",
+            url: "/api/v1/Competitions/" + competitionId,
           }).then(
             function (data) {
               const competition = JSON.parse(data);

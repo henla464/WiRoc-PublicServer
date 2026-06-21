@@ -996,20 +996,32 @@
 
         function pixelToLatLng(px, py) {
           if (!georefPoints.p1Lat || !georefPoints.p2Lat) return null;
-          var ax = georefPoints.p1X,
-            ay = georefPoints.p1Y;
-          var bx = georefPoints.p2X,
-            by = georefPoints.p2Y;
-          var cx = px,
-            cy = py;
-          var dx = bx - ax,
-            dy = by - ay;
-          if (dx === 0 && dy === 0) return null;
-          var t = ((cx - ax) * dx + (cy - ay) * dy) / (dx * dx + dy * dy);
-          var lat =
-            georefPoints.p1Lat + t * (georefPoints.p2Lat - georefPoints.p1Lat);
-          var lng =
-            georefPoints.p1Lng + t * (georefPoints.p2Lng - georefPoints.p1Lng);
+          var dpx = georefPoints.p2X - georefPoints.p1X;
+          var dpy = georefPoints.p2Y - georefPoints.p1Y;
+          var dlng = georefPoints.p2Lng - georefPoints.p1Lng;
+          var dlat = georefPoints.p2Lat - georefPoints.p1Lat;
+          var cosLat = Math.cos(georefPoints.p1Lat * Math.PI / 180);
+          // Meters between P1 and P2 in world space
+          var mE = dlng * 111320 * cosLat; // meters east
+          var mN = dlat * 111320;           // meters north
+          var dPixel = Math.sqrt(dpx * dpx + dpy * dpy);
+          var dM = Math.sqrt(mE * mE + mN * mN);
+          if (dPixel === 0 || dM === 0) return null;
+          var mPerPx = dM / dPixel;
+          // Pixel vector angle and world vector angle
+          var pixelAngle = Math.atan2(dpy, dpx);
+          var worldAngle = Math.atan2(mN, mE);
+          // Rotation from pixel space to world space
+          var rot = worldAngle - pixelAngle;
+          // Offset from P1 in pixels, apply rotation and scale
+          var rx = px - georefPoints.p1X;
+          var ry = py - georefPoints.p1Y;
+          var cosR = Math.cos(rot);
+          var sinR = Math.sin(rot);
+          var east  = (rx * cosR - ry * sinR) * mPerPx; // meters east
+          var north = (rx * sinR + ry * cosR) * mPerPx; // meters north
+          var lng = georefPoints.p1Lng + east / (111320 * cosLat);
+          var lat = georefPoints.p1Lat + north / 111320;
           return { lat: lat, lng: lng };
         }
 

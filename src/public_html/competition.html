@@ -49,57 +49,21 @@
               <button type="button" id="btnTabOrienteering" class="nav-link active" data-maptype="orienteering">Orienteering Map</button>
             </li>
             <li class="nav-item">
-              <button type="button" id="btnTabSatellite" class="nav-link" data-maptype="satellite">Satellite Map</button>
+              <button type="button" id="btnTabSatellite" class="nav-link" data-maptype="satellite">Satellite/Street Map</button>
             </li>
           </ul>
-          <div id="mapEditButtons" style="display: none">
-            <button
-              type="button"
-              id="btnUploadMap"
-              class="btn btn-secondary btn-sm me-1"
-            >
-              Upload Map
-            </button>
-            <button
-              type="button"
-              id="btnSaveMapView"
-              class="btn btn-outline-secondary btn-sm me-1"
-            >
-              Save current view as default
-            </button>
-            <button
-              type="button"
-              id="btnGeorefMap"
-              class="btn btn-outline-info btn-sm me-1"
-            >
-              Georeference Map
-            </button>
-            <button
-              type="button"
-              id="btnDeleteMap"
-              class="btn btn-outline-danger btn-sm"
-            >
-              Delete Map
-            </button>
-            <input
-              type="file"
-              id="mapFileInput"
-              accept="image/png"
-              style="display: none"
-            />
+          <div id="mapOrienteeringButtons" class="me-1" style="display:none">
+            <button type="button" id="btnUploadMap" class="btn btn-outline-dark btn me-1"><i class="fa fa-upload"></i> Upload Map</button>
+            <button type="button" id="btnDeleteMap" class="btn btn-outline-dark btn"><i class="fa fa-trash"></i> Delete Map</button>
+            <input type="file" id="mapFileInput" accept="image/png" style="display:none"/>
           </div>
-          <div id="mapMeasureArea" style="display: none">
-            <button
-              type="button"
-              id="btnMeasure"
-              class="btn btn-outline-dark btn-sm me-1"
-            >
-              Measure distance
-            </button>
-            <span
-              id="measureResult"
-              style="font-size: 13px; color: #333; display: none"
-            ></span>
+          <div id="mapEditButtons" style="display:none">
+            <button type="button" id="btnSaveMapView" class="btn btn-outline-dark btn me-1"><i class="fa fa-save"></i> Save current view</button>
+            <button type="button" id="btnGeorefMap" class="btn btn-outline-dark btn me-1"><i class="fa fa-globe"></i> Georeference Map</button>
+          </div>
+          <div id="mapMeasureArea" style="display:none">
+            <button type="button" id="btnMeasure" class="btn btn-outline-dark btn me-1"><i class="fa fa-arrows-h"></i> Measure distance</button>
+            <span id="measureResult" style="font-size:13px; color:#333; display:none"></span>
           </div>
         </div>
         <div
@@ -759,8 +723,10 @@
         function showMapEditButtons(show) {
           if (show) {
             $("#mapEditButtons").show();
+            $("#mapOrienteeringButtons").show();
           } else {
             $("#mapEditButtons").hide();
+            $("#mapOrienteeringButtons").hide();
           }
         }
 
@@ -852,10 +818,12 @@
             $("#satelliteMapContainer").hide();
             $("#btnTabOrienteering").addClass("active");
             $("#btnTabSatellite").removeClass("active");
+            if (hasEditAccess) $("#mapOrienteeringButtons").show();
           } else {
             mapInstance = satelliteMap;
             $("#orienteeringMapContainer").hide();
             $("#satelliteMapContainer").show();
+            $("#mapOrienteeringButtons").hide();
             if (!georefPoints.p1Lat && !georefState) {
               $("#satelliteMap").hide();
               $("#satelliteMapNoGeo").show();
@@ -1752,7 +1720,7 @@
 
             measuringMode = false;
             mapInstance.getContainer().style.cursor = "";
-            $("#btnMeasure").text("Clear distance");
+            $("#btnMeasure").text("Clear distance").removeClass("btn-outline-dark").addClass("btn-dark");
           }
         }
 
@@ -1783,13 +1751,50 @@
               zoom: 1,
               scrollWheelZoom: true,
             });
-            L.tileLayer(
+
+            var satLayer = L.tileLayer(
               "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-              {
-                attribution: "Esri",
-                maxZoom: 19,
-              },
-            ).addTo(satelliteMap);
+              { attribution: "Esri", maxZoom: 19 }
+            );
+            var streetLayer = L.tileLayer(
+              "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+              { attribution: "© OpenStreetMap contributors", maxZoom: 19 }
+            );
+            satLayer.addTo(satelliteMap);
+
+            var brightnessLevels = [1.0, 1.3, 1.5, 1.8];
+            var currentBrightness = 1.0;
+
+            function setBrightness(val) {
+              currentBrightness = val;
+              var pane = satelliteMap.getPane("tilePane");
+              if (pane) pane.style.filter = "brightness(" + val + ")";
+              $(".brightness-btn").removeClass("active");
+              $(".brightness-btn[data-brightness='" + val + "']").addClass("active");
+            }
+
+            var BrightnessControl = L.Control.extend({
+              options: { position: "topright" },
+              onAdd: function () {
+                var div = L.DomUtil.create("div", "leaflet-bar leaflet-control");
+                div.style.cssText = "background:#fff; padding:3px 5px; font-size:12px; white-space:nowrap;";
+                var html = '<span style="color:#333;font-weight:bold;margin-right:4px;">Brightness</span>';
+                $.each(brightnessLevels, function (i, b) {
+                  html += '<button class="brightness-btn" data-brightness="' + b + '" style="border:1px solid #ccc; background:#fff; padding:1px 5px; cursor:pointer; font-size:11px; border-radius:2px; margin:0 1px;">' + Math.round(b * 100) + '%</button>';
+                });
+                div.innerHTML = html;
+                L.DomEvent.disableClickPropagation(div);
+                L.DomEvent.disableScrollPropagation(div);
+                div.addEventListener("click", function (e) {
+                  var btn = e.target.closest(".brightness-btn");
+                  if (btn) setBrightness(parseFloat(btn.getAttribute("data-brightness")));
+                });
+                return div;
+              }
+            });
+            new BrightnessControl().addTo(satelliteMap);
+
+            L.control.layers({ "Satellite": satLayer, "Street Map": streetLayer }, null, { position: "topright", collapsed: false }).addTo(satelliteMap);
 
             // Set up zoom handler for satellite map
             satelliteMap.on("zoomend", function () {

@@ -179,6 +179,19 @@
         </div>
       </div>
 
+      <div id="heightProfileSection" style="display:none; margin-top:8px; margin-bottom:12px;">
+        <div class="d-flex align-items-center mb-1">
+          <h5 class="mb-0 me-auto">Height Profile</h5>
+          <div class="d-flex align-items-center">
+            <label for="profileHeight1" class="me-1" style="font-size:12px;">Sender antenna height (m)</label>
+            <input type="number" id="profileHeight1" class="form-control form-control-sm" value="2" min="0" max="100" step="0.5" style="width:70px; height:28px;">
+            <label for="profileHeight2" class="ms-3 me-1" style="font-size:12px;">Receiver antenna height (m)</label>
+            <input type="number" id="profileHeight2" class="form-control form-control-sm" value="2" min="0" max="100" step="0.5" style="width:70px; height:28px;">
+          </div>
+        </div>
+        <canvas id="profileCanvas" style="width:100%; height:200px; border:1px solid #ccc; border-radius:4px;"></canvas>
+      </div>
+
       <div class="table-responsive">
         <table
           class="table table-striped table-hover table-sm"
@@ -1544,6 +1557,146 @@
           });
         }
 
+        var heightProfileData = null;
+        var heightProfilePoints = null; // {lat1, lng1, lat2, lng2}
+        var heightProfileSampling = false;
+
+        function sampleElevationProfile(p1, p2, callback) {
+          if (!p1 || !p2 || !p1.lat || !p1.lng || !p2.lat || !p2.lng) return;
+          heightProfileSampling = true;
+          var n = 50; // sample points along path
+          var lats = [], lngs = [];
+          for (var i = 0; i < n; i++) {
+            var t = i / (n - 1);
+            lats.push(p1.lat + (p2.lat - p1.lat) * t);
+            lngs.push(p1.lng + (p2.lng - p1.lng) * t);
+          }
+          var latParam = "latitude=" + lats.join(",");
+          var lngParam = "&longitude=" + lngs.join(",");
+          $.ajax({
+            url: "https://api.open-meteo.com/v1/elevation?" + latParam + lngParam,
+            dataType: "json"
+          }).then(function (data) {
+            if (data && data.elevation) {
+              heightProfileData = data.elevation;
+              // Compute total distance along profile
+              var hDist = 0;
+              if (p1.distanceTo && p2.distanceTo) hDist = p1.distanceTo(p2);
+              heightProfilePoints = { p1: p1, p2: p2, lats: lats, lngs: lngs, dist: hDist };
+              renderHeightProfile(parseFloat($("#profileHeight1").val()) || 2, parseFloat($("#profileHeight2").val()) || 2);
+            }
+            heightProfileSampling = false;
+          }, function () {
+            heightProfileSampling = false;
+          });
+        }
+
+        function renderHeightProfile(h1, h2) {
+          if (!heightProfileData || !heightProfilePoints) return;
+          var elevations = heightProfileData;
+          var n = elevations.length;
+          var canvas = document.getElementById("profileCanvas");
+          if (!canvas) return;
+          // Show section first to get proper dimensions, then render
+          $("#heightProfileSection").show();
+          var ctx = canvas.getContext("2d");
+          var w = canvas.width = canvas.clientWidth || 800;
+          var h = canvas.height = canvas.clientHeight || 200;
+
+          var pad = { top: 15, right: 20, bottom: 30, left: 50 };
+          var plotW = w - pad.left - pad.right;
+          var plotH = h - pad.top - pad.bottom;
+
+          var minEl = Math.min.apply(null, elevations);
+          var maxEl = Math.max.apply(null, elevations);
+
+          // Extend max for markers (ground + marker height)
+          var gnd1 = elevations[0], gnd2 = elevations[n-1];
+          var markerTop1 = gnd1 + h1, markerTop2 = gnd2 + h2;
+          maxEl = Math.max(maxEl, markerTop1, markerTop2);
+          minEl = Math.min(minEl, markerTop1, markerTop2);
+          var elRange = maxEl - minEl || 1;
+          // Pad range by 10%
+          minEl -= elRange * 0.05;
+          maxEl += elRange * 0.05;
+          elRange = maxEl - minEl;
+
+          var toX = function(i) { return pad.left + (i / (n-1)) * plotW; };
+          var toY = function(el) { return pad.top + plotH - ((el - minEl) / elRange) * plotH; };
+
+          ctx.clearRect(0, 0, w, h);
+
+          // Filled ground area
+          ctx.beginPath();
+          ctx.moveTo(toX(0), pad.top + plotH);
+          for (var i = 0; i < n; i++) ctx.lineTo(toX(i), toY(elevations[i]));
+          ctx.lineTo(toX(n-1), pad.top + plotH);
+          ctx.closePath();
+          var grd = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH);
+          grd.addColorStop(0, "#2d6a2d");
+          grd.addColorStop(1, "#8b7355");
+          ctx.fillStyle = grd;
+          ctx.fill();
+
+          // Ground line
+          ctx.beginPath();
+          ctx.strokeStyle = "#1a4314";
+          ctx.lineWidth = 1.5;
+          for (var i = 0; i < n; i++) { i === 0 ? ctx.moveTo(toX(i), toY(elevations[i])) : ctx.lineTo(toX(i), toY(elevations[i])); }
+          ctx.stroke();
+
+          // P1 marker (blue)
+          var p1x = toX(0), p1gndY = toY(gnd1), p1topY = toY(markerTop1);
+          ctx.strokeStyle = "#0066CC";
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(p1x, p1gndY); ctx.lineTo(p1x, p1topY); ctx.stroke();
+          // P1 top circle
+          ctx.fillStyle = "#0066CC";
+          ctx.beginPath(); ctx.arc(p1x, p1topY, 4, 0, Math.PI*2); ctx.fill();
+
+          // P2 marker (red)
+          var p2x = toX(n-1), p2gndY = toY(gnd2), p2topY = toY(markerTop2);
+          ctx.strokeStyle = "#CC0000";
+          ctx.beginPath(); ctx.moveTo(p2x, p2gndY); ctx.lineTo(p2x, p2topY); ctx.stroke();
+          ctx.fillStyle = "#CC0000";
+          ctx.beginPath(); ctx.arc(p2x, p2topY, 4, 0, Math.PI*2); ctx.fill();
+
+          // Line of sight
+          ctx.strokeStyle = "#000";
+          ctx.lineWidth = 1;
+          ctx.setLineDash([5, 3]);
+          ctx.beginPath(); ctx.moveTo(p1x, p1topY); ctx.lineTo(p2x, p2topY); ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Axes
+          ctx.strokeStyle = "#666";
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(pad.left, pad.top); ctx.lineTo(pad.left, pad.top + plotH); ctx.lineTo(pad.left + plotW, pad.top + plotH); ctx.stroke();
+
+          // Y axis labels
+          ctx.fillStyle = "#333";
+          ctx.font = "10px sans-serif";
+          ctx.textAlign = "right";
+          for (var el = Math.ceil(minEl / 5) * 5; el <= maxEl; el += 5) {
+            var y = toY(el);
+            ctx.fillText(el + " m", pad.left - 4, y + 3);
+            ctx.setLineDash([2, 4]);
+            ctx.strokeStyle = "#ddd";
+            ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + plotW, y); ctx.stroke();
+            ctx.setLineDash([]);
+          }
+
+          // X axis labels (distance)
+          ctx.textAlign = "center";
+          ctx.fillStyle = "#333";
+          var totalDist = heightProfilePoints.dist || 0;
+          if (totalDist > 0) {
+            var dm = Math.round(totalDist);
+            ctx.fillText("0 m", toX(0), pad.top + plotH + 14);
+            ctx.fillText((dm >= 1000 ? (dm/1000).toFixed(2) + " km" : dm + " m"), toX(n-1), pad.top + plotH + 14);
+          }
+        }
+
         function renderScaleBar() {
           if (!mapMeta || !mapMeta.exists || !mapMeta.mapScale) {
             $("#scaleBar").hide();
@@ -1657,6 +1810,10 @@
           $("#measureResult").hide().text("");
           if (orienteeringMap) orienteeringMap.getContainer().style.cursor = "";
           if (satelliteMap) satelliteMap.getContainer().style.cursor = "";
+          // Clear height profile
+          heightProfileData = null;
+          heightProfilePoints = null;
+          $("#heightProfileSection").hide();
         }
 
         function handleMeasureClick(e) {
@@ -1721,6 +1878,19 @@
             measuringMode = false;
             mapInstance.getContainer().style.cursor = "";
             $("#btnMeasure").text("Clear distance").removeClass("btn-outline-dark").addClass("btn-dark");
+            // Sample elevation profile for line-of-sight
+            var measP1 = p1, measP2 = pos;
+            if (activeMapType === 'orienteering' && georefPoints.p1Lat) {
+              var ll1 = pixelToLatLng(p1.lng, p1.lat);
+              var ll2 = pixelToLatLng(pos.lng, pos.lat);
+              if (ll1 && ll2) {
+                var gp1 = L.latLng(ll1.lat, ll1.lng);
+                var gp2 = L.latLng(ll2.lat, ll2.lng);
+                sampleElevationProfile(gp1, gp2);
+              }
+            } else if (activeMapType === 'satellite') {
+              sampleElevationProfile(measP1, measP2);
+            }
           }
         }
 
@@ -2146,6 +2316,12 @@
                 stopMeasuring();
               } else {
                 startMeasuring();
+              }
+            });
+
+            $("#profileHeight1, #profileHeight2").on("input", function () {
+              if (heightProfileData) {
+                renderHeightProfile(parseFloat($("#profileHeight1").val()) || 2, parseFloat($("#profileHeight2").val()) || 2);
               }
             });
 

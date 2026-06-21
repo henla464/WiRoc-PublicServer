@@ -148,6 +148,38 @@
       </div>
 
       <div id="addcontrol-modal-placeholder"></div>
+      <div id="calibration-modal-placeholder"></div>
+
+      <div class="modal fade" id="calibrateModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Calibrate Map Scale</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <p>Click <b>two points</b> on the map to measure the distance between them.</p>
+              <div id="calibPointsInfo" class="mb-2">
+                <span id="calibPoint1Status" class="text-muted">Point 1: not set</span><br/>
+                <span id="calibPoint2Status" class="text-muted">Point 2: not set</span>
+              </div>
+              <div class="form-group mb-3">
+                <label for="calibDistanceInput" class="form-label">Real world distance (meters)</label>
+                <input type="number" class="form-control" id="calibDistanceInput" placeholder="e.g. 250" min="1" step="1" required>
+              </div>
+              <div class="form-group mb-3">
+                <label for="calibRatioInput" class="form-label">Map scale ratio (1:X)</label>
+                <input type="number" class="form-control" id="calibRatioInput" placeholder="e.g. 10000" min="1" step="1" required>
+              </div>
+              <div class="alert alert-danger collapse" id="calibErrorAlert" role="alert"></div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" id="btnCancelCalibration">Cancel</button>
+              <button type="button" id="btnSaveCalibration" class="btn btn-primary">Save Calibration</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div id="controlsSection" style="display: none">
         <hr />
@@ -1042,6 +1074,11 @@
           $.each(calibMarkers, function () { mapInstance.removeLayer(this); });
           calibMarkers = [];
           mapInstance.getContainer().style.cursor = "crosshair";
+          $("#calibDistanceInput").val("");
+          $("#calibRatioInput").val("");
+          $("#calibPoint1Status").text("Point 1: not set").removeClass("text-success").addClass("text-muted");
+          $("#calibPoint2Status").text("Point 2: not set").removeClass("text-success").addClass("text-muted");
+          $("#calibErrorAlert").addClass("collapse");
           alert("Click two points on the map to measure the distance between them.");
         }
 
@@ -1053,37 +1090,49 @@
             calibPoint1 = pos;
             var m = L.circle(pos, { radius: 4, color: "#ff0000", fill: true, fillColor: "#ff0000", fillOpacity: 1 }).addTo(mapInstance);
             calibMarkers.push(m);
+            $("#calibPoint1Status").text("Point 1: set (" + Math.round(pos.lat) + ", " + Math.round(pos.lng) + ")").removeClass("text-muted").addClass("text-success");
           } else if (!calibPoint2) {
             calibPoint2 = pos;
             var m = L.circle(pos, { radius: 4, color: "#ff0000", fill: true, fillColor: "#ff0000", fillOpacity: 1 }).addTo(mapInstance);
             calibMarkers.push(m);
             var line = L.polyline([calibPoint1, calibPoint2], { color: "#ff0000", weight: 2, dashArray: "5,5" }).addTo(mapInstance);
             calibMarkers.push(line);
-            promptScaleCalibration();
+            $("#calibPoint2Status").text("Point 2: set (" + Math.round(pos.lat) + ", " + Math.round(pos.lng) + ")").removeClass("text-muted").addClass("text-success");
+            var distPx = Math.round(mapInstance.distance(calibPoint1, calibPoint2));
+            $("#calibDistanceInput").attr("placeholder", "pixel distance: " + distPx + " px");
+            $("#calibrateModal").modal("show");
           }
         }
 
-        function promptScaleCalibration() {
-          if (!calibPoint1 || !calibPoint2) return;
-          var distPx = mapInstance.distance(calibPoint1, calibPoint2); // pixels (since CRS.Simple)
-          var distM = prompt("Enter the real world distance between the two points in meters:");
-          if (!distM || isNaN(distM) || parseFloat(distM) <= 0) { cancelCalibration(); return; }
-          var scaleRatio = prompt("Enter the map scale ratio (the X value in 1:X, e.g. 10000):", "10000");
-          if (!scaleRatio || isNaN(scaleRatio) || parseInt(scaleRatio) <= 0) { cancelCalibration(); return; }
-          var ppm = distPx / parseFloat(distM); // pixels per meter
+        function saveCalibration() {
+          if (!calibPoint1 || !calibPoint2) {
+            $("#calibErrorAlert").text("Please select both points on the map first.").removeClass("collapse");
+            return;
+          }
+          var distM = parseFloat($("#calibDistanceInput").val());
+          var scaleRatio = parseInt($("#calibRatioInput").val());
+          if (!distM || distM <= 0) {
+            $("#calibErrorAlert").text("Please enter a valid real world distance.").removeClass("collapse");
+            return;
+          }
+          if (!scaleRatio || scaleRatio <= 0) {
+            $("#calibErrorAlert").text("Please enter a valid scale ratio.").removeClass("collapse");
+            return;
+          }
+          var distPx = mapInstance.distance(calibPoint1, calibPoint2);
+          var ppm = distPx / distM;
           $.ajax({
             url: "/api/v1/Competitions/" + competitionId + "/Map",
             method: "PATCH",
-            data: JSON.stringify({ mapScale: ppm, mapScaleRatio: parseInt(scaleRatio) }),
+            data: JSON.stringify({ mapScale: ppm, mapScaleRatio: scaleRatio }),
             dataType: "json"
           }).then(function () {
             mapMeta.mapScale = ppm;
-            mapMeta.mapScaleRatio = parseInt(scaleRatio);
+            mapMeta.mapScaleRatio = scaleRatio;
             renderScaleBar();
             cancelCalibration();
           }, function () {
-            alert("Failed to save calibration");
-            cancelCalibration();
+            $("#calibErrorAlert").text("Failed to save calibration.").removeClass("collapse");
           });
         }
 
@@ -1094,6 +1143,8 @@
           $.each(calibMarkers, function () { mapInstance.removeLayer(this); });
           calibMarkers = [];
           mapInstance.getContainer().style.cursor = "";
+          var calibModal = bootstrap.Modal.getInstance(document.getElementById("calibrateModal"));
+          if (calibModal) calibModal.hide();
         }
 
         function initMap(meta) {
@@ -1279,6 +1330,18 @@
               }
               if (calibratingMode) { cancelCalibration(); return; }
               startCalibration();
+            });
+
+            $("#btnSaveCalibration").click(function () {
+              saveCalibration();
+            });
+
+            $("#btnCancelCalibration").click(function () {
+              cancelCalibration();
+            });
+
+            $("#calibrateModal").on("hidden.bs.modal", function () {
+              if (calibratingMode) cancelCalibration();
             });
 
             $("#btnDeleteMap").click(function () {

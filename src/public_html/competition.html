@@ -1279,21 +1279,29 @@
         var satelliteControlLayers = [];
 
         function adjustSatelliteControlSizes() {
-          if (!satelliteMap || !georefPoints.p1Lat) return;
-          var zoom = satelliteMap.getZoom();
-          var fullScale = Math.pow(2, zoom - 16);
-          var halfScale = Math.pow(2, (zoom - 16) / 2);
+          if (!satelliteMap || !georefPoints.p1Lat || !mapMeta.mapScale) return;
+          // Compute sizes from mapScale: same meters → same screen pixels on both maps
+          var oZoom = orienteeringMap ? orienteeringMap.getZoom() : 0;
+          var mPerPx = 1.0 / mapMeta.mapScale; // meters per pixel at orienteering zoom 0
+          var metersPerScreenPx = mPerPx / Math.pow(2, oZoom);
+          // Web Mercator: meters per pixel at zoom Z = 156543 * cos(lat) / 2^Z
+          var satLat = georefPoints.p1Lat;
+          var cosLat = Math.cos(satLat * Math.PI / 180);
+          var sZoom = satelliteMap.getZoom();
+          var satMetersPerPx = 156543 * cosLat / Math.pow(2, sZoom);
+          var sizeFactor = metersPerScreenPx / satMetersPerPx;
+
+          var ctrlSize = Math.round(45 * sizeFactor);
+          var hdrSize = Math.round(20 * sizeFactor);
+          var markerRadius = Math.round(24 * sizeFactor);
 
           $.each(satelliteControlLayers, function () {
-            var ctrlSize = Math.round(45 * fullScale);
-            var hdrSize = Math.round(20 * halfScale);
-            var markerRadius = Math.round(24 * fullScale);
 
             // CircleMarker
             if (this.circleMarker) {
               this.circleMarker.setStyle({
                 radius: markerRadius,
-                weight: Math.round(4 * fullScale),
+                weight: Math.round(4 * sizeFactor),
               });
             }
 

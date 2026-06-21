@@ -1763,8 +1763,21 @@
           var totalDist = heightProfilePoints.dist || 0;
           if (totalDist > 0) {
             var dm = Math.round(totalDist);
-            ctx.fillText("0 m", toX(0), pad.top + plotH + 14);
-            ctx.fillText((dm >= 1000 ? (dm/1000).toFixed(2) + " km" : dm + " m"), toX(n-1), pad.top + plotH + 14);
+            var distStep = dm >= 2000 ? 200 : (dm >= 1000 ? 100 : (dm >= 400 ? 50 : (dm >= 200 ? 20 : 10)));
+            ctx.font = "9px sans-serif";
+            ctx.textAlign = "center";
+            for (var ds = 0; ds <= dm; ds += distStep) {
+              var dlabel = ds >= 1000 ? (ds/1000).toFixed(1) + " km" : ds + " m";
+              var dx = toX(Math.round(ds / dm * (n-1)));
+              ctx.fillText(dlabel, dx, pad.top + plotH + 14);
+              // Small tick mark
+              ctx.strokeStyle = "#999";
+              ctx.beginPath(); ctx.moveTo(dx, pad.top + plotH); ctx.lineTo(dx, pad.top + plotH + 4); ctx.stroke();
+            }
+            // Always label the end point
+            ctx.fillText((dm >= 1000 ? (dm/1000).toFixed(1) + " km" : dm + " m"), toX(n-1), pad.top + plotH + 14);
+            ctx.strokeStyle = "#999";
+            ctx.beginPath(); ctx.moveTo(toX(n-1), pad.top + plotH); ctx.lineTo(toX(n-1), pad.top + plotH + 4); ctx.stroke();
           }
 
           computeLinkBudget();

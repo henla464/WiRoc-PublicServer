@@ -862,13 +862,16 @@
             } else {
               $("#satelliteMap").show();
               $("#satelliteMapNoGeo").hide();
-              // Sync satellite view to match orienteering map's pan and zoom
-              if (orienteeringMap && georefPoints.p1Lat) {
+              // Sync satellite view to show same area as orienteering map
+              if (orienteeringMap && georefPoints.p1Lat && mapMeta.mapScale) {
                 var oCenter = orienteeringMap.getCenter();
                 var ll = pixelToLatLng(oCenter.lng, oCenter.lat);
                 if (ll) {
                   var oZoom = orienteeringMap.getZoom();
-                  var sZoom = oZoom + 18; // approximate zoom match
+                  var mapMeters = mapImgHeight / (mapMeta.mapScale * Math.pow(2, oZoom));
+                  var cosLat = Math.cos(ll.lat * Math.PI / 180);
+                  var metersPerPx = mapMeters / 450; // 450px map div height
+                  var sZoom = Math.round(Math.log2(156543 * cosLat / metersPerPx));
                   satelliteMap.setView([ll.lat, ll.lng], sZoom, { animate: false });
                 }
               }

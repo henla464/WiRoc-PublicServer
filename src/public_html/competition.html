@@ -844,6 +844,7 @@
 
         function setActiveMap(type) {
           if (type === activeMapType) return;
+          if (measuringMode || measMarkers.length > 0) stopMeasuring();
           activeMapType = type;
           if (type === "orienteering") {
             mapInstance = orienteeringMap;
@@ -1658,7 +1659,7 @@
         function startMeasuring() {
           cancelGeoreference();
           stopMeasuring(); // clear any previous
-          setActiveMap("orienteering");
+          // Don't force orienteering — let user measure on whichever map is active
           measuringMode = true;
           $("#btnMeasure")
             .text("Measuring...")
@@ -1680,7 +1681,8 @@
             .removeClass("btn-dark")
             .addClass("btn-outline-dark");
           $("#measureResult").hide().text("");
-          mapInstance.getContainer().style.cursor = "";
+          if (orienteeringMap) orienteeringMap.getContainer().style.cursor = "";
+          if (satelliteMap) satelliteMap.getContainer().style.cursor = "";
         }
 
         function handleMeasureClick(e) {
@@ -1714,18 +1716,19 @@
             }).addTo(mapInstance);
             measMarkers.push(line);
 
-            var totalPx = mapInstance.distance(p1, pos);
-            var ppm = mapMeta && mapMeta.mapScale ? mapMeta.mapScale : 0;
-            var distText;
-            if (ppm > 0) {
-              var meters = totalPx / ppm;
-              distText =
-                meters >= 1000
-                  ? (meters / 1000).toFixed(2) + " km"
-                  : Math.round(meters) + " m";
+            var meters;
+            if (activeMapType === 'satellite' && pos.lat) {
+              // Satellite: use geodesic distance (Haversine)
+              meters = p1.distanceTo(pos);
             } else {
-              distText = Math.round(totalPx) + " px";
+              // Orienteering: pixels → meters via mapScale
+              var totalPx = mapInstance.distance(p1, pos);
+              var ppm = mapMeta && mapMeta.mapScale ? mapMeta.mapScale : 0;
+              meters = ppm > 0 ? totalPx / ppm : null;
             }
+            var distText = meters
+              ? (meters >= 1000 ? (meters / 1000).toFixed(2) + " km" : Math.round(meters) + " m")
+              : Math.round(mapInstance.distance(p1, pos)) + " px";
 
             var label = L.marker(pos, {
               icon: L.divIcon({
@@ -1805,6 +1808,11 @@
               var h = wrapper.offsetHeight;
               e.popup.options.offset = L.point(Math.round(w / 2), -h - 30);
               e.popup.update();
+            });
+
+            // Measurement click handler on satellite map
+            satelliteMap.on("click", function (e) {
+              if (measuringMode) { handleMeasureClick(e.originalEvent); return; }
             });
 
             // Georef click handlers

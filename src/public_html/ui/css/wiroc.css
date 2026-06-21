@@ -143,3 +143,7 @@
   background: transparent !important;
   border: none !important;
 }
+
+.leaflet-marker-icon.leaflet-interactive {
+  cursor: pointer !important;
+}

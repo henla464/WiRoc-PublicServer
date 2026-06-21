@@ -95,6 +95,14 @@
             aria-label="Close"
           ></button>
         </div>
+        <div
+          id="calibInstructions"
+          class="alert alert-info collapse"
+          style="margin-bottom: 4px"
+          role="alert"
+        >
+          <strong>Calibration mode:</strong> Click two points on the map to measure the distance between them.
+        </div>
         <div id="mapContainer" style="display: none">
           <div style="position: relative;">
             <div
@@ -1079,7 +1087,7 @@
           $("#calibPoint1Status").text("Point 1: not set").removeClass("text-success").addClass("text-muted");
           $("#calibPoint2Status").text("Point 2: not set").removeClass("text-success").addClass("text-muted");
           $("#calibErrorAlert").addClass("collapse");
-          alert("Click two points on the map to measure the distance between them.");
+          $("#calibInstructions").removeClass("collapse");
         }
 
         function handleCalibrationClick(e) {
@@ -1143,6 +1151,7 @@
           $.each(calibMarkers, function () { mapInstance.removeLayer(this); });
           calibMarkers = [];
           mapInstance.getContainer().style.cursor = "";
+          $("#calibInstructions").addClass("collapse");
           var calibModal = bootstrap.Modal.getInstance(document.getElementById("calibrateModal"));
           if (calibModal) calibModal.hide();
         }

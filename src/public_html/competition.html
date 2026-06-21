@@ -970,6 +970,16 @@
             } else {
               $("#satelliteMap").show();
               $("#satelliteMapNoGeo").hide();
+              // Sync satellite view to match orienteering map's pan and zoom
+              if (orienteeringMap && georefPoints.p1Lat) {
+                var oCenter = orienteeringMap.getCenter();
+                var ll = pixelToLatLng(oCenter.lng, oCenter.lat);
+                if (ll) {
+                  var oZoom = orienteeringMap.getZoom();
+                  var sZoom = oZoom + 18; // approximate zoom match
+                  satelliteMap.setView([ll.lat, ll.lng], sZoom, { animate: false });
+                }
+              }
             }
             $("#btnTabOrienteering")
               .removeClass("btn-primary")

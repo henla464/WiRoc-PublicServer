@@ -3690,6 +3690,14 @@ $app->patch('/api/v1/Competitions/{competitionId}/Map', function (Request $reque
     if (isset($objectArray['centerY'])) $updateData['defaultCenterY'] = $objectArray['centerY'];
     if (isset($objectArray['mapScale'])) $updateData['mapScale'] = $objectArray['mapScale'];
     if (isset($objectArray['mapScaleRatio'])) $updateData['mapScaleRatio'] = $objectArray['mapScaleRatio'];
+    if (isset($objectArray['georefP1X'])) $updateData['georefP1X'] = $objectArray['georefP1X'];
+    if (isset($objectArray['georefP1Y'])) $updateData['georefP1Y'] = $objectArray['georefP1Y'];
+    if (isset($objectArray['georefP1Lat'])) $updateData['georefP1Lat'] = $objectArray['georefP1Lat'];
+    if (isset($objectArray['georefP1Lng'])) $updateData['georefP1Lng'] = $objectArray['georefP1Lng'];
+    if (isset($objectArray['georefP2X'])) $updateData['georefP2X'] = $objectArray['georefP2X'];
+    if (isset($objectArray['georefP2Y'])) $updateData['georefP2Y'] = $objectArray['georefP2Y'];
+    if (isset($objectArray['georefP2Lat'])) $updateData['georefP2Lat'] = $objectArray['georefP2Lat'];
+    if (isset($objectArray['georefP2Lng'])) $updateData['georefP2Lng'] = $objectArray['georefP2Lng'];
     $this->get('helper')->Update($mapCls, $updateData, $mapCls::$tableName, $map->id);
 
     $res = new CommandResponse();

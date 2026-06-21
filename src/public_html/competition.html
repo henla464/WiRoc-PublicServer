@@ -1867,26 +1867,29 @@
             return k * Math.pow(fGHz, 0.3) * Math.pow(depthMeters, 0.6);
           }
 
-          var maxSearchDist = Math.min(distM / 2, 100);
           var folMetersSender = 0, folMetersReceiver = 0;
-          var sampleInterval = distM / (n-1);
-          // Near sender (index 1 going forward)
-          for (var fi = 1; fi < n-1; fi++) {
-            var fd = fi * sampleInterval;
-            if (fd > maxSearchDist) break;
-            var t3 = fi / (n-1);
+          var origInterval = distM / (n-1);
+          var fineInterval = Math.min(origInterval, 1); // sample every meter for accuracy
+          // Near sender: step in 5m increments up to 100m from sender
+          var maxDistSender = Math.min(distM / 2, 100);
+          for (var sd = fineInterval; sd <= maxDistSender; sd += fineInterval) {
+            var t3 = sd / distM;
+            var idx = Math.round(t3 * (n-1));
+            if (idx < 0 || idx >= n) continue;
             var losEl3 = antenna1h + (antenna2h - antenna1h) * t3;
-            var groundToLos = losEl3 - elevations[fi];
-            if (groundToLos >= 0 && groundToLos < 15) folMetersSender += sampleInterval;
+            var groundToLos = losEl3 - elevations[idx];
+            if (groundToLos >= 0 && groundToLos < 15) folMetersSender += fineInterval;
           }
-          // Near receiver (index n-2 going backward)
-          for (var ri = n-2; ri > 0; ri--) {
-            var rd = (1 - ri / (n-1)) * distM;
-            if (rd > maxSearchDist) break;
-            var t4 = ri / (n-1);
+          // Near receiver: step from receiver backward up to 100m (or halfway)
+          var maxDistReceiver = Math.min(distM / 2, 100);
+          for (var rd = fineInterval; rd <= maxDistReceiver; rd += fineInterval) {
+            var distFromSender = distM - rd;
+            var t4 = distFromSender / distM;
+            var idx2 = Math.round(t4 * (n-1));
+            if (idx2 < 0 || idx2 >= n) continue;
             var losEl4 = antenna1h + (antenna2h - antenna1h) * t4;
-            var groundToLos2 = losEl4 - elevations[ri];
-            if (groundToLos2 >= 0 && groundToLos2 < 15) folMetersReceiver += sampleInterval;
+            var groundToLos2 = losEl4 - elevations[idx2];
+            if (groundToLos2 >= 0 && groundToLos2 < 15) folMetersReceiver += fineInterval;
           }
 
           function endpointForestPenalty(density) {

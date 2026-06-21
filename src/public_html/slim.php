@@ -3477,6 +3477,14 @@ $app->get('/api/v1/Competitions/{competitionId}/Map', function (Request $request
     $res->defaultCenterY = $map->defaultCenterY;
     $res->mapScale = $map->mapScale;
     $res->mapScaleRatio = $map->mapScaleRatio;
+    $res->georefP1X = $map->georefP1X;
+    $res->georefP1Y = $map->georefP1Y;
+    $res->georefP1Lat = $map->georefP1Lat;
+    $res->georefP1Lng = $map->georefP1Lng;
+    $res->georefP2X = $map->georefP2X;
+    $res->georefP2Y = $map->georefP2Y;
+    $res->georefP2Lat = $map->georefP2Lat;
+    $res->georefP2Lng = $map->georefP2Lng;
     $response->getBody()->write(json_encode($res));
     return $response;
 })->setName("getCompetitionMap");

@@ -277,6 +277,23 @@ class Helper
 			$stmt = $this->db->query($sql);
 			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS mapScaleRatio int";
 			$stmt = $this->db->query($sql);
+
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP1X double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP1Y double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP1Lat double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP1Lng double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP2X double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP2Y double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP2Lat double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP2Lng double";
+			$stmt = $this->db->query($sql);
 			$sql = 'CREATE TABLE IF NOT EXISTS CompetitionMaps (id int NOT NULL AUTO_INCREMENT, competitionId int NOT NULL,
 					originalFileName varchar(255), storedFileName varchar(255), fileType varchar(10),
 					defaultZoom int, defaultCenterX double, defaultCenterY double,
@@ -351,6 +368,22 @@ class Helper
         $sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS mapScale double";
         $stmt = $this->db->query($sql);
         $sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS mapScaleRatio int";
+        $stmt = $this->db->query($sql);
+        $sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP1X double";
+        $stmt = $this->db->query($sql);
+        $sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP1Y double";
+        $stmt = $this->db->query($sql);
+        $sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP1Lat double";
+        $stmt = $this->db->query($sql);
+        $sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP1Lng double";
+        $stmt = $this->db->query($sql);
+        $sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP2X double";
+        $stmt = $this->db->query($sql);
+        $sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP2Y double";
+        $stmt = $this->db->query($sql);
+        $sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP2Lat double";
+        $stmt = $this->db->query($sql);
+        $sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP2Lng double";
         $stmt = $this->db->query($sql);
 
         $res = new CommandResponse();

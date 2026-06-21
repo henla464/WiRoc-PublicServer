@@ -54,6 +54,46 @@ class CompetitionMap
      * @var int
      */
     public $mapScaleRatio;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $georefP1X;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $georefP1Y;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $georefP1Lat;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $georefP1Lng;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $georefP2X;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $georefP2Y;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $georefP2Lat;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $georefP2Lng;
 
     public $updateTime;
     public $createdTime;

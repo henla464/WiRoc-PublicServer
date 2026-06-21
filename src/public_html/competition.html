@@ -45,6 +45,24 @@
       <div id="mapSection" class="mb-3" style="display: none">
         <div class="d-flex align-items-center mb-2">
           <h2 class="me-auto mb-0" id="mapHeader">Map</h2>
+          <div id="mapTabs" class="ms-3" style="display: none">
+            <button
+              type="button"
+              id="btnTabOrienteering"
+              class="btn btn-sm btn-primary me-1"
+              data-maptype="orienteering"
+            >
+              Orienteering Map
+            </button>
+            <button
+              type="button"
+              id="btnTabSatellite"
+              class="btn btn-sm btn-outline-secondary me-1"
+              data-maptype="satellite"
+            >
+              Satellite Map
+            </button>
+          </div>
           <div id="mapEditButtons" style="display: none">
             <button
               type="button"
@@ -69,6 +87,13 @@
             </button>
             <button
               type="button"
+              id="btnGeorefMap"
+              class="btn btn-outline-info btn-sm me-1"
+            >
+              Georeference Map
+            </button>
+            <button
+              type="button"
               id="btnDeleteMap"
               class="btn btn-outline-danger btn-sm"
             >
@@ -81,9 +106,18 @@
               style="display: none"
             />
           </div>
-          <div id="mapMeasureArea" style="display:none">
-            <button type="button" id="btnMeasure" class="btn btn-outline-dark btn-sm me-1">Measure distance</button>
-            <span id="measureResult" style="font-size:13px; color:#333; display:none"></span>
+          <div id="mapMeasureArea" style="display: none">
+            <button
+              type="button"
+              id="btnMeasure"
+              class="btn btn-outline-dark btn-sm me-1"
+            >
+              Measure distance
+            </button>
+            <span
+              id="measureResult"
+              style="font-size: 13px; color: #333; display: none"
+            ></span>
           </div>
         </div>
         <div
@@ -105,19 +139,83 @@
           style="margin-bottom: 4px"
           role="alert"
         >
-          <strong>Calibration mode:</strong> Click two points on the map to measure the distance between them.
+          <strong>Calibration mode:</strong> Click two points on the map to
+          measure the distance between them.
         </div>
+        <div
+          id="georefInstructions"
+          class="alert alert-info collapse"
+          style="margin-bottom: 4px"
+          role="alert"
+        ></div>
         <div id="mapContainer" style="display: none">
-          <div style="position: relative;">
+          <div id="orienteeringMapContainer">
+            <div style="position: relative">
+              <div
+                id="map"
+                style="
+                  height: 450px;
+                  border: 1px solid #ccc;
+                  border-radius: 4px;
+                "
+              ></div>
+              <div
+                id="scaleBar"
+                style="
+                  display: none;
+                  position: absolute;
+                  bottom: 20px;
+                  right: 20px;
+                  z-index: 1000;
+                  pointer-events: none;
+                "
+              >
+                <div
+                  id="scaleBarGraphic"
+                  style="
+                    background: #fff;
+                    border: 1px solid #333;
+                    border-radius: 2px;
+                    padding: 4px 6px 2px 6px;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+                  "
+                >
+                  <canvas
+                    id="scaleBarCanvas"
+                    width="160"
+                    height="25"
+                    style="display: block"
+                  ></canvas>
+                  <div
+                    id="scaleBarRatio"
+                    style="
+                      font-size: 10px;
+                      color: #333;
+                      text-align: center;
+                      margin-top: 1px;
+                    "
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="satelliteMapContainer" style="display: none">
             <div
-              id="map"
+              id="satelliteMap"
               style="height: 450px; border: 1px solid #ccc; border-radius: 4px"
             ></div>
-            <div id="scaleBar" style="display:none; position:absolute; bottom:20px; right:20px; z-index:1000; pointer-events:none;">
-              <div id="scaleBarGraphic" style="background:#fff; border:1px solid #333; border-radius:2px; padding:4px 6px 2px 6px; box-shadow:0 1px 3px rgba(0,0,0,0.2);">
-                <canvas id="scaleBarCanvas" width="160" height="25" style="display:block;"></canvas>
-                <div id="scaleBarRatio" style="font-size:10px; color:#333; text-align:center; margin-top:1px;"></div>
-              </div>
+            <div
+              id="satelliteMapNoGeo"
+              class="text-muted text-center p-5"
+              style="
+                display: none;
+                background: #f8f8f8;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+              "
+            >
+              Map not georeferenced. Click "Calibrate Scale" then "Georeference
+              Map" to set up the satellite view.
             </div>
           </div>
           <div
@@ -162,32 +260,85 @@
       <div id="addcontrol-modal-placeholder"></div>
       <div id="calibration-modal-placeholder"></div>
 
-      <div class="modal fade" id="calibrateModal" tabindex="-1" aria-hidden="true">
+      <div
+        class="modal fade"
+        id="calibrateModal"
+        tabindex="-1"
+        aria-hidden="true"
+      >
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title">Calibrate Map Scale</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+              ></button>
             </div>
             <div class="modal-body">
-              <p>Click <b>two points</b> on the map to measure the distance between them.</p>
+              <p>
+                Click <b>two points</b> on the map to measure the distance
+                between them.
+              </p>
               <div id="calibPointsInfo" class="mb-2">
-                <span id="calibPoint1Status" class="text-muted">Point 1: not set</span><br/>
-                <span id="calibPoint2Status" class="text-muted">Point 2: not set</span>
+                <span id="calibPoint1Status" class="text-muted"
+                  >Point 1: not set</span
+                ><br />
+                <span id="calibPoint2Status" class="text-muted"
+                  >Point 2: not set</span
+                >
               </div>
               <div class="form-group mb-3">
-                <label for="calibDistanceInput" class="form-label">Real world distance (meters)</label>
-                <input type="number" class="form-control" id="calibDistanceInput" placeholder="e.g. 250" min="1" step="1" required>
+                <label for="calibDistanceInput" class="form-label"
+                  >Real world distance (meters)</label
+                >
+                <input
+                  type="number"
+                  class="form-control"
+                  id="calibDistanceInput"
+                  placeholder="e.g. 250"
+                  min="1"
+                  step="1"
+                  required
+                />
               </div>
               <div class="form-group mb-3">
-                <label for="calibRatioInput" class="form-label">Map scale ratio (1:X)</label>
-                <input type="number" class="form-control" id="calibRatioInput" placeholder="e.g. 10000" min="1" step="1" required>
+                <label for="calibRatioInput" class="form-label"
+                  >Map scale ratio (1:X)</label
+                >
+                <input
+                  type="number"
+                  class="form-control"
+                  id="calibRatioInput"
+                  placeholder="e.g. 10000"
+                  min="1"
+                  step="1"
+                  required
+                />
               </div>
-              <div class="alert alert-danger collapse" id="calibErrorAlert" role="alert"></div>
+              <div
+                class="alert alert-danger collapse"
+                id="calibErrorAlert"
+                role="alert"
+              ></div>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" id="btnCancelCalibration">Cancel</button>
-              <button type="button" id="btnSaveCalibration" class="btn btn-primary">Save Calibration</button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="btnCancelCalibration"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                id="btnSaveCalibration"
+                class="btn btn-primary"
+              >
+                Save Calibration
+              </button>
             </div>
           </div>
         </div>
@@ -358,50 +509,82 @@
 
           // Regular controls
           $.each(allControls, function () {
-            if (this.controlType == 'Control' || !this.controlType) {
-              var selected = deviceControlId && deviceControlId == this.id ? " selected" : "";
-              html += '<option value="id_' + this.id + '"' + selected + '>' + this.controlNumber + ' - ' + this.name + '</option>';
+            if (this.controlType == "Control" || !this.controlType) {
+              var selected =
+                deviceControlId && deviceControlId == this.id
+                  ? " selected"
+                  : "";
+              html +=
+                '<option value="id_' +
+                this.id +
+                '"' +
+                selected +
+                ">" +
+                this.controlNumber +
+                " - " +
+                this.name +
+                "</option>";
             }
           });
 
           // Dynamic Repeater options
           var maxRepeater = 0;
           $.each(allControls, function () {
-            if (this.controlType == 'Repeater' && this.controlNumber > maxRepeater) {
+            if (
+              this.controlType == "Repeater" &&
+              this.controlNumber > maxRepeater
+            ) {
               maxRepeater = this.controlNumber;
             }
           });
           for (var r = 1; r <= maxRepeater + 1; r++) {
             var rControl = null;
             $.each(allControls, function () {
-              if (this.controlType == 'Repeater' && this.controlNumber == r) {
+              if (this.controlType == "Repeater" && this.controlNumber == r) {
                 rControl = this;
                 return false;
               }
             });
             var rId = rControl ? rControl.id : null;
             var rSelected = rId && deviceControlId == rId ? " selected" : "";
-            html += '<option value="type_Repeater_' + r + '"' + rSelected + '>Repeater ' + r + '</option>';
+            html +=
+              '<option value="type_Repeater_' +
+              r +
+              '"' +
+              rSelected +
+              ">Repeater " +
+              r +
+              "</option>";
           }
 
           // Dynamic Receiver options
           var maxReceiver = 0;
           $.each(allControls, function () {
-            if (this.controlType == 'Receiver' && this.controlNumber > maxReceiver) {
+            if (
+              this.controlType == "Receiver" &&
+              this.controlNumber > maxReceiver
+            ) {
               maxReceiver = this.controlNumber;
             }
           });
           for (var rc = 1; rc <= maxReceiver + 1; rc++) {
             var rcControl = null;
             $.each(allControls, function () {
-              if (this.controlType == 'Receiver' && this.controlNumber == rc) {
+              if (this.controlType == "Receiver" && this.controlNumber == rc) {
                 rcControl = this;
                 return false;
               }
             });
             var rcId = rcControl ? rcControl.id : null;
             var rcSelected = rcId && deviceControlId == rcId ? " selected" : "";
-            html += '<option value="type_Receiver_' + rc + '"' + rcSelected + '>Receiver ' + rc + '</option>';
+            html +=
+              '<option value="type_Receiver_' +
+              rc +
+              '"' +
+              rcSelected +
+              ">Receiver " +
+              rc +
+              "</option>";
           }
 
           html += "</select>";
@@ -548,12 +731,20 @@
 
         var competitionId = $.urlParam("competitionId");
         var allControls = [];
-        var mapInstance = null;
+        var orienteeringMap = null;
+        var satelliteMap = null;
+        var mapInstance = null; // points to active map
+        var activeMapType = "orienteering";
         var controlGroup = null;
+        var satelliteControlGroup = null;
         var hasEditAccess = false;
         var mapImgWidth = 0;
         var mapImgHeight = 0;
         var placingControls = false;
+        var georefState = null; // null | 'o1' | 's1' | 'o2' | 's2' | 'done'
+        var georefPoint = {}; // px, py for current orienteering point
+        var georefP1 = null,
+          georefP2 = null;
 
         function checkControlsAccess(competition) {
           getIsLoggedIn(function (isLoggedIn) {
@@ -677,6 +868,22 @@
           }
         }
 
+        function updateGeorefBanner(msg, cls) {
+          $("#georefInstructions")
+            .text(msg)
+            .removeClass("text-muted text-success text-primary")
+            .addClass(cls || "text-primary")
+            .removeClass("collapse");
+        }
+
+        function cancelGeoreference() {
+          georefState = null;
+          georefPoint = {};
+          if (orienteeringMap) orienteeringMap.getContainer().style.cursor = "";
+          if (satelliteMap) satelliteMap.getContainer().style.cursor = "";
+          $("#georefInstructions").addClass("collapse");
+        }
+
         function loadMap() {
           $.ajax({
             url: "/api/v1/Competitions/" + competitionId + "/Map",
@@ -684,6 +891,15 @@
           }).then(
             function (meta) {
               mapMeta = meta;
+              loadGeorefData(meta);
+              var hasGeo = georefPoints.p1Lat ? true : false;
+              if (hasGeo) {
+                $("#btnTabSatellite").removeAttr("disabled");
+              }
+              // Satellite controls placed automatically by placeControlsOnMap when georeferenced
+              if (!hasGeo) {
+                setActiveMap("orienteering");
+              }
               $("#mapSection").show();
               $("#mapContainer").show();
 
@@ -692,8 +908,16 @@
                 $("#map").show();
                 if (mapInstance) {
                   cancelCalibration();
+                  cancelGeoreference();
                   stopMeasuring();
-                  mapInstance.remove();
+                  if (orienteeringMap) {
+                    orienteeringMap.remove();
+                    orienteeringMap = null;
+                  }
+                  if (satelliteMap) {
+                    satelliteMap.remove();
+                    satelliteMap = null;
+                  }
                   mapInstance = null;
                   controlLayers = [];
                 }
@@ -717,6 +941,85 @@
         }
 
         var controlLayers = [];
+        var georefPoints = {};
+
+        function getActiveMap() {
+          return mapInstance;
+        }
+
+        function setActiveMap(type) {
+          if (type === activeMapType) return;
+          activeMapType = type;
+          if (type === "orienteering") {
+            mapInstance = orienteeringMap;
+            $("#orienteeringMapContainer").show();
+            $("#satelliteMapContainer").hide();
+            $("#btnTabOrienteering")
+              .removeClass("btn-outline-secondary")
+              .addClass("btn-primary");
+            $("#btnTabSatellite")
+              .removeClass("btn-primary")
+              .addClass("btn-outline-secondary");
+          } else {
+            mapInstance = satelliteMap;
+            $("#orienteeringMapContainer").hide();
+            $("#satelliteMapContainer").show();
+            if (!georefPoints.p1Lat && !georefState) {
+              $("#satelliteMap").hide();
+              $("#satelliteMapNoGeo").show();
+            } else {
+              $("#satelliteMap").show();
+              $("#satelliteMapNoGeo").hide();
+            }
+            $("#btnTabOrienteering")
+              .removeClass("btn-primary")
+              .addClass("btn-outline-secondary");
+            $("#btnTabSatellite")
+              .removeClass("btn-outline-secondary")
+              .addClass("btn-primary");
+          }
+          if (mapInstance) {
+            mapInstance.invalidateSize();
+            renderScaleBar();
+          }
+        }
+
+        function pixelToLatLng(px, py) {
+          if (!georefPoints.p1Lat || !georefPoints.p2Lat) return null;
+          var ax = georefPoints.p1X,
+            ay = georefPoints.p1Y;
+          var bx = georefPoints.p2X,
+            by = georefPoints.p2Y;
+          var cx = px,
+            cy = py;
+          var dx = bx - ax,
+            dy = by - ay;
+          if (dx === 0 && dy === 0) return null;
+          var t = ((cx - ax) * dx + (cy - ay) * dy) / (dx * dx + dy * dy);
+          var lat =
+            georefPoints.p1Lat + t * (georefPoints.p2Lat - georefPoints.p1Lat);
+          var lng =
+            georefPoints.p1Lng + t * (georefPoints.p2Lng - georefPoints.p1Lng);
+          return { lat: lat, lng: lng };
+        }
+
+        function loadGeorefData(meta) {
+          if (meta.georefP1Lat) {
+            georefPoints = {
+              p1X: meta.georefP1X,
+              p1Y: meta.georefP1Y,
+              p1Lat: meta.georefP1Lat,
+              p1Lng: meta.georefP1Lng,
+              p2X: meta.georefP2X,
+              p2Y: meta.georefP2Y,
+              p2Lat: meta.georefP2Lat,
+              p2Lng: meta.georefP2Lng,
+            };
+            return true;
+          }
+          georefPoints = {};
+          return false;
+        }
 
         function adjustControlSizes() {
           if (!mapInstance) return;
@@ -731,30 +1034,51 @@
             }
 
             // Label: full-zoom text, positioned right of circle/symbol
-            var isRole = this.controlType && this.controlType != 'Control';
+            var isRole = this.controlType && this.controlType != "Control";
             var ctrlSize = Math.round((isRole ? 36 : 45) * fullScale);
             var ctrlAnchorY = Math.round(ctrlSize * 0.5);
             var ctrlPos = L.latLng(this.y, this.x + this.baseMapRadius * 1.2);
             this.ctrlLabel.setLatLng(ctrlPos);
-            this.ctrlLabel.setIcon(L.divIcon({
-              className: "control-label-icon",
-              html: '<div style="color:' + this.symbolColor + '; font-size:' + ctrlSize + 'px; font-weight:bold; line-height:1; white-space:nowrap;">' + this.displayLabel + '</div>',
-              iconSize: [0, 0],
-              iconAnchor: [0, ctrlAnchorY],
-            }));
+            this.ctrlLabel.setIcon(
+              L.divIcon({
+                className: "control-label-icon",
+                html:
+                  '<div style="color:' +
+                  this.symbolColor +
+                  "; font-size:" +
+                  ctrlSize +
+                  'px; font-weight:bold; line-height:1; white-space:nowrap;">' +
+                  this.displayLabel +
+                  "</div>",
+                iconSize: [0, 0],
+                iconAnchor: [0, ctrlAnchorY],
+              }),
+            );
 
             // Symbol icon for Repeater/Receiver
             if (this.symbolMarker) {
               var symSize = Math.round(36 * fullScale);
-              var symChar = this.controlType == 'Repeater' ? '▲' : '■'; // ▲ or ■
-              var symHtml = '<div style="color:' + this.symbolColor + '; font-size:' + symSize + 'px; line-height:1;">' + symChar + '</div>';
+              var symChar = this.controlType == "Repeater" ? "▲" : "■"; // ▲ or ■
+              var symHtml =
+                '<div style="color:' +
+                this.symbolColor +
+                "; font-size:" +
+                symSize +
+                'px; line-height:1;">' +
+                symChar +
+                "</div>";
               this.symbolMarker.setLatLng(L.latLng(this.y, this.x));
-              this.symbolMarker.setIcon(L.divIcon({
-                className: "role-symbol",
-                html: symHtml,
-                iconSize: [0, 0],
-                iconAnchor: [Math.round(symSize * 0.5), Math.round(symSize * 0.55)]
-              }));
+              this.symbolMarker.setIcon(
+                L.divIcon({
+                  className: "role-symbol",
+                  html: symHtml,
+                  iconSize: [0, 0],
+                  iconAnchor: [
+                    Math.round(symSize * 0.5),
+                    Math.round(symSize * 0.55),
+                  ],
+                }),
+              );
             }
 
             // Device info card: half-zoom text, concatenated device names
@@ -772,8 +1096,12 @@
               var ctrlPoint = mapInstance.latLngToContainerPoint(ctrlPos);
               var ctrlTextTop = ctrlPoint.y - ctrlAnchorY;
               var cardHeight = Math.round(hdrSize * 1.3);
-              var devContainerPoint = L.point(ctrlPoint.x, ctrlTextTop - 4 - cardHeight);
-              var devLatLng = mapInstance.containerPointToLatLng(devContainerPoint);
+              var devContainerPoint = L.point(
+                ctrlPoint.x,
+                ctrlTextTop - 4 - cardHeight,
+              );
+              var devLatLng =
+                mapInstance.containerPointToLatLng(devContainerPoint);
 
               this.devLabel.setLatLng(devLatLng);
               this.devLabel.setIcon(
@@ -795,70 +1123,411 @@
             url:
               "/api/v1/Competitions/" + competitionId + "/Controls/withDevices",
             dataType: "json",
-          }).then(function (controls) {
-            if (!mapInstance) { placingControls = false; return; }
+          })
+            .then(function (controls) {
+              if (!mapInstance) {
+                placingControls = false;
+                return;
+              }
 
-            // Remove old control group and create a fresh one
-            if (controlGroup) {
-              mapInstance.removeLayer(controlGroup);
+              // Remove old control group and create a fresh one
+              if (controlGroup) {
+                mapInstance.removeLayer(controlGroup);
+              }
+              controlGroup = L.layerGroup().addTo(mapInstance);
+              controlLayers = [];
+
+              var baseMapRadius = imageW * 0.024;
+
+              // Group controls by id so multiple devices sharing a control get one circle
+              var controlMap = {};
+              $.each(controls, function () {
+                if (!controlMap[this.id]) {
+                  controlMap[this.id] = {
+                    id: this.id,
+                    controlNumber: this.controlNumber,
+                    controlName: this.controlName,
+                    description: this.description,
+                    mapX: this.mapX,
+                    mapY: this.mapY,
+                    controlType: this.controlType || "Control",
+                    devices: [],
+                  };
+                }
+                if (this.deviceName && this.deviceName !== "undefined") {
+                  controlMap[this.id].devices.push(this);
+                }
+              });
+              var groupedControls = Object.values(controlMap);
+              var count = groupedControls.length;
+              if (count === 0) return;
+
+              var cols = Math.ceil(Math.sqrt(count * (imageW / imageH)));
+              var rows = Math.ceil(count / cols);
+              var spacingX = imageW / (cols + 1);
+              var spacingY = imageH / (rows + 1);
+              var gridIndex = 0;
+              $.each(groupedControls, function () {
+                var cx, cy;
+                if (this.mapX != null && this.mapY != null) {
+                  cx = this.mapY;
+                  cy = this.mapX;
+                } else {
+                  var row = Math.floor(gridIndex / cols);
+                  var col = gridIndex % cols;
+                  cx = (col + 1) * spacingX;
+                  cy = (row + 1) * spacingY;
+                  gridIndex++;
+                }
+
+                var devices = this.devices;
+                var controlId = this.id;
+
+                // Popup: shows all devices assigned
+                var typeLabel = this.controlType || "Control";
+                var popupHtml =
+                  "<div>" +
+                  "<b>" +
+                  typeLabel +
+                  " " +
+                  this.controlNumber +
+                  ": " +
+                  (this.controlName || "") +
+                  "</b><br/>";
+                if (this.description) {
+                  popupHtml += "Description: " + this.description + "<br/>";
+                }
+                popupHtml += "<br/>";
+                if (devices.length > 0) {
+                  $.each(devices, function () {
+                    popupHtml +=
+                      '<b>WiRoc Device:</b> <a href="device.html?devicebt=' +
+                      (this.deviceBTAddress || "") +
+                      '">' +
+                      this.deviceName +
+                      "</a><br/>";
+                    popupHtml +=
+                      "BT Address: " + (this.deviceBTAddress || "") + "<br/>";
+                    popupHtml += "Battery: " + this.batteryLevel + "%";
+                    if (this.batteryIsLow == 1)
+                      popupHtml += ' <span style="color:red">(LOW)</span>';
+                    popupHtml += "<br/>";
+                  });
+                } else {
+                  popupHtml += "<em>No device assigned</em><br/>";
+                }
+                popupHtml += "</div>";
+
+                // Symbol based on controlType
+                var symbolColor;
+                var circle = null; // L.circle for Control
+                var symbolMarker = null; // divIcon marker for Repeater/Receiver
+                if (
+                  this.controlType == "Repeater" ||
+                  this.controlType == "Receiver"
+                ) {
+                  symbolColor =
+                    this.controlType == "Repeater" ? "#0066CC" : "#228B22";
+                  symbolMarker = L.marker([cy, cx], {
+                    icon: L.divIcon({
+                      className: "role-symbol",
+                      html: "",
+                      iconSize: [0, 0],
+                      iconAnchor: [0, 0],
+                    }),
+                    interactive: false,
+                  }).addTo(controlGroup);
+                } else {
+                  symbolColor = "#800080";
+                  circle = L.circle([cy, cx], {
+                    radius: baseMapRadius,
+                    color: symbolColor,
+                    fillOpacity: 0,
+                    weight: 4,
+                  }).addTo(controlGroup);
+                }
+
+                // Label: control type + number (e.g. "1", "Rep 1", "Rec 1")
+                var displayLabel =
+                  this.controlType && this.controlType != "Control"
+                    ? (this.controlType == "Repeater" ? "Rep " : "Rec ") +
+                      this.controlNumber
+                    : "" + this.controlNumber;
+                var ctrlLabel = L.marker([cy, cx], {
+                  icon: L.divIcon({
+                    className: "control-label-icon",
+                    html: "",
+                    iconSize: [0, 0],
+                    iconAnchor: [0, 0],
+                  }),
+                  interactive: false,
+                }).addTo(controlGroup);
+
+                // Device info card: concatenated device names with |
+                var devNames = $.map(devices, function (d) {
+                  return d.deviceName;
+                }).join(" | ");
+                var devLabel = null;
+                if (devNames) {
+                  devLabel = L.marker([cy, cx], {
+                    icon: L.divIcon({
+                      className: "device-info-card",
+                      html: "",
+                      iconSize: [0, 0],
+                      iconAnchor: [0, 0],
+                    }),
+                    interactive: true,
+                  }).addTo(controlGroup);
+                  devLabel.bindPopup(popupHtml, {
+                    className: "device-info-card-popup",
+                    autoPan: false,
+                    offset: L.point(0, 0),
+                  });
+                }
+
+                var layerEntry = {
+                  circle: circle,
+                  symbolMarker: symbolMarker,
+                  ctrlLabel: ctrlLabel,
+                  devLabel: devLabel,
+                  devNames: devNames,
+                  baseMapRadius: baseMapRadius,
+                  x: cx,
+                  y: cy,
+                  controlType: this.controlType || "Control",
+                  controlNumber: this.controlNumber,
+                  displayLabel: displayLabel,
+                  symbolColor: symbolColor,
+                };
+                var layerIdx = controlLayers.length;
+                controlLayers.push(layerEntry);
+
+                // Draggable for repositioning
+                if (hasEditAccess) {
+                  var dragMarker = L.marker([cy, cx], {
+                    draggable: true,
+                    icon: L.divIcon({
+                      className: "drag-target",
+                      html: "",
+                      iconSize: [100, 100],
+                      iconAnchor: [50, 50],
+                    }),
+                  }).addTo(controlGroup);
+
+                  (function (idx) {
+                    dragMarker.on("drag", function (e) {
+                      var pos = e.target.getLatLng();
+                      var entry = controlLayers[idx];
+                      if (entry) {
+                        if (entry.circle) entry.circle.setLatLng(pos);
+                        if (entry.symbolMarker)
+                          entry.symbolMarker.setLatLng(pos);
+                        entry.ctrlLabel.setLatLng(pos);
+                        if (entry.devLabel) entry.devLabel.setLatLng(pos);
+                        entry.x = pos.lng;
+                        entry.y = pos.lat;
+                        adjustControlSizes();
+                      }
+                    });
+                  })(layerIdx);
+
+                  dragMarker.on("dragend", function (e) {
+                    var pos = e.target.getLatLng();
+                    $.ajax({
+                      url: "/api/v1/Controls/" + controlId + "/MapPosition",
+                      method: "PATCH",
+                      data: JSON.stringify({ mapX: pos.lat, mapY: pos.lng }),
+                      dataType: "json",
+                    });
+                    if (georefPoints.p1Lat) {
+                      setTimeout(function () {
+                        placeControlsOnSatelliteMap(mapImgWidth, mapImgHeight);
+                      }, 300);
+                    }
+                  });
+                }
+              });
+
+              adjustControlSizes();
+              placingControls = false;
+              // Also update satellite map
+              if (georefPoints.p1Lat) {
+                setTimeout(function () {
+                  placeControlsOnSatelliteMap(mapImgWidth, mapImgHeight);
+                }, 500);
+              }
+            })
+            .fail(function () {
+              placingControls = false;
+            });
+        }
+
+        var placingSatellite = false;
+        var satelliteControlLayers = [];
+
+        function adjustSatelliteControlSizes() {
+          if (!satelliteMap || !georefPoints.p1Lat) return;
+          var zoom = satelliteMap.getZoom();
+          var fullScale = Math.pow(2, zoom - 16);
+          var halfScale = Math.pow(2, (zoom - 16) / 2);
+
+          $.each(satelliteControlLayers, function () {
+            var ctrlSize = Math.round(45 * fullScale);
+            var hdrSize = Math.round(20 * halfScale);
+            var markerRadius = Math.round(24 * fullScale);
+
+            // CircleMarker
+            if (this.circleMarker) {
+              this.circleMarker.setStyle({
+                radius: markerRadius,
+                weight: Math.round(4 * fullScale),
+              });
             }
-            controlGroup = L.layerGroup().addTo(mapInstance);
-            controlLayers = [];
 
-            var baseMapRadius = imageW * 0.024;
+            // Symbol
+            if (this.symbol) {
+              var symHtml =
+                '<div style="color:' +
+                this.color +
+                "; font-size:" +
+                ctrlSize +
+                'px; font-weight:bold;">' +
+                this.sym +
+                "</div>";
+              this.symbol.setIcon(
+                L.divIcon({
+                  className: "",
+                  html: symHtml,
+                  iconSize: [0, 0],
+                  iconAnchor: [
+                    Math.round(ctrlSize * 0.5),
+                    Math.round(ctrlSize * 0.7),
+                  ],
+                }),
+              );
+            }
 
-            // Group controls by id so multiple devices sharing a control get one circle
-            var controlMap = {};
+            // Control number label — position in pixel space relative to circle center
+            var ctrlAnchorY = Math.round(ctrlSize * 0.5);
+            var markerLatLng = L.latLng(this.lat, this.lng);
+            var markerPoint = satelliteMap.latLngToContainerPoint(markerLatLng);
+            var labelPoint = L.point(
+              markerPoint.x + markerRadius + 4,
+              markerPoint.y - ctrlAnchorY,
+            );
+            var labelLatLng = satelliteMap.containerPointToLatLng(labelPoint);
+            var labelHtml =
+              '<div style="color:' +
+              this.color +
+              "; font-size:" +
+              ctrlSize +
+              'px; font-weight:bold; white-space:nowrap;">' +
+              this.displayLabel +
+              "</div>";
+            this.ctrlLabel.setIcon(
+              L.divIcon({
+                className: "",
+                html: labelHtml,
+                iconSize: [0, 0],
+                iconAnchor: [0, ctrlAnchorY],
+              }),
+            );
+            this.ctrlLabel.setLatLng(labelLatLng);
+
+            // Device name — positioned in pixel space above the control number
+            if (this.devLabel) {
+              var devPoint = L.point(
+                labelPoint.x,
+                labelPoint.y - Math.round(ctrlAnchorY) - 4,
+              );
+              var devHtml =
+                '<div style="display:inline-block; background:#fff; border:1px solid #ccc; border-radius:3px; padding:2px 6px; white-space:nowrap; font-size:' +
+                hdrSize +
+                'px; color:#333; font-weight:bold;">' +
+                this.devNames +
+                "</div>";
+              this.devLabel.setIcon(
+                L.divIcon({
+                  className: "device-info-card",
+                  html: devHtml,
+                  iconSize: [0, 0],
+                  iconAnchor: [0, Math.round(hdrSize * 1.3)],
+                }),
+              );
+              this.devLabel.setLatLng(
+                satelliteMap.containerPointToLatLng(devPoint),
+              );
+
+              // Store label top-left pixel coords for popup positioning
+              this.devLabel._labelTopY = devPoint.y - Math.round(hdrSize * 1.3);
+              this.devLabel._labelLeftX = devPoint.x;
+              this.devLabel._srcPointY = devPoint.y;
+              this.devLabel._srcPointX = devPoint.x;
+            }
+          });
+        }
+
+        function placeControlsOnSatelliteMap(imageW, imageH) {
+          if (!satelliteMap || !georefPoints.p1Lat || placingSatellite) return;
+          placingSatellite = true;
+          if (satelliteControlGroup) {
+            satelliteMap.removeLayer(satelliteControlGroup);
+          }
+          satelliteControlGroup = L.layerGroup().addTo(satelliteMap);
+          satelliteControlLayers = [];
+
+          $.ajax({
+            url:
+              "/api/v1/Competitions/" + competitionId + "/Controls/withDevices",
+            dataType: "json",
+          }).then(function (controls) {
+            var cm = {};
             $.each(controls, function () {
-              if (!controlMap[this.id]) {
-                controlMap[this.id] = {
+              if (!cm[this.id]) {
+                cm[this.id] = {
                   id: this.id,
                   controlNumber: this.controlNumber,
                   controlName: this.controlName,
                   description: this.description,
                   mapX: this.mapX,
                   mapY: this.mapY,
-                  controlType: this.controlType || 'Control',
-                  devices: []
+                  controlType: this.controlType || "Control",
+                  devices: [],
                 };
               }
-              if (this.deviceName && this.deviceName !== "undefined") {
-                controlMap[this.id].devices.push(this);
-              }
+              if (this.deviceName && this.deviceName !== "undefined")
+                cm[this.id].devices.push(this);
             });
-            var groupedControls = Object.values(controlMap);
-            var count = groupedControls.length;
-            if (count === 0) return;
+            var gc = Object.values(cm);
 
-            var cols = Math.ceil(Math.sqrt(count * (imageW / imageH)));
-            var rows = Math.ceil(count / cols);
-            var spacingX = imageW / (cols + 1);
-            var spacingY = imageH / (rows + 1);
-            var gridIndex = 0;
-            $.each(groupedControls, function () {
-              var cx, cy;
-              if (this.mapX != null && this.mapY != null) {
-                cx = this.mapY;
-                cy = this.mapX;
-              } else {
-                var row = Math.floor(gridIndex / cols);
-                var col = gridIndex % cols;
-                cx = (col + 1) * spacingX;
-                cy = (row + 1) * spacingY;
-                gridIndex++;
-              }
+            $.each(gc, function () {
+              if (this.mapX == null || this.mapY == null) return;
+              var ll = pixelToLatLng(this.mapY, this.mapX);
+              if (!ll) return;
 
+              var displayLabel =
+                this.controlType && this.controlType != "Control"
+                  ? (this.controlType == "Repeater" ? "Rep " : "Rec ") +
+                    this.controlNumber
+                  : "" + this.controlNumber;
+              var color =
+                this.controlType == "Repeater"
+                  ? "#0066CC"
+                  : this.controlType == "Receiver"
+                    ? "#228B22"
+                    : "#800080";
               var devices = this.devices;
-              var controlId = this.id;
 
-              // Popup: shows all devices assigned
-              var typeLabel = this.controlType || "Control";
               var popupHtml =
-                "<div>" +
-                "<b>" + typeLabel + " " + this.controlNumber + ": " + (this.controlName || "") + "</b><br/>";
-              if (this.description) {
+                "<div><b>" +
+                (this.controlType || "Control") +
+                " " +
+                this.controlNumber +
+                ": " +
+                (this.controlName || "") +
+                "</b><br/>";
+              if (this.description)
                 popupHtml += "Description: " + this.description + "<br/>";
-              }
               popupHtml += "<br/>";
               if (devices.length > 0) {
                 $.each(devices, function () {
@@ -880,49 +1549,52 @@
               }
               popupHtml += "</div>";
 
-              // Symbol based on controlType
-              var symbolColor;
-              var circle = null;   // L.circle for Control
-              var symbolMarker = null; // divIcon marker for Repeater/Receiver
-              if (this.controlType == 'Repeater' || this.controlType == 'Receiver') {
-                symbolColor = this.controlType == 'Repeater' ? '#0066CC' : '#228B22';
-                symbolMarker = L.marker([cy, cx], {
+              var sym = null,
+                symbolMarker = null,
+                circleMarker = null;
+              if (this.controlType == "Repeater") sym = "▲";
+              else if (this.controlType == "Receiver") sym = "■";
+
+              if (sym) {
+                symbolMarker = L.marker([ll.lat, ll.lng], {
                   icon: L.divIcon({
-                    className: "role-symbol",
+                    className: "",
                     html: "",
                     iconSize: [0, 0],
                     iconAnchor: [0, 0],
                   }),
-                  interactive: false,
-                }).addTo(controlGroup);
+                  interactive: true,
+                }).addTo(satelliteControlGroup);
+                symbolMarker.bindPopup(popupHtml, {
+                  className: "device-info-card-popup",
+                  autoPan: false,
+                  offset: L.point(0, 0),
+                });
               } else {
-                symbolColor = '#800080';
-                circle = L.circle([cy, cx], {
-                  radius: baseMapRadius,
-                  color: symbolColor,
+                circleMarker = L.circleMarker([ll.lat, ll.lng], {
+                  radius: 24,
+                  color: color,
                   fillOpacity: 0,
                   weight: 4,
-                }).addTo(controlGroup);
+                }).addTo(satelliteControlGroup);
               }
 
-              // Label: control type + number (e.g. "1", "Rep 1", "Rec 1")
-              var displayLabel = (this.controlType && this.controlType != 'Control')
-                ? ((this.controlType == 'Repeater' ? 'Rep ' : 'Rec ') + this.controlNumber) : ('' + this.controlNumber);
-              var ctrlLabel = L.marker([cy, cx], {
+              var ctrlLabel = L.marker([ll.lat, ll.lng], {
                 icon: L.divIcon({
-                  className: "control-label-icon",
+                  className: "",
                   html: "",
                   iconSize: [0, 0],
                   iconAnchor: [0, 0],
                 }),
-                interactive: false,
-              }).addTo(controlGroup);
+                interactive: true,
+              }).addTo(satelliteControlGroup);
 
-              // Device info card: concatenated device names with |
-              var devNames = $.map(devices, function(d) { return d.deviceName; }).join(" | ");
               var devLabel = null;
+              var devNames = $.map(devices, function (d) {
+                return d.deviceName;
+              }).join(" | ");
               if (devNames) {
-                devLabel = L.marker([cy, cx], {
+                devLabel = L.marker([ll.lat, ll.lng], {
                   icon: L.divIcon({
                     className: "device-info-card",
                     html: "",
@@ -930,91 +1602,64 @@
                     iconAnchor: [0, 0],
                   }),
                   interactive: true,
-                }).addTo(controlGroup);
+                }).addTo(satelliteControlGroup);
                 devLabel.bindPopup(popupHtml, {
                   className: "device-info-card-popup",
                   autoPan: false,
-                  offset: L.point(0, 0),
                 });
               }
 
-              var layerEntry = {
-                circle: circle,
-                symbolMarker: symbolMarker,
+              satelliteControlLayers.push({
+                lat: ll.lat,
+                lng: ll.lng,
+                symbol: symbolMarker,
+                circleMarker: circleMarker,
                 ctrlLabel: ctrlLabel,
                 devLabel: devLabel,
-                devNames: devNames,
-                baseMapRadius: baseMapRadius,
-                x: cx,
-                y: cy,
-                controlType: this.controlType || 'Control',
-                controlNumber: this.controlNumber,
+                color: color,
+                sym: sym,
                 displayLabel: displayLabel,
-                symbolColor: symbolColor,
-              };
-              var layerIdx = controlLayers.length;
-              controlLayers.push(layerEntry);
-
-              // Draggable for repositioning
-              if (hasEditAccess) {
-                var dragMarker = L.marker([cy, cx], {
-                  draggable: true,
-                  icon: L.divIcon({
-                    className: "drag-target",
-                    html: "",
-                    iconSize: [100, 100],
-                    iconAnchor: [50, 50],
-                  }),
-                }).addTo(controlGroup);
-
-                (function (idx) {
-                  dragMarker.on("drag", function (e) {
-                    var pos = e.target.getLatLng();
-                    var entry = controlLayers[idx];
-                    if (entry) {
-                      if (entry.circle) entry.circle.setLatLng(pos);
-                      if (entry.symbolMarker) entry.symbolMarker.setLatLng(pos);
-                      entry.ctrlLabel.setLatLng(pos);
-                      if (entry.devLabel) entry.devLabel.setLatLng(pos);
-                      entry.x = pos.lng;
-                      entry.y = pos.lat;
-                      adjustControlSizes();
-                    }
-                  });
-                })(layerIdx);
-
-                dragMarker.on("dragend", function (e) {
-                  var pos = e.target.getLatLng();
-                  $.ajax({
-                    url: "/api/v1/Controls/" + controlId + "/MapPosition",
-                    method: "PATCH",
-                    data: JSON.stringify({ mapX: pos.lat, mapY: pos.lng }),
-                    dataType: "json",
-                  });
-                });
-              }
+                devNames: devNames,
+              });
             });
-
-            adjustControlSizes();
-            placingControls = false;
-          }).fail(function () {
-            placingControls = false;
+            adjustingSatellite();
+            satelliteMap.off("zoomend", adjustingSatellite);
+            satelliteMap.on("zoomend", adjustingSatellite);
+            placingSatellite = false;
           });
+        }
+
+        function adjustingSatellite() {
+          adjustSatelliteControlSizes();
+          var prev = mapInstance;
+          mapInstance = satelliteMap;
+          adjustPopupSizes();
+          mapInstance = prev;
         }
 
         function adjustPopupSizes() {
           if (!mapInstance) return;
           var zoom = mapInstance.getZoom();
+          if (activeMapType === "satellite") zoom -= 16; // normalize to orienteering zoom
           var halfScale = Math.pow(2, zoom / 2);
           var fontSize = Math.round(14 * halfScale) + "px";
           var w = Math.round(280 * halfScale) + "px";
           $(".device-info-card-popup").css("font-size", fontSize);
-          $(".device-info-card-popup .leaflet-popup-content-wrapper").css({ width: w, maxWidth: "none" });
-          $(".device-info-card-popup .leaflet-popup-content").css({ width: "auto", maxWidth: "none" });
+          $(".device-info-card-popup .leaflet-popup-content-wrapper").css({
+            width: w,
+            maxWidth: "none",
+          });
+          $(".device-info-card-popup .leaflet-popup-content").css({
+            width: "auto",
+            maxWidth: "none",
+          });
         }
 
         function renderScaleBar() {
-          if (!mapMeta || !mapMeta.exists || !mapMeta.mapScale) { $("#scaleBar").hide(); return; }
+          if (!mapMeta || !mapMeta.exists || !mapMeta.mapScale) {
+            $("#scaleBar").hide();
+            return;
+          }
           var ppm = mapMeta.mapScale; // pixels per meter at zoom 0
           var zoom = mapInstance ? mapInstance.getZoom() : 0;
           var pixelPerM = ppm * Math.pow(2, zoom);
@@ -1024,11 +1669,29 @@
           scaleBarSpan = null;
           for (var i = 0; i < allSpans.length; i++) {
             var w = allSpans[i] * pixelPerM;
-            if (w >= 50 && w <= 1500) { scaleBarSpan = allSpans[i]; barPx = w; break; }
+            if (w >= 50 && w <= 1500) {
+              scaleBarSpan = allSpans[i];
+              barPx = w;
+              break;
+            }
           }
-          if (!scaleBarSpan) { scaleBarSpan = 300; barPx = 300 * pixelPerM; }
+          if (!scaleBarSpan) {
+            scaleBarSpan = 300;
+            barPx = 300 * pixelPerM;
+          }
 
-          var step = scaleBarSpan >= 300 ? 50 : (scaleBarSpan >= 100 ? 50 : (scaleBarSpan >= 50 ? 10 : (scaleBarSpan >= 20 ? 5 : (scaleBarSpan >= 10 ? 2 : 1))));
+          var step =
+            scaleBarSpan >= 300
+              ? 50
+              : scaleBarSpan >= 100
+                ? 50
+                : scaleBarSpan >= 50
+                  ? 10
+                  : scaleBarSpan >= 20
+                    ? 5
+                    : scaleBarSpan >= 10
+                      ? 2
+                      : 1;
           var majorStep = step * 2; // label every other tick
 
           var canvas = document.getElementById("scaleBarCanvas");
@@ -1046,7 +1709,7 @@
 
           for (var m = 0; m <= scaleBarSpan + 0.01; m += step) {
             var x = 10 + Math.round(m * pixelPerM);
-            var isMajor = (Math.round(m) % majorStep === 0);
+            var isMajor = Math.round(m) % majorStep === 0;
             var tickH = isMajor ? 12 : 6;
 
             ctx.beginPath();
@@ -1055,12 +1718,13 @@
             ctx.stroke();
 
             if (isMajor) {
-              var label = (m >= 1000) ? (m/1000).toFixed(1) + " km" : m + " m";
+              var label = m >= 1000 ? (m / 1000).toFixed(1) + " km" : m + " m";
               ctx.fillText(label, x, h - 5 - tickH - 2);
             }
           }
 
-          var startX = 10, endX = 10 + Math.round(barPx);
+          var startX = 10,
+            endX = 10 + Math.round(barPx);
           ctx.beginPath();
           ctx.moveTo(startX, h - 5);
           ctx.lineTo(endX, h - 5);
@@ -1070,8 +1734,12 @@
           ctx.lineTo(endX, h - 5 - 6);
           ctx.stroke();
 
-          var ratioText = mapMeta.mapScaleRatio ? "1:" + mapMeta.mapScaleRatio : "";
-          $("#scaleBarRatio").text(ratioText).css("font-size", Math.round(10 * Math.pow(2, zoom / 2)) + "px");
+          var ratioText = mapMeta.mapScaleRatio
+            ? "1:" + mapMeta.mapScaleRatio
+            : "";
+          $("#scaleBarRatio")
+            .text(ratioText)
+            .css("font-size", Math.round(10 * Math.pow(2, zoom / 2)) + "px");
           $("#scaleBar").show();
         }
 
@@ -1084,19 +1752,32 @@
         var measMarkers = []; // [point1, point2, line, label]
 
         function startMeasuring() {
-          if (calibratingMode) { cancelCalibration(); }
+          if (calibratingMode) {
+            cancelCalibration();
+          }
+          cancelGeoreference();
           stopMeasuring(); // clear any previous
+          setActiveMap("orienteering");
           measuringMode = true;
-          $("#btnMeasure").text("Measuring...").removeClass("btn-outline-dark").addClass("btn-dark");
+          $("#btnMeasure")
+            .text("Measuring...")
+            .removeClass("btn-outline-dark")
+            .addClass("btn-dark");
           $("#measureResult").hide().text("");
           mapInstance.getContainer().style.cursor = "crosshair";
         }
 
         function stopMeasuring() {
           measuringMode = false;
-          $.each(measMarkers, function () { mapInstance.removeLayer(this); });
+          $.each(measMarkers, function () {
+            if (orienteeringMap) orienteeringMap.removeLayer(this);
+            if (satelliteMap) satelliteMap.removeLayer(this);
+          });
           measMarkers = [];
-          $("#btnMeasure").text("Measure distance").removeClass("btn-dark").addClass("btn-outline-dark");
+          $("#btnMeasure")
+            .text("Measure distance")
+            .removeClass("btn-dark")
+            .addClass("btn-outline-dark");
           $("#measureResult").hide().text("");
           mapInstance.getContainer().style.cursor = "";
         }
@@ -1107,14 +1788,29 @@
 
           if (measMarkers.length === 0) {
             // First point
-            var m = L.circle(pos, { radius: 4, color: "#000", fill: true, fillColor: "#000", fillOpacity: 1 }).addTo(mapInstance);
+            var m = L.circle(pos, {
+              radius: 4,
+              color: "#000",
+              fill: true,
+              fillColor: "#000",
+              fillOpacity: 1,
+            }).addTo(mapInstance);
             measMarkers.push(m);
           } else if (measMarkers.length === 1) {
             // Second point — draw line, calculate, show label
             var p1 = measMarkers[0].getLatLng();
-            var m = L.circle(pos, { radius: 4, color: "#000", fill: true, fillColor: "#000", fillOpacity: 1 }).addTo(mapInstance);
+            var m = L.circle(pos, {
+              radius: 4,
+              color: "#000",
+              fill: true,
+              fillColor: "#000",
+              fillOpacity: 1,
+            }).addTo(mapInstance);
             measMarkers.push(m);
-            var line = L.polyline([p1, pos], { color: "#000", weight: 2 }).addTo(mapInstance);
+            var line = L.polyline([p1, pos], {
+              color: "#000",
+              weight: 2,
+            }).addTo(mapInstance);
             measMarkers.push(line);
 
             var totalPx = mapInstance.distance(p1, pos);
@@ -1122,7 +1818,10 @@
             var distText;
             if (ppm > 0) {
               var meters = totalPx / ppm;
-              distText = (meters >= 1000) ? (meters / 1000).toFixed(2) + " km" : Math.round(meters) + " m";
+              distText =
+                meters >= 1000
+                  ? (meters / 1000).toFixed(2) + " km"
+                  : Math.round(meters) + " m";
             } else {
               distText = Math.round(totalPx) + " px";
             }
@@ -1130,7 +1829,10 @@
             var label = L.marker(pos, {
               icon: L.divIcon({
                 className: "meas-distance-label",
-                html: '<div style="background:#fff; border:1px solid #333; border-radius:3px; padding:3px 7px; font-size:24px; font-weight:bold; white-space:nowrap; color:#333; display:inline-block;">' + distText + '</div>',
+                html:
+                  '<div style="background:#fff; border:1px solid #333; border-radius:3px; padding:3px 7px; font-size:24px; font-weight:bold; white-space:nowrap; color:#333; display:inline-block;">' +
+                  distText +
+                  "</div>",
                 iconSize: [200, 50],
                 iconAnchor: [-20, 5],
               }),
@@ -1146,16 +1848,25 @@
 
         function startCalibration() {
           if (!hasEditAccess) return;
+          setActiveMap("orienteering");
           calibratingMode = true;
           calibPoint1 = null;
           calibPoint2 = null;
-          $.each(calibMarkers, function () { mapInstance.removeLayer(this); });
+          $.each(calibMarkers, function () {
+            mapInstance.removeLayer(this);
+          });
           calibMarkers = [];
           mapInstance.getContainer().style.cursor = "crosshair";
           $("#calibDistanceInput").val("");
           $("#calibRatioInput").val("");
-          $("#calibPoint1Status").text("Point 1: not set").removeClass("text-success").addClass("text-muted");
-          $("#calibPoint2Status").text("Point 2: not set").removeClass("text-success").addClass("text-muted");
+          $("#calibPoint1Status")
+            .text("Point 1: not set")
+            .removeClass("text-success")
+            .addClass("text-muted");
+          $("#calibPoint2Status")
+            .text("Point 2: not set")
+            .removeClass("text-success")
+            .addClass("text-muted");
           $("#calibErrorAlert").addClass("collapse");
           $("#calibInstructions").removeClass("collapse");
         }
@@ -1166,35 +1877,80 @@
           var pos = mapInstance.mouseEventToLatLng(e);
           if (!calibPoint1) {
             calibPoint1 = pos;
-            var m = L.circle(pos, { radius: 4, color: "#ff0000", fill: true, fillColor: "#ff0000", fillOpacity: 1 }).addTo(mapInstance);
+            var m = L.circle(pos, {
+              radius: 4,
+              color: "#ff0000",
+              fill: true,
+              fillColor: "#ff0000",
+              fillOpacity: 1,
+            }).addTo(mapInstance);
             calibMarkers.push(m);
-            $("#calibPoint1Status").text("Point 1: set (" + Math.round(pos.lat) + ", " + Math.round(pos.lng) + ")").removeClass("text-muted").addClass("text-success");
+            $("#calibPoint1Status")
+              .text(
+                "Point 1: set (" +
+                  Math.round(pos.lat) +
+                  ", " +
+                  Math.round(pos.lng) +
+                  ")",
+              )
+              .removeClass("text-muted")
+              .addClass("text-success");
           } else if (!calibPoint2) {
             calibPoint2 = pos;
-            var m = L.circle(pos, { radius: 4, color: "#ff0000", fill: true, fillColor: "#ff0000", fillOpacity: 1 }).addTo(mapInstance);
+            var m = L.circle(pos, {
+              radius: 4,
+              color: "#ff0000",
+              fill: true,
+              fillColor: "#ff0000",
+              fillOpacity: 1,
+            }).addTo(mapInstance);
             calibMarkers.push(m);
-            var line = L.polyline([calibPoint1, calibPoint2], { color: "#ff0000", weight: 2, dashArray: "5,5" }).addTo(mapInstance);
+            var line = L.polyline([calibPoint1, calibPoint2], {
+              color: "#ff0000",
+              weight: 2,
+              dashArray: "5,5",
+            }).addTo(mapInstance);
             calibMarkers.push(line);
-            $("#calibPoint2Status").text("Point 2: set (" + Math.round(pos.lat) + ", " + Math.round(pos.lng) + ")").removeClass("text-muted").addClass("text-success");
-            var distPx = Math.round(mapInstance.distance(calibPoint1, calibPoint2));
-            $("#calibDistanceInput").attr("placeholder", "pixel distance: " + distPx + " px");
+            $("#calibPoint2Status")
+              .text(
+                "Point 2: set (" +
+                  Math.round(pos.lat) +
+                  ", " +
+                  Math.round(pos.lng) +
+                  ")",
+              )
+              .removeClass("text-muted")
+              .addClass("text-success");
+            var distPx = Math.round(
+              mapInstance.distance(calibPoint1, calibPoint2),
+            );
+            $("#calibDistanceInput").attr(
+              "placeholder",
+              "pixel distance: " + distPx + " px",
+            );
             $("#calibrateModal").modal("show");
           }
         }
 
         function saveCalibration() {
           if (!calibPoint1 || !calibPoint2) {
-            $("#calibErrorAlert").text("Please select both points on the map first.").removeClass("collapse");
+            $("#calibErrorAlert")
+              .text("Please select both points on the map first.")
+              .removeClass("collapse");
             return;
           }
           var distM = parseFloat($("#calibDistanceInput").val());
           var scaleRatio = parseInt($("#calibRatioInput").val());
           if (!distM || distM <= 0) {
-            $("#calibErrorAlert").text("Please enter a valid real world distance.").removeClass("collapse");
+            $("#calibErrorAlert")
+              .text("Please enter a valid real world distance.")
+              .removeClass("collapse");
             return;
           }
           if (!scaleRatio || scaleRatio <= 0) {
-            $("#calibErrorAlert").text("Please enter a valid scale ratio.").removeClass("collapse");
+            $("#calibErrorAlert")
+              .text("Please enter a valid scale ratio.")
+              .removeClass("collapse");
             return;
           }
           var distPx = mapInstance.distance(calibPoint1, calibPoint2);
@@ -1203,26 +1959,36 @@
             url: "/api/v1/Competitions/" + competitionId + "/Map",
             method: "PATCH",
             data: JSON.stringify({ mapScale: ppm, mapScaleRatio: scaleRatio }),
-            dataType: "json"
-          }).then(function () {
-            mapMeta.mapScale = ppm;
-            mapMeta.mapScaleRatio = scaleRatio;
-            renderScaleBar();
-            cancelCalibration();
-          }, function () {
-            $("#calibErrorAlert").text("Failed to save calibration.").removeClass("collapse");
-          });
+            dataType: "json",
+          }).then(
+            function () {
+              mapMeta.mapScale = ppm;
+              mapMeta.mapScaleRatio = scaleRatio;
+              renderScaleBar();
+              cancelCalibration();
+            },
+            function () {
+              $("#calibErrorAlert")
+                .text("Failed to save calibration.")
+                .removeClass("collapse");
+            },
+          );
         }
 
         function cancelCalibration() {
           calibratingMode = false;
           calibPoint1 = null;
           calibPoint2 = null;
-          $.each(calibMarkers, function () { mapInstance.removeLayer(this); });
+          $.each(calibMarkers, function () {
+            if (orienteeringMap) orienteeringMap.removeLayer(this);
+            if (satelliteMap) satelliteMap.removeLayer(this);
+          });
           calibMarkers = [];
           mapInstance.getContainer().style.cursor = "";
           $("#calibInstructions").addClass("collapse");
-          var calibModal = bootstrap.Modal.getInstance(document.getElementById("calibrateModal"));
+          var calibModal = bootstrap.Modal.getInstance(
+            document.getElementById("calibrateModal"),
+          );
           if (calibModal) calibModal.hide();
         }
 
@@ -1235,10 +2001,163 @@
             mapImgHeight = h;
 
             // Use Leaflet CRS.Simple for pixel-based coordinates
-            mapInstance = L.map("map", {
+            orienteeringMap = L.map("map", {
               crs: L.CRS.Simple,
               minZoom: -3,
               maxZoom: 5,
+            });
+            mapInstance = orienteeringMap;
+
+            // Create satellite map (Web Mercator)
+            satelliteMap = L.map("satelliteMap", {
+              center: [0, 0],
+              zoom: 1,
+              scrollWheelZoom: true,
+            });
+            L.tileLayer(
+              "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+              {
+                attribution: "Esri",
+                maxZoom: 19,
+              },
+            ).addTo(satelliteMap);
+
+            // Set up zoom handler for satellite map
+            satelliteMap.on("zoomend", function () {
+              adjustingSatellite();
+              renderScaleBar();
+            });
+            satelliteMap.on("popupopen", function (e) {
+              adjustPopupSizes();
+              if (
+                !e.popup._source ||
+                !e.popup._source.options.className ||
+                !e.popup._source.options.className.match("device-info-card")
+              )
+                return;
+
+              var popupEl = e.popup.getElement();
+              var wrapper = popupEl.querySelector(
+                ".leaflet-popup-content-wrapper",
+              );
+              if (!wrapper) return;
+              var w = wrapper.offsetWidth;
+              var h = wrapper.offsetHeight;
+              e.popup.options.offset = L.point(Math.round(w / 2), -h - 30);
+              e.popup.update();
+            });
+
+            // Georef click handlers
+            orienteeringMap.on("click", function (e) {
+              if (
+                typeof georefState === "undefined" ||
+                !georefState ||
+                (georefState !== "o1" && georefState !== "o2")
+              )
+                return;
+              georefPoint = { px: e.latlng.lng, py: e.latlng.lat };
+              if (georefState === "o1") {
+                georefState = "s1";
+                setActiveMap("satellite");
+                satelliteMap.getContainer().style.cursor = "crosshair";
+                updateGeorefBanner(
+                  "Now click the SAME point on the satellite map (point 1/2)",
+                );
+              } else if (georefState === "o2") {
+                georefState = "s2";
+                setActiveMap("satellite");
+                satelliteMap.getContainer().style.cursor = "crosshair";
+                updateGeorefBanner(
+                  "Now click the SAME point on the satellite map (point 2/2)",
+                );
+              }
+            });
+
+            satelliteMap.on("click", function (e) {
+              if (
+                typeof georefState === "undefined" ||
+                !georefState ||
+                (georefState !== "s1" && georefState !== "s2")
+              )
+                return;
+              var lat = e.latlng.lat;
+              var lng = e.latlng.lng;
+              if (georefState === "s1") {
+                georefP1 = {
+                  px: georefPoint.px,
+                  py: georefPoint.py,
+                  lat: lat,
+                  lng: lng,
+                };
+                georefState = "o2";
+                setActiveMap("orienteering");
+                orienteeringMap.getContainer().style.cursor = "crosshair";
+                satelliteMap.getContainer().style.cursor = "";
+                updateGeorefBanner(
+                  "Point 1 saved (" +
+                    lat.toFixed(5) +
+                    ", " +
+                    lng.toFixed(5) +
+                    "). Click another point on the orienteering map (point 2/2)",
+                  "text-success",
+                );
+              } else if (georefState === "s2") {
+                georefP2 = {
+                  px: georefPoint.px,
+                  py: georefPoint.py,
+                  lat: lat,
+                  lng: lng,
+                };
+                georefState = "done";
+                orienteeringMap.getContainer().style.cursor = "";
+                satelliteMap.getContainer().style.cursor = "";
+                updateGeorefBanner("Saving georeference...", "text-success");
+                $.ajax({
+                  url: "/api/v1/Competitions/" + competitionId + "/Map",
+                  method: "PATCH",
+                  data: JSON.stringify({
+                    georefP1X: georefP1.px,
+                    georefP1Y: georefP1.py,
+                    georefP1Lat: georefP1.lat,
+                    georefP1Lng: georefP1.lng,
+                    georefP2X: georefP2.px,
+                    georefP2Y: georefP2.py,
+                    georefP2Lat: georefP2.lat,
+                    georefP2Lng: georefP2.lng,
+                  }),
+                  dataType: "json",
+                }).then(
+                  function () {
+                    georefPoints = {
+                      p1X: georefP1.px,
+                      p1Y: georefP1.py,
+                      p1Lat: georefP1.lat,
+                      p1Lng: georefP1.lng,
+                      p2X: georefP2.px,
+                      p2Y: georefP2.py,
+                      p2Lat: georefP2.lat,
+                      p2Lng: georefP2.lng,
+                    };
+                    mapMeta.georefP1Lat = georefP1.lat;
+                    updateGeorefBanner(
+                      "Georeference saved! Controls placed on satellite map.",
+                      "text-success",
+                    );
+                    setTimeout(function () {
+                      $("#georefInstructions").addClass("collapse");
+                    }, 3000);
+                    setActiveMap("satellite");
+                    placeControlsOnSatelliteMap(mapImgWidth, mapImgHeight);
+                    cancelGeoreference();
+                  },
+                  function () {
+                    updateGeorefBanner(
+                      "Failed to save georeference.",
+                      "text-danger",
+                    );
+                  },
+                );
+              }
             });
 
             var bounds = [
@@ -1260,7 +2179,7 @@
               mapInstance.fitBounds(bounds);
             }
 
-            // Place control markers on the map
+            // Place control markers on the orienteering map
             placeControlsOnMap(w, h);
 
             // Scale popup font with half-zoom; close on zoom so position recalculates
@@ -1271,8 +2190,14 @@
               mapInstance.closePopup();
             });
             mapInstance.on("click", function (e) {
-              if (calibratingMode) { handleCalibrationClick(e.originalEvent); return; }
-              if (measuringMode) { handleMeasureClick(e.originalEvent); return; }
+              if (calibratingMode) {
+                handleCalibrationClick(e.originalEvent);
+                return;
+              }
+              if (measuringMode) {
+                handleMeasureClick(e.originalEvent);
+                return;
+              }
             });
             mapInstance.on("popupopen", function (e) {
               adjustPopupSizes();
@@ -1284,7 +2209,9 @@
                 return;
 
               var popupEl = e.popup.getElement();
-              var wrapper = popupEl.querySelector(".leaflet-popup-content-wrapper");
+              var wrapper = popupEl.querySelector(
+                ".leaflet-popup-content-wrapper",
+              );
               if (!wrapper) return;
               var w = wrapper.offsetWidth;
               var h = wrapper.offsetHeight;
@@ -1293,6 +2220,7 @@
             });
 
             renderScaleBar();
+            $("#mapTabs").show();
             $("#mapMeasureArea").show();
             $("#btnSaveMapView").show();
             $("#btnDeleteMap").show();
@@ -1301,9 +2229,10 @@
         }
 
         function saveMapViewState() {
-          if (!mapInstance) return;
-          var center = mapInstance.getCenter();
-          var zoom = mapInstance.getZoom();
+          if (!orienteeringMap) return;
+          var map = orienteeringMap;
+          var center = map.getCenter();
+          var zoom = map.getZoom();
           var bounds = [
             [0, 0],
             [
@@ -1409,7 +2338,11 @@
                 alert("You do not have permission.");
                 return;
               }
-              if (calibratingMode) { cancelCalibration(); return; }
+              if (calibratingMode) {
+                cancelCalibration();
+                return;
+              }
+              setActiveMap("orienteering");
               startCalibration();
             });
 
@@ -1445,9 +2378,53 @@
             });
 
             $("#btnMeasure").click(function () {
-              if (measuringMode) { stopMeasuring(); }
-              else if (measMarkers.length > 0) { stopMeasuring(); }
-              else { startMeasuring(); }
+              if (measuringMode) {
+                stopMeasuring();
+              } else if (measMarkers.length > 0) {
+                stopMeasuring();
+              } else {
+                startMeasuring();
+              }
+            });
+
+            $("#btnTabOrienteering").click(function () {
+              setActiveMap("orienteering");
+            });
+            $("#btnTabSatellite").click(function () {
+              setActiveMap("satellite");
+            });
+
+            // Georef button
+            $("#btnGeorefMap").click(function () {
+              if (!hasEditAccess) {
+                alert("You do not have permission.");
+                return;
+              }
+              if (calibratingMode || measuringMode) return;
+              cancelGeoreference();
+              georefState = "o1";
+              georefPoint = {};
+              georefP1 = null;
+              georefP2 = null;
+              if (georefPoints.p1Lat) {
+                georefP1 = {
+                  px: georefPoints.p1X,
+                  py: georefPoints.p1Y,
+                  lat: georefPoints.p1Lat,
+                  lng: georefPoints.p1Lng,
+                };
+                georefP2 = {
+                  px: georefPoints.p2X,
+                  py: georefPoints.p2Y,
+                  lat: georefPoints.p2Lat,
+                  lng: georefPoints.p2Lng,
+                };
+              }
+              setActiveMap("orienteering");
+              orienteeringMap.getContainer().style.cursor = "crosshair";
+              updateGeorefBanner(
+                "Click a known point (e.g. road crossing) on the orienteering map (point 1/2)",
+              );
             });
 
             // Handle control assignment changes from device table dropdowns
@@ -1463,7 +2440,10 @@
                 postData = { controlId: parseInt(rawVal.substring(3)) };
               } else if (rawVal.indexOf("type_") === 0) {
                 var parts = rawVal.split("_");
-                postData = { controlType: parts[1], controlNumber: parseInt(parts[2]) };
+                postData = {
+                  controlType: parts[1],
+                  controlNumber: parseInt(parts[2]),
+                };
               }
 
               $.ajax({
@@ -1478,7 +2458,7 @@
                     select.removeClass("is-valid");
                   }, 1500);
                   // Refresh allControls and rebuild dropdowns + map
-                  loadControlsTable(competitionId, function() {
+                  loadControlsTable(competitionId, function () {
                     loadDeviceTable();
                     if (mapInstance && mapImgWidth > 0) {
                       placeControlsOnMap(mapImgWidth, mapImgHeight);

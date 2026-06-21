@@ -81,6 +81,10 @@
               style="display: none"
             />
           </div>
+          <div id="mapMeasureArea" style="display:none">
+            <button type="button" id="btnMeasure" class="btn btn-outline-dark btn-sm me-1">Measure distance</button>
+            <span id="measureResult" style="font-size:13px; color:#333; display:none"></span>
+          </div>
         </div>
         <div
           id="mapUpdatedAlert"
@@ -688,6 +692,7 @@
                 $("#map").show();
                 if (mapInstance) {
                   cancelCalibration();
+                  stopMeasuring();
                   mapInstance.remove();
                   mapInstance = null;
                   controlLayers = [];
@@ -695,6 +700,7 @@
                 initMap(meta);
               } else {
                 $("#map").hide();
+                $("#mapMeasureArea").hide();
                 $("#mapNoFile").show();
                 // Hide save view / delete buttons when no map exists
                 $("#btnSaveMapView").hide();
@@ -1074,6 +1080,65 @@
         var calibPoint2 = null;
         var calibMarkers = [];
 
+        var measuringMode = false;
+        var measMarkers = [];
+
+        function toggleMeasuring() {
+          if (measuringMode) { stopMeasuring(); return; }
+          if (calibratingMode) { cancelCalibration(); }
+          measuringMode = true;
+          $.each(measMarkers, function () { mapInstance.removeLayer(this); });
+          measMarkers = [];
+          $("#btnMeasure").text("Stop measuring").removeClass("btn-outline-dark").addClass("btn-dark");
+          $("#measureResult").hide().text("");
+          mapInstance.getContainer().style.cursor = "crosshair";
+        }
+
+        function stopMeasuring() {
+          measuringMode = false;
+          $.each(measMarkers, function () { mapInstance.removeLayer(this); });
+          measMarkers = [];
+          $("#btnMeasure").text("Measure distance").removeClass("btn-dark").addClass("btn-outline-dark");
+          mapInstance.getContainer().style.cursor = "";
+        }
+
+        function handleMeasureClick(e) {
+          if (!measuringMode || !mapInstance) return;
+          var pos = mapInstance.mouseEventToLatLng(e);
+
+          var m = L.circle(pos, { radius: 4, color: "#000", fill: true, fillColor: "#000", fillOpacity: 1 }).addTo(mapInstance);
+          measMarkers.push(m);
+
+          if (measMarkers.length >= 2) {
+            // Draw line between last two points
+            var prev = measMarkers[measMarkers.length - 2].getLatLng();
+            var line = L.polyline([prev, pos], { color: "#000", weight: 2 }).addTo(mapInstance);
+            measMarkers.push(line);
+
+            // Calculate total pixel distance along all segments
+            var totalPx = 0;
+            var allPoints = [];
+            $.each(measMarkers, function () {
+              if (this.getLatLng) allPoints.push(this.getLatLng());
+            });
+            for (var i = 1; i < allPoints.length; i++) {
+              totalPx += mapInstance.distance(allPoints[i-1], allPoints[i]);
+            }
+
+            // Convert to real distance if calibrated (mapScale is pixels/meter at zoom 0, distance() uses projected coords)
+            var ppm = mapMeta && mapMeta.mapScale ? mapMeta.mapScale : 0;
+            var distText;
+            if (ppm > 0) {
+              var meters = totalPx / ppm;
+              if (meters >= 1000) distText = (meters / 1000).toFixed(2) + " km";
+              else distText = Math.round(meters) + " m";
+            } else {
+              distText = Math.round(totalPx) + " px";
+            }
+            $("#measureResult").text("Distance: " + distText).show();
+          }
+        }
+
         function startCalibration() {
           if (!hasEditAccess) return;
           calibratingMode = true;
@@ -1201,7 +1266,8 @@
               mapInstance.closePopup();
             });
             mapInstance.on("click", function (e) {
-              if (calibratingMode) handleCalibrationClick(e.originalEvent);
+              if (calibratingMode) { handleCalibrationClick(e.originalEvent); return; }
+              if (measuringMode) { handleMeasureClick(e.originalEvent); return; }
             });
             mapInstance.on("popupopen", function (e) {
               adjustPopupSizes();
@@ -1222,6 +1288,7 @@
             });
 
             renderScaleBar();
+            $("#mapMeasureArea").show();
             $("#btnSaveMapView").show();
             $("#btnDeleteMap").show();
           };
@@ -1370,6 +1437,10 @@
                   alert("Failed to delete map");
                 },
               );
+            });
+
+            $("#btnMeasure").click(function () {
+              toggleMeasuring();
             });
 
             // Handle control assignment changes from device table dropdowns

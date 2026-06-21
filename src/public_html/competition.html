@@ -1902,6 +1902,18 @@
                       p2Lng: georefP2.lng,
                     };
                     mapMeta.georefP1Lat = georefP1.lat;
+                    // Auto-compute mapScale from georeference points
+                    var gDx = Math.abs(georefP2.px - georefP1.px);
+                    var gDy = Math.abs(georefP2.py - georefP1.py);
+                    var gPx = Math.sqrt(gDx * gDx + gDy * gDy);
+                    var gCosLat = Math.cos(georefP1.lat * Math.PI / 180);
+                    var gME = Math.abs(georefP2.lng - georefP1.lng) * 111320 * gCosLat;
+                    var gMN = Math.abs(georefP2.lat - georefP1.lat) * 111320;
+                    var gM = Math.sqrt(gME * gME + gMN * gMN);
+                    if (gPx > 0 && gM > 0) {
+                      mapMeta.mapScale = gPx / gM; // pixels per meter at zoom 0
+                      $.ajax({ url: "/api/v1/Competitions/" + competitionId + "/Map", method: "PATCH", data: JSON.stringify({ mapScale: mapMeta.mapScale }), dataType: "json" });
+                    }
                     updateGeorefBanner(
                       "Georeference saved! Controls placed on satellite map.",
                       "text-success",

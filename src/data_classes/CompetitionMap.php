@@ -44,6 +44,16 @@ class CompetitionMap
      * @var float
      */
     public $defaultCenterY;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $mapScale;
+    /**
+     * @SWG\Property()
+     * @var int
+     */
+    public $mapScaleRatio;
 
     public $updateTime;
     public $createdTime;

@@ -3475,6 +3475,8 @@ $app->get('/api/v1/Competitions/{competitionId}/Map', function (Request $request
     $res->defaultZoom = $map->defaultZoom;
     $res->defaultCenterX = $map->defaultCenterX;
     $res->defaultCenterY = $map->defaultCenterY;
+    $res->mapScale = $map->mapScale;
+    $res->mapScaleRatio = $map->mapScaleRatio;
     $response->getBody()->write(json_encode($res));
     return $response;
 })->setName("getCompetitionMap");
@@ -3626,7 +3628,7 @@ $app->post('/api/v1/Competitions/{competitionId}/Map', function (Request $reques
 /**
  * @SWG\Patch(
  *     path="/api/v1/Competitions/{competitionId}/Map",
- *     description="Save default view state (zoom + center). Requires competition edit access.",
+ *     description="Save default view state and calibration (zoom, center, mapScale, mapScaleRatio). Requires competition edit access.",
  *     operationId="patchCompetitionMap",
  *     @SWG\Parameter(
  *         description="ID of the Competition",
@@ -3678,6 +3680,8 @@ $app->patch('/api/v1/Competitions/{competitionId}/Map', function (Request $reque
     if (isset($objectArray['zoom'])) $updateData['defaultZoom'] = $objectArray['zoom'];
     if (isset($objectArray['centerX'])) $updateData['defaultCenterX'] = $objectArray['centerX'];
     if (isset($objectArray['centerY'])) $updateData['defaultCenterY'] = $objectArray['centerY'];
+    if (isset($objectArray['mapScale'])) $updateData['mapScale'] = $objectArray['mapScale'];
+    if (isset($objectArray['mapScaleRatio'])) $updateData['mapScaleRatio'] = $objectArray['mapScaleRatio'];
     $this->get('helper')->Update($mapCls, $updateData, $mapCls::$tableName, $map->id);
 
     $res = new CommandResponse();

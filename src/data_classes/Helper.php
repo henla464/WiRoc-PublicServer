@@ -272,6 +272,11 @@ class Helper
 			try { $this->db->exec("CREATE UNIQUE INDEX idx_controls_competition_controlnumber_v2 ON Controls (competitionId, controlType, controlNumber)"); } catch (\Exception $e) {}
 			try { $this->db->exec("UPDATE Controls SET controlType = 'Control' WHERE controlType IS NULL OR controlType = ''"); } catch (\Exception $e) {}
 
+
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS mapScale double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS mapScaleRatio int";
+			$stmt = $this->db->query($sql);
 			$sql = 'CREATE TABLE IF NOT EXISTS CompetitionMaps (id int NOT NULL AUTO_INCREMENT, competitionId int NOT NULL,
 					originalFileName varchar(255), storedFileName varchar(255), fileType varchar(10),
 					defaultZoom int, defaultCenterX double, defaultCenterY double,
@@ -342,6 +347,11 @@ class Helper
         try { $this->db->exec("DROP INDEX idx_controls_competition_controlnumber_v2 ON Controls"); } catch (\Exception $e) {}
         try { $this->db->exec("CREATE UNIQUE INDEX idx_controls_competition_controlnumber_v2 ON Controls (competitionId, controlType, controlNumber)"); } catch (\Exception $e) {}
         try { $this->db->exec("UPDATE Controls SET controlType = 'Control' WHERE controlType IS NULL OR controlType = ''"); } catch (\Exception $e) {}
+
+        $sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS mapScale double";
+        $stmt = $this->db->query($sql);
+        $sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS mapScaleRatio int";
+        $stmt = $this->db->query($sql);
 
         $res = new CommandResponse();
         $res->code = 0;

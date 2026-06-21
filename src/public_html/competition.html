@@ -62,6 +62,13 @@
             </button>
             <button
               type="button"
+              id="btnCalibrateScale"
+              class="btn btn-outline-info btn-sm me-1"
+            >
+              Calibrate Scale
+            </button>
+            <button
+              type="button"
               id="btnDeleteMap"
               class="btn btn-outline-danger btn-sm"
             >
@@ -89,10 +96,18 @@
           ></button>
         </div>
         <div id="mapContainer" style="display: none">
-          <div
-            id="map"
-            style="height: 450px; border: 1px solid #ccc; border-radius: 4px"
-          ></div>
+          <div style="position: relative;">
+            <div
+              id="map"
+              style="height: 450px; border: 1px solid #ccc; border-radius: 4px"
+            ></div>
+            <div id="scaleBar" style="display:none; position:absolute; bottom:20px; right:20px; z-index:1000; pointer-events:none;">
+              <div id="scaleBarGraphic" style="background:#fff; border:1px solid #333; border-radius:2px; padding:4px 6px 2px 6px; box-shadow:0 1px 3px rgba(0,0,0,0.2);">
+                <canvas id="scaleBarCanvas" width="160" height="25" style="display:block;"></canvas>
+                <div id="scaleBarRatio" style="font-size:10px; color:#333; text-align:center; margin-top:1px;"></div>
+              </div>
+            </div>
+          </div>
           <div
             id="mapNoFile"
             class="text-muted text-center p-5"
@@ -632,6 +647,7 @@
                 $("#mapNoFile").hide();
                 $("#map").show();
                 if (mapInstance) {
+                  cancelCalibration();
                   mapInstance.remove();
                   mapInstance = null;
                   controlLayers = [];
@@ -951,6 +967,135 @@
           $(".device-info-card-popup .leaflet-popup-content").css({ width: "auto", maxWidth: "none" });
         }
 
+        function renderScaleBar() {
+          if (!mapMeta || !mapMeta.exists || !mapMeta.mapScale) { $("#scaleBar").hide(); return; }
+          var ppm = mapMeta.mapScale; // pixels per meter at zoom 0
+          var zoom = mapInstance ? mapInstance.getZoom() : 0;
+          var pixelPerM = ppm * Math.pow(2, zoom);
+
+          // Always pick the largest span (max 300m) that fits in 50-1500px
+          var allSpans = [300, 200, 100, 50, 20, 10, 5, 2];
+          scaleBarSpan = null;
+          for (var i = 0; i < allSpans.length; i++) {
+            var w = allSpans[i] * pixelPerM;
+            if (w >= 50 && w <= 1500) { scaleBarSpan = allSpans[i]; barPx = w; break; }
+          }
+          if (!scaleBarSpan) { scaleBarSpan = 300; barPx = 300 * pixelPerM; }
+
+          var step = scaleBarSpan >= 300 ? 50 : (scaleBarSpan >= 100 ? 50 : (scaleBarSpan >= 50 ? 10 : (scaleBarSpan >= 20 ? 5 : (scaleBarSpan >= 10 ? 2 : 1))));
+          var majorStep = step * 2; // label every other tick
+
+          var canvas = document.getElementById("scaleBarCanvas");
+          if (!canvas) return;
+          canvas.width = Math.round(barPx) + 30;
+          var ctx = canvas.getContext("2d");
+          var h = canvas.height;
+          ctx.clearRect(0, 0, canvas.width, h);
+
+          ctx.strokeStyle = "#333";
+          ctx.fillStyle = "#333";
+          ctx.font = "11px sans-serif";
+          ctx.textAlign = "center";
+          ctx.lineWidth = 1;
+
+          for (var m = 0; m <= scaleBarSpan + 0.01; m += step) {
+            var x = 10 + Math.round(m * pixelPerM);
+            var isMajor = (Math.round(m) % majorStep === 0);
+            var tickH = isMajor ? 12 : 6;
+
+            ctx.beginPath();
+            ctx.moveTo(x, h - 5);
+            ctx.lineTo(x, h - 5 - tickH);
+            ctx.stroke();
+
+            if (isMajor) {
+              var label = (m >= 1000) ? (m/1000).toFixed(1) + " km" : m + " m";
+              ctx.fillText(label, x, h - 5 - tickH - 2);
+            }
+          }
+
+          var startX = 10, endX = 10 + Math.round(barPx);
+          ctx.beginPath();
+          ctx.moveTo(startX, h - 5);
+          ctx.lineTo(endX, h - 5);
+          ctx.moveTo(startX, h - 5);
+          ctx.lineTo(startX, h - 5 - 6);
+          ctx.moveTo(endX, h - 5);
+          ctx.lineTo(endX, h - 5 - 6);
+          ctx.stroke();
+
+          var ratioText = mapMeta.mapScaleRatio ? "1:" + mapMeta.mapScaleRatio : "";
+          $("#scaleBarRatio").text(ratioText).css("font-size", Math.round(10 * Math.pow(2, zoom / 2)) + "px");
+          $("#scaleBar").show();
+        }
+
+        var calibratingMode = false;
+        var calibPoint1 = null;
+        var calibPoint2 = null;
+        var calibMarkers = [];
+
+        function startCalibration() {
+          if (!hasEditAccess) return;
+          calibratingMode = true;
+          calibPoint1 = null;
+          calibPoint2 = null;
+          $.each(calibMarkers, function () { mapInstance.removeLayer(this); });
+          calibMarkers = [];
+          mapInstance.getContainer().style.cursor = "crosshair";
+          alert("Click two points on the map to measure the distance between them.");
+        }
+
+        function handleCalibrationClick(e) {
+          if (!calibratingMode || !mapInstance) return;
+
+          var pos = mapInstance.mouseEventToLatLng(e);
+          if (!calibPoint1) {
+            calibPoint1 = pos;
+            var m = L.circle(pos, { radius: 4, color: "#ff0000", fill: true, fillColor: "#ff0000", fillOpacity: 1 }).addTo(mapInstance);
+            calibMarkers.push(m);
+          } else if (!calibPoint2) {
+            calibPoint2 = pos;
+            var m = L.circle(pos, { radius: 4, color: "#ff0000", fill: true, fillColor: "#ff0000", fillOpacity: 1 }).addTo(mapInstance);
+            calibMarkers.push(m);
+            var line = L.polyline([calibPoint1, calibPoint2], { color: "#ff0000", weight: 2, dashArray: "5,5" }).addTo(mapInstance);
+            calibMarkers.push(line);
+            promptScaleCalibration();
+          }
+        }
+
+        function promptScaleCalibration() {
+          if (!calibPoint1 || !calibPoint2) return;
+          var distPx = mapInstance.distance(calibPoint1, calibPoint2); // pixels (since CRS.Simple)
+          var distM = prompt("Enter the real world distance between the two points in meters:");
+          if (!distM || isNaN(distM) || parseFloat(distM) <= 0) { cancelCalibration(); return; }
+          var scaleRatio = prompt("Enter the map scale ratio (the X value in 1:X, e.g. 10000):", "10000");
+          if (!scaleRatio || isNaN(scaleRatio) || parseInt(scaleRatio) <= 0) { cancelCalibration(); return; }
+          var ppm = distPx / parseFloat(distM); // pixels per meter
+          $.ajax({
+            url: "/api/v1/Competitions/" + competitionId + "/Map",
+            method: "PATCH",
+            data: JSON.stringify({ mapScale: ppm, mapScaleRatio: parseInt(scaleRatio) }),
+            dataType: "json"
+          }).then(function () {
+            mapMeta.mapScale = ppm;
+            mapMeta.mapScaleRatio = parseInt(scaleRatio);
+            renderScaleBar();
+            cancelCalibration();
+          }, function () {
+            alert("Failed to save calibration");
+            cancelCalibration();
+          });
+        }
+
+        function cancelCalibration() {
+          calibratingMode = false;
+          calibPoint1 = null;
+          calibPoint2 = null;
+          $.each(calibMarkers, function () { mapInstance.removeLayer(this); });
+          calibMarkers = [];
+          mapInstance.getContainer().style.cursor = "";
+        }
+
         function initMap(meta) {
           var img = new Image();
           img.onload = function () {
@@ -992,7 +1137,11 @@
             mapInstance.on("zoomend", function () {
               adjustControlSizes();
               adjustPopupSizes();
+              renderScaleBar();
               mapInstance.closePopup();
+            });
+            mapInstance.on("click", function (e) {
+              if (calibratingMode) handleCalibrationClick(e.originalEvent);
             });
             mapInstance.on("popupopen", function (e) {
               adjustPopupSizes();
@@ -1012,6 +1161,7 @@
               e.popup.update();
             });
 
+            renderScaleBar();
             $("#btnSaveMapView").show();
             $("#btnDeleteMap").show();
           };
@@ -1120,6 +1270,15 @@
                 return;
               }
               saveMapViewState();
+            });
+
+            $("#btnCalibrateScale").click(function () {
+              if (!hasEditAccess) {
+                alert("You do not have permission.");
+                return;
+              }
+              if (calibratingMode) { cancelCalibration(); return; }
+              startCalibration();
             });
 
             $("#btnDeleteMap").click(function () {

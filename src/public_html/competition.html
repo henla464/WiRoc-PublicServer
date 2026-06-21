@@ -1081,15 +1081,13 @@
         var calibMarkers = [];
 
         var measuringMode = false;
-        var measMarkers = [];
+        var measMarkers = []; // [point1, point2, line, label]
 
-        function toggleMeasuring() {
-          if (measuringMode) { stopMeasuring(); return; }
+        function startMeasuring() {
           if (calibratingMode) { cancelCalibration(); }
+          stopMeasuring(); // clear any previous
           measuringMode = true;
-          $.each(measMarkers, function () { mapInstance.removeLayer(this); });
-          measMarkers = [];
-          $("#btnMeasure").text("Stop measuring").removeClass("btn-outline-dark").addClass("btn-dark");
+          $("#btnMeasure").text("Measuring...").removeClass("btn-outline-dark").addClass("btn-dark");
           $("#measureResult").hide().text("");
           mapInstance.getContainer().style.cursor = "crosshair";
         }
@@ -1099,6 +1097,7 @@
           $.each(measMarkers, function () { mapInstance.removeLayer(this); });
           measMarkers = [];
           $("#btnMeasure").text("Measure distance").removeClass("btn-dark").addClass("btn-outline-dark");
+          $("#measureResult").hide().text("");
           mapInstance.getContainer().style.cursor = "";
         }
 
@@ -1106,36 +1105,42 @@
           if (!measuringMode || !mapInstance) return;
           var pos = mapInstance.mouseEventToLatLng(e);
 
-          var m = L.circle(pos, { radius: 4, color: "#000", fill: true, fillColor: "#000", fillOpacity: 1 }).addTo(mapInstance);
-          measMarkers.push(m);
-
-          if (measMarkers.length >= 2) {
-            // Draw line between last two points
-            var prev = measMarkers[measMarkers.length - 2].getLatLng();
-            var line = L.polyline([prev, pos], { color: "#000", weight: 2 }).addTo(mapInstance);
+          if (measMarkers.length === 0) {
+            // First point
+            var m = L.circle(pos, { radius: 4, color: "#000", fill: true, fillColor: "#000", fillOpacity: 1 }).addTo(mapInstance);
+            measMarkers.push(m);
+          } else if (measMarkers.length === 1) {
+            // Second point — draw line, calculate, show label
+            var p1 = measMarkers[0].getLatLng();
+            var m = L.circle(pos, { radius: 4, color: "#000", fill: true, fillColor: "#000", fillOpacity: 1 }).addTo(mapInstance);
+            measMarkers.push(m);
+            var line = L.polyline([p1, pos], { color: "#000", weight: 2 }).addTo(mapInstance);
             measMarkers.push(line);
 
-            // Calculate total pixel distance along all segments
-            var totalPx = 0;
-            var allPoints = [];
-            $.each(measMarkers, function () {
-              if (this.getLatLng) allPoints.push(this.getLatLng());
-            });
-            for (var i = 1; i < allPoints.length; i++) {
-              totalPx += mapInstance.distance(allPoints[i-1], allPoints[i]);
-            }
-
-            // Convert to real distance if calibrated (mapScale is pixels/meter at zoom 0, distance() uses projected coords)
+            var totalPx = mapInstance.distance(p1, pos);
             var ppm = mapMeta && mapMeta.mapScale ? mapMeta.mapScale : 0;
             var distText;
             if (ppm > 0) {
               var meters = totalPx / ppm;
-              if (meters >= 1000) distText = (meters / 1000).toFixed(2) + " km";
-              else distText = Math.round(meters) + " m";
+              distText = (meters >= 1000) ? (meters / 1000).toFixed(2) + " km" : Math.round(meters) + " m";
             } else {
               distText = Math.round(totalPx) + " px";
             }
-            $("#measureResult").text("Distance: " + distText).show();
+
+            var label = L.marker(pos, {
+              icon: L.divIcon({
+                className: "meas-distance-label",
+                html: '<div style="background:#fff; border:1px solid #333; border-radius:3px; padding:3px 7px; font-size:24px; font-weight:bold; white-space:nowrap; color:#333; display:inline-block;">' + distText + '</div>',
+                iconSize: [200, 50],
+                iconAnchor: [-20, 5],
+              }),
+              interactive: false,
+            }).addTo(mapInstance);
+            measMarkers.push(label);
+
+            measuringMode = false;
+            mapInstance.getContainer().style.cursor = "";
+            $("#btnMeasure").text("Clear distance");
           }
         }
 
@@ -1440,7 +1445,9 @@
             });
 
             $("#btnMeasure").click(function () {
-              toggleMeasuring();
+              if (measuringMode) { stopMeasuring(); }
+              else if (measMarkers.length > 0) { stopMeasuring(); }
+              else { startMeasuring(); }
             });
 
             // Handle control assignment changes from device table dropdowns

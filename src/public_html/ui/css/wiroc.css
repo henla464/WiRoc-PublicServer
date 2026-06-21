@@ -121,3 +121,11 @@
   background: transparent !important;
   border: none !important;
 }
+
+.meas-distance-label {
+  width: auto !important;
+  height: auto !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border: none !important;
+}

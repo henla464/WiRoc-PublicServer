@@ -1778,14 +1778,17 @@
           // Free-space path loss
           var FSPL = 32.45 + 20 * Math.log10(freq) + 20 * Math.log10(Math.max(dkm, 0.001));
 
-          // Epstein-Peterson diffraction over terrain with Earth curvature
+          // Effective Earth radius (k=4/3) and curvature function
+          var k = 4 / 3;
+          var Re = 6371e3 * k;
+          function earthCurveHeight(distFromEnd, totalDist, Re_curv) { var d1 = distFromEnd; var d2 = totalDist - distFromEnd; return (d1 * d2) / (2 * Re_curv); }
+
           var losBlocked = false;
           var maxClearanceRatio = 0;
           for (var i = 1; i < n-1; i++) {
             var t = i / (n-1);
             var losEl = antenna1h + (antenna2h - antenna1h) * t;
-            // Earth bulge: effective LOS curves downward, so we add bulge height to terrain
-            var curveEl = earthCurveHeight(t * distM, distM);
+            var curveEl = earthCurveHeight(t * distM, distM, Re);
             var effectiveTerrain = elevations[i] + curveEl;
             var clearance = losEl - effectiveTerrain;
             if (clearance < 0) losBlocked = true;
@@ -1796,18 +1799,6 @@
               var ratio = clearance / f1;
               maxClearanceRatio = Math.max(maxClearanceRatio, Math.abs(ratio));
             }
-          }
-
-          // Effective Earth radius (k=4/3 standard atmosphere) for curvature
-          var k = 4 / 3;
-          var Re = 6371e3 * k;
-          var Re2 = 2 * Re;
-
-          // Account for Earth curvature in LOS check
-          function earthCurveHeight(distFromEnd, totalDist) {
-            var d1 = distFromEnd;
-            var d2 = totalDist - distFromEnd;
-            return (d1 * d2) / Re2; // meter bulge at this point due to Earth curvature
           }
 
           var totalLoss = FSPL;
@@ -1821,7 +1812,7 @@
             for (var j = 1; j < n-1; j++) {
               var t2 = j / (n-1);
               var losEl2 = antenna1h + (antenna2h - antenna1h) * t2;
-              var curveEl2 = earthCurveHeight(t2 * distM, distM);
+              var curveEl2 = earthCurveHeight(t2 * distM, distM, Re);
               var cl = (elevations[j] + curveEl2) - losEl2; // positive = terrain+curvature above LOS
               if (cl > worstClearance) worstClearance = cl;
             }

@@ -122,6 +122,20 @@
   border: none !important;
 }
 
+.nav-tabs .nav-link {
+  border: 2px solid #dee2e6 !important;
+  border-bottom-color: transparent !important;
+  background: #f8f9fa;
+  color: #6c757d;
+  font-weight: 500;
+}
+.nav-tabs .nav-link.active {
+  border-color: #333 #333 #fff !important;
+  background: #fff;
+  color: #333;
+  font-weight: 600;
+}
+
 .meas-distance-label {
   width: auto !important;
   height: auto !important;

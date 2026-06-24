@@ -1429,21 +1429,19 @@
 
         function adjustSatelliteControlSizes() {
           if (!satelliteMap || !georefPoints.p1Lat || !mapMeta.mapScale) return;
-          // Skip when container has no real size (satellite tab not yet shown)
-          var satEl = satelliteMap.getContainer();
-          if (!satEl || satEl.clientHeight === 0) return;
+          var sZoom = satelliteMap.getZoom();
+          if (sZoom === undefined || sZoom === 0) return;
 
+          // Convert orienteering control ground size to satellite screen pixels.
+          // Orientering control covers 45/mapScale meters of ground (same regardless of oZoom).
+          // Scale proportionally with satellite zoom so controls grow when zooming in.
           var satLat = georefPoints.p1Lat;
           var cosLat = Math.cos(satLat * Math.PI / 180);
-          var sZoom = satelliteMap.getZoom();
           var satMetersPerPx = 156543 * cosLat / Math.pow(2, sZoom);
-          // Orientering controls use font-size 45 pixels at zoom0, scaled up by orienteering zoom.
-          // The physical size in meters covered by the control text is always 45 / mapScale
-          // because both pixel size and map resolution scale by 2^oZoom, which cancels out.
-          var targetMeters = 45 / mapMeta.mapScale;
+          var targetMeters = 45 / mapMeta.mapScale * 1.25; // 1.25x compensates calibration variance
           var ctrlSize = Math.round(targetMeters / satMetersPerPx);
-          var hdrSize = Math.round(20 / mapMeta.mapScale / satMetersPerPx);
-          var markerRadius = Math.round(24 / mapMeta.mapScale / satMetersPerPx);
+          var hdrSize = Math.round(20 / mapMeta.mapScale * 1.25 / satMetersPerPx);
+          var markerRadius = Math.round(24 / mapMeta.mapScale * 1.25 / satMetersPerPx);
 
           $.each(satelliteControlLayers, function () {
 

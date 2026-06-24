@@ -60,6 +60,7 @@
           <div id="mapEditButtons" style="display:none">
             <button type="button" id="btnSaveMapView" class="btn btn-outline-dark btn me-1"><i class="fa fa-save"></i> Save current view</button>
             <button type="button" id="btnGeorefMap" class="btn btn-outline-dark btn me-1"><i class="fa fa-globe"></i> Georeference Map</button>
+            <button type="button" id="btnLockControls" class="btn btn-outline-dark btn me-1"><i class="fa fa-lock"></i> Unlock controls</button>
           </div>
           <div id="mapMeasureArea" style="display:none">
             <button type="button" id="btnMeasure" class="btn btn-outline-dark btn me-1"><i class="fa fa-arrows-h"></i> Measure distance</button>
@@ -738,6 +739,7 @@
         var hasViewAccess = false;
         var hasEditAccess = false;
         var isLoggedIn = false;
+        var controlsLocked = true;
         var mapImgWidth = 0;
         var mapImgHeight = 0;
         var placingControls = false;
@@ -1364,8 +1366,8 @@
                 var layerIdx = controlLayers.length;
                 controlLayers.push(layerEntry);
 
-                // Draggable for repositioning
-                if (hasEditAccess) {
+                // Draggable for repositioning (only when unlocked)
+                if (hasEditAccess && !controlsLocked) {
                   var dragMarker = L.marker([cy, cx], {
                     draggable: true,
                     icon: L.divIcon({
@@ -1693,8 +1695,8 @@
                 controlId: this.id,
               });
 
-              // Draggable for edit access users on satellite map
-              if (hasEditAccess) {
+              // Draggable for edit access users on satellite map (only when unlocked)
+              if (hasEditAccess && !controlsLocked) {
                 var sDragMarker = L.marker([ll.lat, ll.lng], {
                   draggable: true,
                   icon: L.divIcon({
@@ -2862,6 +2864,29 @@
               updateGeorefBanner(
                 "Click a known point (e.g. road crossing) on the orienteering map (point 1/2)",
               );
+            });
+
+            $("#btnLockControls").click(function () {
+              controlsLocked = !controlsLocked;
+              if (controlsLocked) {
+                $(this).html('<i class="fa fa-lock"></i> Unlock controls');
+                $(this).removeClass("btn-dark").addClass("btn-outline-dark");
+              } else {
+                $(this).html('<i class="fa fa-unlock"></i> Lock controls');
+                $(this).removeClass("btn-outline-dark").addClass("btn-dark");
+              }
+              // Re-render controls on both maps with new draggable state
+              loadControlsTable(competitionId, function () {
+                loadDeviceTable();
+                if (orienteeringMap && mapImgWidth > 0) {
+                  placeControlsOnMap(mapImgWidth, mapImgHeight);
+                }
+                if (georefPoints.p1Lat) {
+                  setTimeout(function () {
+                    placeControlsOnSatelliteMap(mapImgWidth, mapImgHeight);
+                  }, 300);
+                }
+              });
             });
 
             // Handle control assignment changes from device table dropdowns

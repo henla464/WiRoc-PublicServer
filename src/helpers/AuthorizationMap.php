@@ -129,7 +129,8 @@ class AuthorizationMap {
             'getControls',
             'getControl',
             'getCompetitionControlsWithDevices',
-            'getCompetitionMapFile');
+            'getCompetitionMapFile',
+            'getCompetitionAccessLevel');
     }
 
     public function needsAuthorization(ServerRequestInterface $request) {

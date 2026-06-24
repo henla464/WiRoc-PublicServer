@@ -414,9 +414,44 @@
               const competition = JSON.parse(data);
               $("#header").text("Competition: " + competition.name);
               $("#controlsHeader").text("Controls for " + competition.name);
-              loadDeviceTable();
-              loadMap();
-              checkControlsAccess(competition);
+              // Check access first, then load map (hasViewAccess must be set before loadMap reads it)
+              $.ajax({
+                url: "/api/v1/Competitions/" + competitionId + "/access",
+                dataType: "json",
+              }).then(function (access) {
+                isLoggedIn = access.isLoggedIn;
+                hasViewAccess = access.hasViewAccess;
+                hasEditAccess = access.hasEditAccess;
+
+                loadMap();
+
+                if (isLoggedIn) {
+                  $("#btnTabOrienteering").show();
+                  $("#mapTabs").show();
+                }
+
+                if (hasViewAccess) {
+                  loadControlsTable(competitionId, function () {
+                    loadDeviceTable();
+                    if (mapInstance && mapImgWidth > 0) {
+                      placeControlsOnMap(mapImgWidth, mapImgHeight);
+                    }
+                  });
+                  $("#controlsSection").show();
+                } else {
+                  loadDeviceTable();
+                }
+
+                if (hasEditAccess) {
+                  $("#btnOpenAddControl").show();
+                  $(".control-editcol, .control-deletecol").show();
+                  showMapEditButtons(true);
+                  if (access.isCreator) {
+                    $("#btnOpenAccess").show();
+                  }
+                  initCompetitionAccess();
+                }
+              });
             },
             function (fail) {},
           );
@@ -700,7 +735,9 @@
         var activeMapType = "orienteering";
         var controlGroup = null;
         var satelliteControlGroup = null;
+        var hasViewAccess = false;
         var hasEditAccess = false;
+        var isLoggedIn = false;
         var mapImgWidth = 0;
         var mapImgHeight = 0;
         var placingControls = false;
@@ -709,101 +746,7 @@
         var georefP1 = null,
           georefP2 = null;
 
-        function checkControlsAccess(competition) {
-          getIsLoggedIn(function (isLoggedIn) {
-            if (!isLoggedIn) {
-              $("#btnOpenAddControl").hide();
-              $("#btnOpenAccess").hide();
-              showMapEditButtons(false);
-              return;
-            }
-            getIsAdmin(function (isAdmin) {
-              if (isAdmin) {
-                $("#btnOpenAddControl").show();
-                $("#btnOpenAccess").show();
-                $(".control-editcol, .control-deletecol").show();
-                hasEditAccess = true;
-                showMapEditButtons(true);
-                reloadWithEditAccess();
-                return;
-              }
-              $.ajax({
-                url: "/api/v1/login",
-                dataType: "json",
-              }).then(
-                function (loginResp) {
-                  if (!loginResp.isLoggedIn) {
-                    $("#btnOpenAddControl").hide();
-                    $("#btnOpenAccess").hide();
-                    showMapEditButtons(false);
-                    return;
-                  }
-                  if (
-                    competition &&
-                    competition.createdByUserId == loginResp.userId
-                  ) {
-                    $("#btnOpenAddControl").show();
-                    $("#btnOpenAccess").show();
-                    $(".control-editcol, .control-deletecol").show();
-                    hasEditAccess = true;
-                    showMapEditButtons(true);
-                    reloadWithEditAccess();
-                  } else {
-                    $.ajax({
-                      url: "/api/v1/CompetitionAccess",
-                      dataType: "json",
-                    }).then(
-                      function (entries) {
-                        var hasAccess = false;
-                        if (entries) {
-                          $.each(entries, function () {
-                            if (this.competitionId == competitionId) {
-                              hasAccess = true;
-                              return false;
-                            }
-                          });
-                        }
-                        if (hasAccess) {
-                          $("#btnOpenAddControl").show();
-                          $(".control-editcol, .control-deletecol").show();
-                          hasEditAccess = true;
-                          showMapEditButtons(true);
-                          reloadWithEditAccess();
-                        } else {
-                          $("#btnOpenAddControl").hide();
-                          $(".control-editcol, .control-deletecol").hide();
-                          showMapEditButtons(false);
-                        }
-                        // Access button: only for creator or admin
-                        $("#btnOpenAccess").hide();
-                      },
-                      function () {
-                        $("#btnOpenAddControl").hide();
-                        $("#btnOpenAccess").hide();
-                        showMapEditButtons(false);
-                      },
-                    );
-                  }
-                },
-                function () {
-                  $("#btnOpenAddControl").hide();
-                  $("#btnOpenAccess").hide();
-                  showMapEditButtons(false);
-                },
-              );
-            });
-
-            function reloadWithEditAccess() {
-              loadControlsTable(competitionId, function () {
-                loadDeviceTable();
-                if (mapInstance && mapImgWidth > 0) {
-                  placeControlsOnMap(mapImgWidth, mapImgHeight);
-                }
-              });
-              $("#controlsSection").show();
-            }
-          });
-        }
+        // Access is checked via loadHeader() which calls the access API endpoint
 
         function initCompetitionAccess() {
           $("#competitionaccess-modal-placeholder").load("competitionaccessmodal.html", function() {
@@ -817,11 +760,12 @@
 
             $("#buttonGrantAccess").click(function() {
               var userEmail = $("#userEmailInput").val();
+              var role = $("#accessRoleInput").val() || "view";
               if (!userEmail) return;
               $.ajax({
                 url: "/api/v1/CompetitionAccess/grant",
                 method: "POST",
-                data: JSON.stringify({ competitionId: competitionId, UserEmail: userEmail }),
+                data: JSON.stringify({ competitionId: competitionId, UserEmail: userEmail, accessRole: role }),
                 dataType: "json"
               }).then(function(res) {
                 $("#grantErrorAlert").addClass("collapse");
@@ -859,7 +803,8 @@
             if (entries) {
               $.each(entries, function() {
                 if (this.competitionId == compId) {
-                  $("#CompetitionAccesses tbody").append('<tr><td>' + this.UserEmail + '</td><td>' + this.GrantedAt + '</td><td><button class="btn btn-sm btn-danger revokeaccess" data-userid="' + this.UserId + '">Revoke</button></td></tr>');
+                  var roleStr = this.accessRole || 'edit';
+                  $("#CompetitionAccesses tbody").append('<tr><td>' + this.UserEmail + '</td><td>' + roleStr + '</td><td>' + this.GrantedAt + '</td><td><button class="btn btn-sm btn-danger revokeaccess" data-userid="' + this.UserId + '">Revoke</button></td></tr>');
                 }
               });
             }
@@ -940,17 +885,41 @@
               mapMeta = meta;
               loadGeorefData(meta);
               var hasGeo = georefPoints.p1Lat ? true : false;
+              var hasMap = meta.exists;
               if (hasGeo) {
                 $("#btnTabSatellite").removeAttr("disabled");
               }
-              // Satellite controls placed automatically by placeControlsOnMap when georeferenced
-              if (!hasGeo) {
-                setActiveMap("orienteering");
-              }
+
               $("#mapSection").show();
               $("#mapContainer").show();
 
-              if (meta.exists) {
+              if (!hasViewAccess) {
+                // No view access: show message on orienteering tab, satellite available
+                $("#mapMeasureArea").show();
+                $("#orienteeringMapContainer").show();
+                $("#map").hide();
+                $("#mapNoFile").show().text("Log in to view the orienteering map.");
+                $("#mapOrienteeringButtons").hide();
+                $("#mapEditButtons").hide();
+                $("#mapTabs").show();
+                $("#btnTabOrienteering").show();
+                $("#satelliteMapContainer").show();
+                $("#satelliteMapNoGeo").hide();
+                if (satelliteMap) {
+                  satelliteMap.remove();
+                  satelliteMap = null;
+                }
+                initSatelliteOnlyMap();
+                setActiveMap("satellite");
+                return;
+              }
+
+              // View access or higher: full map (PNG orienteering + satellite)
+              if (!hasGeo) {
+                setActiveMap("orienteering");
+              }
+
+              if (hasMap) {
                 $("#mapNoFile").hide();
                 $("#map").show();
                 if (mapInstance) {
@@ -972,7 +941,6 @@
                 $("#map").hide();
                 $("#mapMeasureArea").hide();
                 $("#mapNoFile").show();
-                // Hide save view / delete buttons when no map exists
                 $("#btnSaveMapView").hide();
                 $("#btnDeleteMap").hide();
               }
@@ -998,6 +966,7 @@
           if (measuringMode || measMarkers.length > 0) stopMeasuring();
           activeMapType = type;
           if (type === "orienteering") {
+            if (!orienteeringMap) return;
             mapInstance = orienteeringMap;
             $("#orienteeringMapContainer").show();
             $("#satelliteMapContainer").hide();
@@ -1009,12 +978,9 @@
             $("#orienteeringMapContainer").hide();
             $("#satelliteMapContainer").show();
             $("#mapOrienteeringButtons").hide();
-            if (!georefPoints.p1Lat && !georefState) {
-              $("#satelliteMap").hide();
-              $("#satelliteMapNoGeo").show();
-            } else {
-              $("#satelliteMap").show();
-              $("#satelliteMapNoGeo").hide();
+            $("#satelliteMap").show();
+            $("#satelliteMapNoGeo").hide();
+            if (georefPoints.p1Lat || georefState) {
               // Sync satellite view to show same area as orienteering map
               if (orienteeringMap && georefPoints.p1Lat && mapMeta.mapScale) {
                 var oCenter = orienteeringMap.getCenter();
@@ -2277,6 +2243,69 @@
 
 
 
+        function initSatelliteOnlyMap() {
+          satelliteMap = L.map("satelliteMap", {
+            center: [0, 0],
+            zoom: 1,
+            scrollWheelZoom: true,
+          });
+
+          var satLayer = L.tileLayer(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            { attribution: "Esri", maxZoom: 19 }
+          );
+          var streetLayer = L.tileLayer(
+            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+            { attribution: "© OpenStreetMap contributors", maxZoom: 19 }
+          );
+          satLayer.addTo(satelliteMap);
+
+          var brightnessLevels = [1.0, 1.3, 1.5, 1.8];
+          var currentBrightness = 1.0;
+
+          function setBrightness(val) {
+            currentBrightness = val;
+            var pane = satelliteMap.getPane("tilePane");
+            if (pane) pane.style.filter = "brightness(" + val + ")";
+            $(".brightness-btn").removeClass("active");
+            $(".brightness-btn[data-brightness='" + val + "']").addClass("active");
+          }
+
+          var BrightnessControl = L.Control.extend({
+            options: { position: "topright" },
+            onAdd: function () {
+              var div = L.DomUtil.create("div", "leaflet-bar leaflet-control");
+              div.style.cssText = "background:#fff; padding:3px 5px; font-size:12px; white-space:nowrap;";
+              var html = '<span style="color:#333;font-weight:bold;margin-right:4px;">Brightness</span>';
+              $.each(brightnessLevels, function (i, b) {
+                html += '<button class="brightness-btn" data-brightness="' + b + '" style="border:1px solid #ccc; background:#fff; padding:1px 5px; cursor:pointer; font-size:11px; border-radius:2px; margin:0 1px;">' + Math.round(b * 100) + '%</button>';
+              });
+              div.innerHTML = html;
+              L.DomEvent.disableClickPropagation(div);
+              L.DomEvent.disableScrollPropagation(div);
+              div.addEventListener("click", function (e) {
+                var btn = e.target.closest(".brightness-btn");
+                if (btn) setBrightness(parseFloat(btn.getAttribute("data-brightness")));
+              });
+              return div;
+            }
+          });
+          new BrightnessControl().addTo(satelliteMap);
+
+          L.control.layers({ "Satellite": satLayer, "Street Map": streetLayer }, null, { position: "topright", collapsed: false }).addTo(satelliteMap);
+
+          satelliteMap.on("click", function (e) {
+            if (measuringMode) { handleMeasureClick(e.originalEvent); return; }
+          });
+
+          // Try to set view based on georef data
+          if (georefPoints.p1Lat) {
+            var centerLat = (georefPoints.p1Lat + georefPoints.p2Lat) / 2;
+            var centerLng = (georefPoints.p1Lng + georefPoints.p2Lng) / 2;
+            satelliteMap.setView([centerLat, centerLng], 15, { animate: false });
+          }
+        }
+
         function initMap(meta) {
           var img = new Image();
           img.onload = function () {
@@ -2610,7 +2639,7 @@
         $(document).ready(function () {
           $("#nav-placeholder").load("navigation.html", function () {
             initNavigation();
-            initCompetitionAccess();
+            // initCompetitionAccess() is called from loadHeader() after access check
             $.each($(".navbar").find(".nav-link"), function () {
               $(this).toggleClass(
                 "active",

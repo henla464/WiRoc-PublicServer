@@ -9,8 +9,14 @@
                         <h6>Grant access to a user</h6>
                         <form id="accessGrantForm" class="needs-validation mb-3" novalidate>
                                 <div class="row">
-                                        <div class="col-8">
+                                        <div class="col-5">
                                                 <input type="email" class="form-control" id="userEmailInput" placeholder="User email" required>
+                                        </div>
+                                        <div class="col-3">
+                                                <select class="form-select" id="accessRoleInput">
+                                                        <option value="view">View</option>
+                                                        <option value="edit">Edit</option>
+                                                </select>
                                         </div>
                                         <div class="col-4">
                                                 <button type="button" id="buttonGrantAccess" class="btn btn-secondary">Grant Access</button>
@@ -26,6 +32,7 @@
                                 <thead>
                                         <tr>
                                                 <th scope="col">User Email</th>
+                                                <th scope="col">Role</th>
                                                 <th scope="col">Granted At</th>
                                                 <th scope="col"></th>
                                         </tr>

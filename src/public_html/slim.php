@@ -3322,7 +3322,7 @@ $app->delete('/api/v1/WiRocPython2ReleaseUpgradeScripts/{scriptId}', function (R
 $app->get('/api/v1/Competitions/{competitionId}/Controls/withDevices', function (Request $request, Response $response) {
     $competitionId = $request->getAttribute('competitionId');
 
-    $err = $this->get('helper')->requireCompetitionEditAccess($response, $competitionId);
+    $err = $this->get('helper')->requireCompetitionViewAccess($response, $competitionId);
     if ($err) return $err;
 
     $sql = "SELECT c.id, c.controlNumber, c.name as controlName, c.description, c.mapX, c.mapY, c.controlType,
@@ -3447,7 +3447,7 @@ $app->get('/api/v1/Competitions/{competitionId}/Map', function (Request $request
 $app->get('/api/v1/Competitions/{competitionId}/Map/file', function (Request $request, Response $response) {
     $competitionId = $request->getAttribute('competitionId');
 
-    $err = $this->get('helper')->requireCompetitionEditAccess($response, $competitionId);
+    $err = $this->get('helper')->requireCompetitionViewAccess($response, $competitionId);
     if ($err) return $err;
 
     $cls = CompetitionMap::class;
@@ -3882,7 +3882,7 @@ $app->get('/api/v1/Controls', function ($request, $response) use ($app) {
     $sort = $this->get('helper')->getSort($cls, $request);
     $limit = $this->get('helper')->getLimit($request);
     if (trim($competitionId) != '' && ctype_digit($competitionId)) {
-        $err = $this->get('helper')->requireCompetitionEditAccess($response, $competitionId);
+        $err = $this->get('helper')->requireCompetitionViewAccess($response, $competitionId);
         if ($err) return $err;
         $sql = "SELECT * FROM {$cls::$tableName} WHERE competitionId = :competitionId " . $sort . " " . $limit;
         $response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, ['competitionId'=>$competitionId])));
@@ -3928,7 +3928,7 @@ $app->get('/api/v1/Controls/{controlId}', function (Request $request, Response $
         return $response->withStatus(404);
     }
 
-    $err = $this->get('helper')->requireCompetitionEditAccess($response, $control->competitionId);
+    $err = $this->get('helper')->requireCompetitionViewAccess($response, $control->competitionId);
     if ($err) return $err;
 
     $response->getBody()->write(json_encode($control));
@@ -4173,7 +4173,7 @@ $app->get('/api/v1/CompetitionAccess', function (Request $request, Response $res
 
     try {
         $compAccessCls = CompetitionAccess::class;
-        $selectFields = "SELECT ca.id, ca.competitionId, ca.UserId, u.email AS UserEmail, ca.GrantedAt, ca.GrantedByUserId, ca.updateTime, ca.createdTime,
+        $selectFields = "SELECT ca.id, ca.competitionId, ca.UserId, u.email AS UserEmail, ca.GrantedAt, ca.GrantedByUserId, ca.accessRole, ca.updateTime, ca.createdTime,
                        c.name AS CompetitionName
                 FROM {$compAccessCls::$tableName} ca
                 JOIN Users u ON ca.UserId = u.id
@@ -4201,6 +4201,71 @@ $app->get('/api/v1/CompetitionAccess', function (Request $request, Response $res
     $response->getBody()->write(json_encode($entries));
     return $response;
 })->setName("getCompetitionAccesses");
+
+/**
+ * @SWG\Get(
+ *     path="/api/v1/Competitions/{competitionId}/access",
+ *     description="Get current user's access level for a competition",
+ *     operationId="getCompetitionAccessLevel",
+ *     @SWG\Parameter(
+ *         description="ID of the Competition",
+ *         format="int64", in="path", name="competitionId", required=true, type="integer"
+ *     ),
+ *     @SWG\Response(response=200, description="Access level info"),
+ *     security={ {} }
+ * )
+ */
+$app->get('/api/v1/Competitions/{competitionId}/access', function (Request $request, Response $response) {
+    $competitionId = $request->getAttribute('competitionId');
+    $res = new \stdClass();
+    $res->isLoggedIn = !empty($_SESSION['userId']);
+    $res->isAdmin = !empty($_SESSION['userIsAdmin']);
+    $res->hasViewAccess = false;
+    $res->hasEditAccess = false;
+    $res->isCreator = false;
+
+    if (!$res->isLoggedIn) {
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    }
+
+    // Check creator
+    $compCls = Competition::class;
+    $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $competitionId);
+    if ($competition && $competition->createdByUserId == $_SESSION['userId']) {
+        $res->isCreator = true;
+        $res->hasViewAccess = true;
+        $res->hasEditAccess = true;
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    }
+
+    // Admin
+    if (!empty($_SESSION['userIsAdmin'])) {
+        $res->hasViewAccess = true;
+        $res->hasEditAccess = true;
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    }
+
+    // Check CompetitionAccesses
+    try {
+        $compAccessCls = CompetitionAccess::class;
+        $sql = "SELECT accessRole FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
+        $access = $this->get('helper')->GetBySql($compAccessCls, $sql, [
+            'competitionId' => $competitionId,
+            'UserId' => $_SESSION['userId']
+        ]);
+        if ($access) {
+            $res->hasViewAccess = true;
+            $res->hasEditAccess = ($access->accessRole === 'edit');
+        }
+    } catch (\PDOException $e) {}
+
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("getCompetitionAccessLevel");
+
 
 /**
  * @SWG\Post(
@@ -4277,11 +4342,15 @@ $app->post('/api/v1/CompetitionAccess/grant', function (Request $request, Respon
         return $response;
     }
 
-    $insertSql = "INSERT INTO {$compAccessCls::$tableName} (competitionId, UserId, GrantedAt, GrantedByUserId, createdTime) VALUES (:competitionId, :UserId, NOW(), :GrantedByUserId, NOW())";
+    $role = $objectArray['accessRole'] ?? 'edit';
+    if (!in_array($role, ['view', 'edit'])) $role = 'view';
+
+    $insertSql = "INSERT INTO {$compAccessCls::$tableName} (competitionId, UserId, GrantedAt, GrantedByUserId, accessRole, createdTime) VALUES (:competitionId, :UserId, NOW(), :GrantedByUserId, :accessRole, NOW())";
     $this->get('helper')->RunSql($insertSql, [
         'competitionId' => $objectArray['competitionId'],
         'UserId' => $user->id,
-        'GrantedByUserId' => $_SESSION['userId']
+        'GrantedByUserId' => $_SESSION['userId'],
+        'accessRole' => $role
     ]);
 
     $res = new CommandResponse();

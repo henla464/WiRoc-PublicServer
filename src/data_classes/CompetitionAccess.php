@@ -26,7 +26,13 @@ class CompetitionAccess
      */
     public $GrantedByUserId;
 
-	public $updateTime;
+    /**
+     * @SWG\Property()
+     * @var string
+     */
+    public $accessRole;
+
+    public $updateTime;
     public $createdTime;
 }
 

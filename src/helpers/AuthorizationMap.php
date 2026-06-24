@@ -33,11 +33,7 @@ class AuthorizationMap {
             'getMessageStat',
             'getCompetitions',
             'getCompetition',
-            'getControls',
-            'getControl',
             'getCompetitionMap',
-            'getCompetitionMapFile',
-            'getCompetitionControlsWithDevices',
             'postPasswordRecovery',
             'postSetNewPassword');
 
@@ -81,7 +77,6 @@ class AuthorizationMap {
             'getDeviceSetBatteryIsLowReceived',
             'deleteDevice',
             'postDevices',
-            'patchDevice',
             'postDeviceSetConnectedToInternetTime',
             'postDeviceStatus',
             'postMessageStat',
@@ -105,10 +100,14 @@ class AuthorizationMap {
             'getWiRocPython2ReleaseUpgradeScripts',
             'getWiRocPython2ReleaseUpgradeScript',
             'postWiRocPython2ReleaseUpgradeScript',
-            'deleteWiRocPython2ReleaseUpgradeScript');
+            'deleteWiRocPython2ReleaseUpgradeScript',
+            'deleteDeviceById',
+            'getDeviceSetBatteryIsNormalReceived',
+            'getDeviceSetBatteryIsNormal');
         
         $this->loggedInRoutesArray = array(
             'getLogout',
+            'patchDevice',
             'postDeviceSetCompetition',
             'postDeviceSetControl',
             'deleteDeviceStatusesByBTAddress',
@@ -126,7 +125,11 @@ class AuthorizationMap {
             'postCompetitionMap',
             'patchCompetitionMap',
             'deleteCompetitionMap',
-            'patchControlMapPosition');
+            'patchControlMapPosition',
+            'getControls',
+            'getControl',
+            'getCompetitionControlsWithDevices',
+            'getCompetitionMapFile');
     }
 
     public function needsAuthorization(ServerRequestInterface $request) {

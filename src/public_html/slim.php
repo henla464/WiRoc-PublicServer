@@ -52,7 +52,7 @@ $container->set('config', function () {
     $config['db']['pass']   = $ini_array['database']['database_password'];
     $config['db']['dbname'] = $ini_array['database']['database_name'];
     $config['upload']['log_archive_upload_directory'] = $ini_array['upload']['log_archive_upload_directory'];
-    $config['upload']['map_upload_directory'] = $ini_array['upload']['map_upload_directory'] ?? 'Maps/';
+    $config['upload']['map_upload_directory'] = $ini_array['upload']['map_upload_directory'] ?? '../uploads/Maps/';
     $config['pepper'] = $ini_array['user']['pepper'];
     $config['api_key'] = $ini_array['api']['api_key'];
     $config['smtp']['username'] = $ini_array['smtp']['username'];
@@ -1104,15 +1104,14 @@ $app->post('/api/v1/Devices', function (Request $request, Response $response) {
      *         )
      *     ),
      *     security={
-     *       {"api_key": {}}
+     *       {}
      *     }
      * )
      */
     $app->patch('/api/v1/Device', function (Request $request, Response $response) {
         $objectArray = json_decode($request->getBody(), true);
-          
 
-        $BTAddress = $objectArray['BTAddress'];
+        $BTAddress = $objectArray['BTAddress'] ?? null;
         if (isset($BTAddress) && !preg_match('/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/', $BTAddress)) {
             $res = new CommandResponse();
             $res->code = 3;
@@ -1120,27 +1119,35 @@ $app->post('/api/v1/Devices', function (Request $request, Response $response) {
             $response->getBody()->write(json_encode($res));
             return $response->withStatus(400);
         }
-        $deviceId = $objectArray['id'];
+        $deviceId = $objectArray['id'] ?? null;
         if (isset($deviceId)) {
             unset($objectArray['id']);
-        } else {
-            $BTAddress = $objectArray['BTAddress'];
-            if (isset($BTAddress)) {
-                unset($objectArray['BTAddress']);
-
-                $cls = Device::class;
-                $sql = "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress";
-                $device = $this->get('helper')->GetBySql($cls, $sql, ['BTAddress'=>$BTAddress]);
-                $deviceId = $device->id;
-            } else {
-                $res = new CommandResponse();
-                $res->code = 2;
-                $res->message = "No device identifier supplied";
-                $response->getBody()->write(json_encode($res));
-                return $response;
+        } elseif (isset($BTAddress)) {
+            unset($objectArray['BTAddress']);
+            $cls = Device::class;
+            $sql = "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress";
+            $device = $this->get('helper')->GetBySql($cls, $sql, ['BTAddress'=>$BTAddress]);
+            if (!$device) {
+                return $response->withStatus(404);
             }
-        }    
-        
+            $deviceId = $device->id;
+        } else {
+            $res = new CommandResponse();
+            $res->code = 2;
+            $res->message = "No device identifier supplied";
+            $response->getBody()->write(json_encode($res));
+            return $response;
+        }
+
+        // Resolve BTAddress if we only have deviceId, then check DeviceAccess
+        if (!isset($BTAddress) && isset($deviceId)) {
+            $device = $this->get('helper')->Get(Device::class, Device::$tableName, $deviceId);
+            $BTAddress = $device ? $device->BTAddress : null;
+        }
+        if (isset($BTAddress)) {
+            $err = $this->get('helper')->requireDeviceAccess($response, $BTAddress);
+            if ($err) return $err;
+        }
 
         $cls = Device::class;
         try {
@@ -1156,7 +1163,7 @@ $app->post('/api/v1/Devices', function (Request $request, Response $response) {
             }
             throw $e;
         }
-           
+
         $res = new CommandResponse();
         $res->code = 0;
         $res->message = "Device updated";
@@ -1262,42 +1269,10 @@ $app->post('/api/v1/Devices/{BTAddress}/SetConnectedToInternetTime', function (R
             return $response->withStatus(401);
         }
 
-        // Admins bypass DeviceAccess check
-        if (empty($_SESSION['userIsAdmin'])) {
-            $deviceAccessCls = DeviceAccess::class;
-            $checkSql = "SELECT * FROM {$deviceAccessCls::$tableName} WHERE BTAddress = :BTAddress AND UserId = :UserId";
-            $access = $this->get('helper')->GetBySql($deviceAccessCls, $checkSql, [
-                'BTAddress' => $BTAddress,
-                'UserId' => $_SESSION['userId']
-            ]);
-            if (!$access) {
-                return $response->withStatus(403);
-            }
-        }
+        $err = $this->get('helper')->requireDeviceAccess($response, $BTAddress);
+        if ($err) return $err;
 
-        // Verify user has access to the new competition
         $newCompetitionId = $objectArray['competitionId'];
-        // Check if user is the creator of the competition
-        $compCls = Competition::class;
-        $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $newCompetitionId);
-        $isCreator = $competition && $competition->createdByUserId == $_SESSION['userId'];
-
-        // Also check CompetitionAccesses (handle case where table doesn't exist yet)
-        $compAccess = null;
-        try {
-            $compAccessCls = CompetitionAccess::class;
-            $compCheckSql = "SELECT * FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
-            $compAccess = $this->get('helper')->GetBySql($compAccessCls, $compCheckSql, [
-                'competitionId' => $newCompetitionId,
-                'UserId' => $_SESSION['userId']
-            ]);
-        } catch (\PDOException $e) {
-            // Table may not exist yet; fall through to isCreator check only
-        }
-
-        if (!$compAccess && !$isCreator && empty($_SESSION['userIsAdmin'])) {
-            return $response->withStatus(403);
-        }
 
         // Check if competition is changing; if so, clear controlId
         $currentDevice = $this->get('helper')->GetBySql($cls, "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress", ['BTAddress' => $BTAddress]);
@@ -1568,29 +1543,17 @@ $app->post('/api/v1/DeviceStatuses', function (Request $request, Response $respo
 $app->delete('/api/v1/Devices/{BTAddress}/DeviceStatuses/DeleteByBTAddress', function (Request $request, Response $response) {
 	$BTAddress = $request->getAttribute('BTAddress');
 
-    if ($BTAddress != 'all') {
-        $deviceAccessCls = DeviceAccess::class;
-        $checkSql = "SELECT * FROM {$deviceAccessCls::$tableName} WHERE BTAddress = :BTAddress AND UserId = :UserId";
-        $access = $this->get('helper')->GetBySql($deviceAccessCls, $checkSql, [
-            'BTAddress' => $BTAddress,
-            'UserId' => $_SESSION['userId']
-        ]);
-        if (!$access) {
-            return $response->withStatus(403);
-        }
-    } else {
+    if ($BTAddress == 'all') {
+        // Admin-only: delete all statuses
         if (empty($_SESSION['userIsAdmin'])) {
             return $response->withStatus(403);
         }
+        $this->get('helper')->DeleteBySql('DELETE FROM DeviceStatuses', []);
+    } else {
+        $err = $this->get('helper')->requireDeviceAccess($response, $BTAddress);
+        if ($err) return $err;
+        $this->get('helper')->DeleteBySql('DELETE FROM DeviceStatuses WHERE BTAddress = :BTAddress', ['BTAddress' => $BTAddress]);
     }
-
-    $objectArray = [];
-    if ($BTAddress == 'all') {
-        $this->get('helper')->DeleteBySql('DELETE FROM DeviceStatuses', $objectArray);
-	} else {
-		$objectArray['BTAddress'] = $BTAddress;
-		$this->get('helper')->DeleteBySql('DELETE FROM DeviceStatuses WHERE BTAddress = :BTAddress', $objectArray);
-	}
     return $response->withStatus(204);
 })->setName("deleteDeviceStatusesByBTAddress");
 
@@ -1828,29 +1791,17 @@ $app->post('/api/v1/MessageStats', function (Request $request, Response $respons
 $app->delete('/api/v1/Devices/{BTAddress}/MessageStats/DeleteByBTAddress', function (Request $request, Response $response) {
 	$BTAddress = $request->getAttribute('BTAddress');
 
-    if ($BTAddress != 'all') {
-        $deviceAccessCls = DeviceAccess::class;
-        $checkSql = "SELECT * FROM {$deviceAccessCls::$tableName} WHERE BTAddress = :BTAddress AND UserId = :UserId";
-        $access = $this->get('helper')->GetBySql($deviceAccessCls, $checkSql, [
-            'BTAddress' => $BTAddress,
-            'UserId' => $_SESSION['userId']
-        ]);
-        if (!$access) {
-            return $response->withStatus(403);
-        }
-    } else {
+    if ($BTAddress == 'all') {
+        // Admin-only: delete all message stats
         if (empty($_SESSION['userIsAdmin'])) {
             return $response->withStatus(403);
         }
+        $this->get('helper')->DeleteBySql('DELETE FROM MessageStats', []);
+    } else {
+        $err = $this->get('helper')->requireDeviceAccess($response, $BTAddress);
+        if ($err) return $err;
+        $this->get('helper')->DeleteBySql('DELETE FROM MessageStats WHERE BTAddress = :BTAddress', ['BTAddress' => $BTAddress]);
     }
-
-    $objectArray = [];
-    if ($BTAddress == 'all') {
-        $this->get('helper')->DeleteBySql('DELETE FROM MessageStats', $objectArray);
-	} else {
-		$objectArray['BTAddress'] = $BTAddress;
-		$this->get('helper')->DeleteBySql('DELETE FROM MessageStats WHERE BTAddress = :BTAddress', $objectArray);
-	}
     return $response->withStatus(204);
 })->setName("deleteMessageStatsByBTAddress");
 
@@ -3358,18 +3309,22 @@ $app->delete('/api/v1/WiRocPython2ReleaseUpgradeScripts/{scriptId}', function (R
 /**
  * @SWG\Get(
  *     path="/api/v1/Competitions/{competitionId}/Controls/withDevices",
- *     description="Returns all controls for a competition with their associated WiRoc device info",
+ *     description="Returns all controls for a competition with their associated WiRoc device info. Requires competition edit access.",
  *     operationId="getCompetitionControlsWithDevices",
  *     @SWG\Parameter(
  *         description="ID of the Competition",
  *         format="int64", in="path", name="competitionId", required=true, type="integer"
  *     ),
  *     @SWG\Response(response=200, description="Controls with device info"),
- *     security={ {"api_key": {}} }
+ *     security={ {} }
  * )
  */
 $app->get('/api/v1/Competitions/{competitionId}/Controls/withDevices', function (Request $request, Response $response) {
     $competitionId = $request->getAttribute('competitionId');
+
+    $err = $this->get('helper')->requireCompetitionEditAccess($response, $competitionId);
+    if ($err) return $err;
+
     $sql = "SELECT c.id, c.controlNumber, c.name as controlName, c.description, c.mapX, c.mapY, c.controlType,
                    d.id as deviceId, d.name as deviceName, d.BTAddress as deviceBTAddress,
                    d.batteryIsLow, IFNULL(ds.batteryLevel, 0) as batteryLevel
@@ -3414,21 +3369,8 @@ $app->patch('/api/v1/Controls/{controlId}/MapPosition', function (Request $reque
         return $response->withStatus(404);
     }
 
-    // Verify competition edit access
-    $compCls = Competition::class;
-    $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $control->competitionId);
-    $isCreator = $competition && $competition->createdByUserId == $_SESSION['userId'];
-    $compAccess = null;
-    try {
-        $compAccessCls = CompetitionAccess::class;
-        $sql = "SELECT * FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
-        $compAccess = $this->get('helper')->GetBySql($compAccessCls, $sql, [
-            'competitionId' => $control->competitionId, 'UserId' => $_SESSION['userId']
-        ]);
-    } catch (\PDOException $e) {}
-    if (!$compAccess && !$isCreator && empty($_SESSION['userIsAdmin'])) {
-        return $response->withStatus(403);
-    }
+    $err = $this->get('helper')->requireCompetitionEditAccess($response, $control->competitionId);
+    if ($err) return $err;
 
     $updateData = ['mapX' => $objectArray['mapX'], 'mapY' => $objectArray['mapY']];
     $this->get('helper')->Update($controlCls, $updateData, $controlCls::$tableName, $controlId);
@@ -3492,18 +3434,22 @@ $app->get('/api/v1/Competitions/{competitionId}/Map', function (Request $request
 /**
  * @SWG\Get(
  *     path="/api/v1/Competitions/{competitionId}/Map/file",
- *     description="Get the map image file for a competition",
+ *     description="Get the map image file for a competition. Requires competition edit access.",
  *     operationId="getCompetitionMapFile",
  *     @SWG\Parameter(
  *         description="ID of the Competition",
  *         format="int64", in="path", name="competitionId", required=true, type="integer"
  *     ),
  *     @SWG\Response(response=200, description="Map image file"),
- *     security={ {"api_key": {}} }
+ *     security={ {} }
  * )
  */
 $app->get('/api/v1/Competitions/{competitionId}/Map/file', function (Request $request, Response $response) {
     $competitionId = $request->getAttribute('competitionId');
+
+    $err = $this->get('helper')->requireCompetitionEditAccess($response, $competitionId);
+    if ($err) return $err;
+
     $cls = CompetitionMap::class;
     $sql = "SELECT * FROM {$cls::$tableName} WHERE competitionId = :competitionId";
     $map = $this->get('helper')->GetBySql($cls, $sql, ['competitionId' => $competitionId]);
@@ -3544,24 +3490,8 @@ $app->get('/api/v1/Competitions/{competitionId}/Map/file', function (Request $re
 $app->post('/api/v1/Competitions/{competitionId}/Map', function (Request $request, Response $response) {
     $competitionId = $request->getAttribute('competitionId');
 
-    // Verify competition edit access
-    $compCls = Competition::class;
-    $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $competitionId);
-    if (!$competition) {
-        return $response->withStatus(404);
-    }
-    $isCreator = $competition->createdByUserId == $_SESSION['userId'];
-    $compAccess = null;
-    try {
-        $compAccessCls = CompetitionAccess::class;
-        $sql = "SELECT * FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
-        $compAccess = $this->get('helper')->GetBySql($compAccessCls, $sql, [
-            'competitionId' => $competitionId, 'UserId' => $_SESSION['userId']
-        ]);
-    } catch (\PDOException $e) {}
-    if (!$compAccess && !$isCreator && empty($_SESSION['userIsAdmin'])) {
-        return $response->withStatus(403);
-    }
+    $err = $this->get('helper')->requireCompetitionEditAccess($response, $competitionId);
+    if ($err) return $err;
 
     $files = $request->getUploadedFiles();
     if (empty($files['mapfile'])) {
@@ -3654,24 +3584,8 @@ $app->patch('/api/v1/Competitions/{competitionId}/Map', function (Request $reque
     $competitionId = $request->getAttribute('competitionId');
     $objectArray = json_decode($request->getBody(), true);
 
-    // Verify competition edit access
-    $compCls = Competition::class;
-    $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $competitionId);
-    if (!$competition) {
-        return $response->withStatus(404);
-    }
-    $isCreator = $competition->createdByUserId == $_SESSION['userId'];
-    $compAccess = null;
-    try {
-        $compAccessCls = CompetitionAccess::class;
-        $sql = "SELECT * FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
-        $compAccess = $this->get('helper')->GetBySql($compAccessCls, $sql, [
-            'competitionId' => $competitionId, 'UserId' => $_SESSION['userId']
-        ]);
-    } catch (\PDOException $e) {}
-    if (!$compAccess && !$isCreator && empty($_SESSION['userIsAdmin'])) {
-        return $response->withStatus(403);
-    }
+    $err = $this->get('helper')->requireCompetitionEditAccess($response, $competitionId);
+    if ($err) return $err;
 
     $mapCls = CompetitionMap::class;
     $oldSql = "SELECT * FROM {$mapCls::$tableName} WHERE competitionId = :competitionId";
@@ -3723,24 +3637,8 @@ $app->patch('/api/v1/Competitions/{competitionId}/Map', function (Request $reque
 $app->delete('/api/v1/Competitions/{competitionId}/Map', function (Request $request, Response $response) {
     $competitionId = $request->getAttribute('competitionId');
 
-    // Verify competition edit access
-    $compCls = Competition::class;
-    $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $competitionId);
-    if (!$competition) {
-        return $response->withStatus(404);
-    }
-    $isCreator = $competition->createdByUserId == $_SESSION['userId'];
-    $compAccess = null;
-    try {
-        $compAccessCls = CompetitionAccess::class;
-        $sql = "SELECT * FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
-        $compAccess = $this->get('helper')->GetBySql($compAccessCls, $sql, [
-            'competitionId' => $competitionId, 'UserId' => $_SESSION['userId']
-        ]);
-    } catch (\PDOException $e) {}
-    if (!$compAccess && !$isCreator && empty($_SESSION['userIsAdmin'])) {
-        return $response->withStatus(403);
-    }
+    $err = $this->get('helper')->requireCompetitionEditAccess($response, $competitionId);
+    if ($err) return $err;
 
     $mapCls = CompetitionMap::class;
     $oldSql = "SELECT * FROM {$mapCls::$tableName} WHERE competitionId = :competitionId";
@@ -3954,11 +3852,11 @@ $app->delete('/api/v1/Competitions/{competitionId}', function (Request $request,
 /**
  * @SWG\Get(
  *     path="/api/v1/Controls?competitionId={competitionId}&sort={sort}&limit={limit}",
- *     description="Returns all Controls, optionally filtered by competitionId",
+ *     description="Returns Controls for a competition (requires edit access) or all controls (admin only)",
  *     operationId="getControls",
  *     produces={"application/json"},
  *     @SWG\Parameter(
- *         description="Filter by competitionId",
+ *         description="Filter by competitionId (requires edit access to that competition)",
  *         in="path",
  *         name="competitionId",
  *         required=false,
@@ -3973,7 +3871,7 @@ $app->delete('/api/v1/Competitions/{competitionId}', function (Request $request,
  *         ),
  *     ),
  *     security={
- *       {"api_key": {}}
+ *       {}
  *     }
  * )
  */
@@ -3984,9 +3882,15 @@ $app->get('/api/v1/Controls', function ($request, $response) use ($app) {
     $sort = $this->get('helper')->getSort($cls, $request);
     $limit = $this->get('helper')->getLimit($request);
     if (trim($competitionId) != '' && ctype_digit($competitionId)) {
+        $err = $this->get('helper')->requireCompetitionEditAccess($response, $competitionId);
+        if ($err) return $err;
         $sql = "SELECT * FROM {$cls::$tableName} WHERE competitionId = :competitionId " . $sort . " " . $limit;
         $response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, ['competitionId'=>$competitionId])));
     } else {
+        // No competitionId filter: admin only
+        if (empty($_SESSION['userIsAdmin'])) {
+            return $response->withStatus(403);
+        }
         $response->getBody()->write(json_encode($this->get('helper')->GetAll($cls, $cls::$tableName, $request)));
     }
     return $response;
@@ -3995,7 +3899,7 @@ $app->get('/api/v1/Controls', function ($request, $response) use ($app) {
 /**
  * @SWG\Get(
  *     path="/api/v1/Controls/{controlId}",
- *     description="Gets a Control",
+ *     description="Gets a Control. Requires edit access to the control's competition.",
  *     operationId="getControl",
  *     produces={"application/json"},
  *     @SWG\Parameter(
@@ -4012,7 +3916,7 @@ $app->get('/api/v1/Controls', function ($request, $response) use ($app) {
  *         @SWG\Schema(ref="#/definitions/Control")
  *     ),
  *     security={
- *       {"api_key": {}}
+ *       {}
  *     }
  * )
  */
@@ -4023,6 +3927,10 @@ $app->get('/api/v1/Controls/{controlId}', function (Request $request, Response $
     if ($control == false) {
         return $response->withStatus(404);
     }
+
+    $err = $this->get('helper')->requireCompetitionEditAccess($response, $control->competitionId);
+    if ($err) return $err;
+
     $response->getBody()->write(json_encode($control));
     return $response;
 })->setName("getControl");
@@ -4054,27 +3962,9 @@ $app->post('/api/v1/Controls', function (Request $request, Response $response) {
     $cls = Control::class;
     $objectArray = json_decode($request->getBody(), true);
 
-    // Verify the user has access to the competition
     $competitionId = $objectArray['competitionId'];
-    $compCls = Competition::class;
-    $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $competitionId);
-    $isCreator = $competition && $competition->createdByUserId == $_SESSION['userId'];
-
-    $compAccess = null;
-    try {
-        $compAccessCls = CompetitionAccess::class;
-        $compCheckSql = "SELECT * FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
-        $compAccess = $this->get('helper')->GetBySql($compAccessCls, $compCheckSql, [
-            'competitionId' => $competitionId,
-            'UserId' => $_SESSION['userId']
-        ]);
-    } catch (\PDOException $e) {
-        // Table may not exist yet
-    }
-
-    if (!$compAccess && !$isCreator && empty($_SESSION['userIsAdmin'])) {
-        return $response->withStatus(403);
-    }
+    $err = $this->get('helper')->requireCompetitionEditAccess($response, $competitionId);
+    if ($err) return $err;
 
     // Check uniqueness of controlNumber+controlType within competition
     if (!array_key_exists("id", $objectArray) || $objectArray['id'] == null) {
@@ -4134,26 +4024,8 @@ $app->delete('/api/v1/Controls/{controlId}', function (Request $request, Respons
     if (!$control) {
         return $response->withStatus(404);
     }
-    // Verify the user has access to the competition
-    $compCls = Competition::class;
-    $competition = $this->get('helper')->Get($compCls, $compCls::$tableName, $control->competitionId);
-    $isCreator = $competition && $competition->createdByUserId == $_SESSION['userId'];
-
-    $compAccess = null;
-    try {
-        $compAccessCls = CompetitionAccess::class;
-        $compCheckSql = "SELECT * FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
-        $compAccess = $this->get('helper')->GetBySql($compAccessCls, $compCheckSql, [
-            'competitionId' => $control->competitionId,
-            'UserId' => $_SESSION['userId']
-        ]);
-    } catch (\PDOException $e) {
-        // Table may not exist yet
-    }
-
-    if (!$compAccess && !$isCreator && empty($_SESSION['userIsAdmin'])) {
-        return $response->withStatus(403);
-    }
+    $err = $this->get('helper')->requireCompetitionEditAccess($response, $control->competitionId);
+    if ($err) return $err;
     $this->get('helper')->Delete($id, $cls::$tableName);
     return $response->withStatus(204);
 })->setName("deleteControl");
@@ -4198,18 +4070,8 @@ $app->post('/api/v1/Devices/{BTAddress}/SetControl', function (Request $request,
         return $response->withStatus(401);
     }
 
-    // Admins bypass DeviceAccess check
-    if (empty($_SESSION['userIsAdmin'])) {
-        $deviceAccessCls = DeviceAccess::class;
-        $checkSql = "SELECT * FROM {$deviceAccessCls::$tableName} WHERE BTAddress = :BTAddress AND UserId = :UserId";
-        $access = $this->get('helper')->GetBySql($deviceAccessCls, $checkSql, [
-            'BTAddress' => $BTAddress,
-            'UserId' => $_SESSION['userId']
-        ]);
-        if (!$access) {
-            return $response->withStatus(403);
-        }
-    }
+    $err = $this->get('helper')->requireDeviceAccess($response, $BTAddress);
+    if ($err) return $err;
 
     // Get the device to check its competition
     $device = $this->get('helper')->GetBySql($cls, "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress", ['BTAddress' => $BTAddress]);

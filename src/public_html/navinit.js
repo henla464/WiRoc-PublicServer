@@ -1,5 +1,6 @@
 var isLoggedIn = null;
 var isAdmin = null;
+var userId = null;
 
 function checkLoggedIn(callback) {
   $.ajax({
@@ -38,10 +39,24 @@ function getIsAdmin(callback) {
     checkLoggedIn(function (loginResponse) {
       isAdmin = loginResponse.isAdmin;
       isLoggedIn = loginResponse.isLoggedIn;
+      userId = loginResponse.userId;
       callback(isAdmin);
     });
   } else {
     callback(isAdmin);
+  }
+}
+
+function getUserId(callback) {
+  if (userId === null) {
+    checkLoggedIn(function (loginResponse) {
+      userId = loginResponse.userId;
+      isLoggedIn = loginResponse.isLoggedIn;
+      isAdmin = loginResponse.isAdmin;
+      callback(userId);
+    });
+  } else {
+    callback(userId);
   }
 }
 

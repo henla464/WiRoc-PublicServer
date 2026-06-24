@@ -477,21 +477,6 @@
           new Chart(ctx, configBatteryChart);
         }
 
-        function loadControlsForCompetition(compId, selectedControlId) {
-          $("#controlInput").empty();
-          $("#controlInput").append('<option value="">No control</option>');
-          if (!compId) return;
-          $.ajax({
-            url: "/api/v1/Controls?competitionId=" + compId + "&sort=controlNumber",
-            dataType: "json"
-          }).then(function(controls) {
-            $.each(controls, function() {
-              var selected = (selectedControlId && this.id == selectedControlId) ? ' selected' : '';
-              $("#controlInput").append('<option value="' + this.id + '"' + selected + '>' + this.controlNumber + ' - ' + this.name + '</option>');
-            });
-          });
-        }
-
         function loadCompetition(compId) {
           $.ajax({
             url: "/api/v1/" + competitionTableName + "/" + compId,
@@ -617,22 +602,6 @@
             dataType: "json",
           }).then(function (device) {
             $("#competitionInput").val(device.competitionId);
-            if (device.competitionId) {
-              loadControlsForCompetition(device.competitionId, device.controlId);
-            }
-            // Display assigned control
-            if (device.controlId) {
-              $.ajax({
-                url: "/api/v1/Controls/" + device.controlId,
-                dataType: "json"
-              }).then(function(ctrl) {
-                $("#deviceControl").text(ctrl.controlNumber + " - " + ctrl.name);
-              }, function() {
-                $("#deviceControl").text("Control #" + device.controlId);
-              });
-            } else {
-              $("#deviceControl").text("None");
-            }
             $("#descriptionInput").val(device.description);
             $("#deviceName").text(device.name + "  |  " + device.description);
             $("#deviceBTAddress").text("(" + btAddressOfDevice + ")");
@@ -939,107 +908,66 @@
                 $("#descriptionInput").trigger("focus");
               });
 
-              loadDevice();
+              // Load competitions first, then load device (so dropdown options exist)
+              $.ajax({
+                url:
+                  "/api/v1/" + competitionTableName + "?sort=CreatedDate&limit=100",
+                dataType: "json",
+              }).then(function (items) {
+                $.each(items, function () {
+                  $("#competitionInput").append(
+                    '<option value="' + this.id + '">' + this.name + "</option>"
+                  );
+                });
+                loadDevice();
+              });
 
               var editDeviceForm = $("#editDeviceForm");
               $("#buttonSaveDevice").click(function () {
                 if (editDeviceForm[0].checkValidity()) {
                   var description = $("#descriptionInput").val();
                   var btAddress = btAddressOfDevice;
+                  var competitionId = $("#competitionInput").val();
+
+                  // Step 1: PATCH description
                   $.ajax({
-                    url: "/api/v1/Devices",
-                    type: "POST",
+                    url: "/api/v1/Device",
+                    type: "PATCH",
                     contentType: "application/json",
                     data: JSON.stringify({
                       BTAddress: btAddress,
                       description: description,
                     }),
-                    success: function (response) {
-                      $("#editdevice").modal("hide");
-                      location.reload();
-                    },
-                    error: function () {
-                      $("#errorAlert").removeClass("collapse");
-                    },
+                  }).then(function () {
+                    // Step 2: Set competition (runs only after description succeeds)
+                    return $.ajax({
+                      url:
+                        "/api/v1/" +
+                        tableName +
+                        "/" +
+                        btAddress +
+                        "/SetCompetition",
+                      method: "POST",
+                      data: JSON.stringify({ competitionId: competitionId }),
+                      dataType: "json",
+                    });
+                  }).then(function () {
+                    // Both succeeded
+                    var compName = $("#competitionInput").find(":selected").text();
+                    $("#competitionName").text(compName);
+                    $("#itemUpdatedAlert").removeClass("collapse");
+                    $("#editdevice").modal("hide");
+                    location.reload();
+                  }, function () {
+                    // Either step failed
+                    $("#errorAlert").removeClass("collapse");
                   });
-
-                  var competitionId = $("#competitionInput").val();
-                  var controlId = $("#controlInput").val();
-                  var postItemData = JSON.stringify({
-                    competitionId: competitionId,
-                  });
-
-                  // Set competition first
-                  $.ajax({
-                    url:
-                      "/api/v1/" +
-                      tableName +
-                      "/" +
-                      btAddressOfDevice +
-                      "/SetCompetition",
-                    method: "POST",
-                    data: postItemData,
-                    dataType: "json",
-                  }).then(
-                    function (item) {
-                      // Now set the control if selected
-                      var selectedControlId = $("#controlInput").val();
-                      if (selectedControlId) {
-                        $.ajax({
-                          url: "/api/v1/" + tableName + "/" + btAddressOfDevice + "/SetControl",
-                          method: "POST",
-                          data: JSON.stringify({ controlId: parseInt(selectedControlId) }),
-                          dataType: "json"
-                        }).always(function() {
-                          $("#errorAlert").addClass("collapse");
-                          var itemModalElement = document.querySelector("#editdevice");
-                          var itemModal = bootstrap.Modal.getOrCreateInstance(itemModalElement);
-                          itemModal.hide();
-                          $("#itemUpdatedAlert").removeClass("collapse");
-                          var compName = $("#competitionInput").find(":selected").text();
-                          $("#competitionName").text(compName);
-                          location.reload();
-                        });
-                      } else {
-                        $("#errorAlert").addClass("collapse");
-                        var itemModalElement = document.querySelector("#editdevice");
-                        var itemModal = bootstrap.Modal.getOrCreateInstance(itemModalElement);
-                        itemModal.hide();
-                        $("#itemUpdatedAlert").removeClass("collapse");
-                        var compName = $("#competitionInput").find(":selected").text();
-                        $("#competitionName").text(compName);
-                        location.reload();
-                      }
-                    },
-                    function (fail) {
-                      $("#errorAlert").text(JSON.stringify(fail));
-                      $("#errorAlert").removeClass("collapse");
-                    }
-                  );
                 } else {
                   editDeviceForm[0].reportValidity();
                 }
               });
             }
           );
-
-          $.ajax({
-            url:
-              "/api/v1/" + competitionTableName + "?sort=CreatedDate&limit=100",
-            dataType: "json",
-          }).then(function (items) {
-            $.each(items, function () {
-              $("#competitionInput").append(
-                '<option value="' + this.id + '">' + this.name + "</option>"
-              );
-            });
-          });
-
-          // When competition changes, reload control dropdown
-          $(document).on("change", "#competitionInput", function() {
-            var compId = $(this).val();
-            loadControlsForCompetition(compId, null);
-          });
 
           $(document).on("click", ".close", function () {
             $(this).parent().addClass("collapse");

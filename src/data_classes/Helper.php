@@ -391,5 +391,71 @@ class Helper
         $res->message = "Devices columns added";
         return $res;
     }
-	
+
+    /**
+     * Check if the current session user has competition edit access.
+     * Admins always pass. Others must be the competition creator or have a CompetitionAccesses grant.
+     *
+     * @param object $response The PSR-7 response object
+     * @param int    $competitionId
+     * @return object|null Returns response with error status if denied, null if authorized
+     */
+    public function requireCompetitionEditAccess($response, $competitionId) {
+        if (!empty($_SESSION['userIsAdmin'])) return null;
+
+        $compCls = Competition::class;
+        $competition = $this->Get($compCls, $compCls::$tableName, $competitionId);
+        if (!$competition) {
+            $res = new CommandResponse();
+            $res->code = 1;
+            $res->message = "Competition not found";
+            $response->getBody()->write(json_encode($res));
+            return $response->withStatus(404);
+        }
+
+        if ($competition->createdByUserId == $_SESSION['userId']) return null;
+
+        try {
+            $compAccessCls = CompetitionAccess::class;
+            $sql = "SELECT * FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
+            $access = $this->GetBySql($compAccessCls, $sql, [
+                'competitionId' => $competitionId,
+                'UserId' => $_SESSION['userId']
+            ]);
+            if ($access) return null;
+        } catch (\PDOException $e) {}
+
+        $res = new CommandResponse();
+        $res->code = 3;
+        $res->message = "You do not have access to this competition";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(403);
+    }
+
+    /**
+     * Check if the current session user has device access.
+     * Admins always pass. Others must have a DeviceAccesses row.
+     *
+     * @param object $response The PSR-7 response object
+     * @param string $BTAddress
+     * @return object|null Returns response with error status if denied, null if authorized
+     */
+    public function requireDeviceAccess($response, $BTAddress) {
+        if (!empty($_SESSION['userIsAdmin'])) return null;
+
+        $deviceAccessCls = DeviceAccess::class;
+        $checkSql = "SELECT * FROM {$deviceAccessCls::$tableName} WHERE BTAddress = :BTAddress AND UserId = :UserId";
+        $access = $this->GetBySql($deviceAccessCls, $checkSql, [
+            'BTAddress' => $BTAddress,
+            'UserId' => $_SESSION['userId']
+        ]);
+        if ($access) return null;
+
+        $res = new CommandResponse();
+        $res->code = 4;
+        $res->message = "You do not have access to this device";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(403);
+    }
+
 }

@@ -997,6 +997,9 @@
             }
             $("#btnTabOrienteering").removeClass("active");
             $("#btnTabSatellite").addClass("active");
+            // Container is now visible — recalculate control sizes with real dimensions
+            satelliteMap.invalidateSize();
+            if (satelliteControlLayers.length > 0) adjustSatelliteControlSizes();
           }
           if (mapInstance) {
             mapInstance.invalidateSize();
@@ -1035,6 +1038,32 @@
           return { lat: lat, lng: lng };
         }
 
+        function latLngToPixel(lat, lng) {
+          if (!georefPoints.p1Lat || !georefPoints.p2Lat) return null;
+          var dpx = georefPoints.p2X - georefPoints.p1X;
+          var dpy = georefPoints.p2Y - georefPoints.p1Y;
+          var dlng = georefPoints.p2Lng - georefPoints.p1Lng;
+          var dlat = georefPoints.p2Lat - georefPoints.p1Lat;
+          var cosLat = Math.cos(georefPoints.p1Lat * Math.PI / 180);
+          var mE = dlng * 111320 * cosLat;
+          var mN = dlat * 111320;
+          var dPixel = Math.sqrt(dpx * dpx + dpy * dpy);
+          var dM = Math.sqrt(mE * mE + mN * mN);
+          if (dPixel === 0 || dM === 0) return null;
+          var mPerPx = dM / dPixel;
+          var pixelAngle = Math.atan2(dpy, dpx);
+          var worldAngle = Math.atan2(mN, mE);
+          var rot = worldAngle - pixelAngle; // same rotation as forward transform
+          var cosR = Math.cos(rot), sinR = Math.sin(rot);
+          var east  = (lng - georefPoints.p1Lng) * 111320 * cosLat;
+          var north = (lat - georefPoints.p1Lat) * 111320;
+          // Inverse rotation: R^T * [east; north] / mPerPx
+          var rx = (cosR * east + sinR * north) / mPerPx;
+          var ry = (-sinR * east + cosR * north) / mPerPx;
+          // px = mapY, py = mapX in orienteering pixel space
+          return { mapX: georefPoints.p1Y + ry, mapY: georefPoints.p1X + rx };
+        }
+
         function loadGeorefData(meta) {
           if (meta.georefP1Lat) {
             georefPoints = {
@@ -1054,8 +1083,8 @@
         }
 
         function adjustControlSizes() {
-          if (!mapInstance) return;
-          var zoom = mapInstance.getZoom();
+          if (!orienteeringMap) return;
+          var zoom = orienteeringMap.getZoom();
           var fullScale = Math.pow(2, zoom);
           var halfScale = Math.pow(2, zoom / 2);
 
@@ -1125,7 +1154,7 @@
                 "</span>" +
                 "</div>";
 
-              var ctrlPoint = mapInstance.latLngToContainerPoint(ctrlPos);
+              var ctrlPoint = orienteeringMap.latLngToContainerPoint(ctrlPos);
               var ctrlTextTop = ctrlPoint.y - ctrlAnchorY;
               var cardHeight = Math.round(hdrSize * 1.3);
               var devContainerPoint = L.point(
@@ -1133,7 +1162,7 @@
                 ctrlTextTop - 4 - cardHeight,
               );
               var devLatLng =
-                mapInstance.containerPointToLatLng(devContainerPoint);
+                orienteeringMap.containerPointToLatLng(devContainerPoint);
 
               this.devLabel.setLatLng(devLatLng);
               this.devLabel.setIcon(
@@ -1162,11 +1191,12 @@
                 return;
               }
 
-              // Remove old control group and create a fresh one
-              if (controlGroup) {
-                mapInstance.removeLayer(controlGroup);
+              // Remove old control group and create a fresh one on orienteering map
+              if (controlGroup && orienteeringMap) {
+                orienteeringMap.removeLayer(controlGroup);
               }
-              controlGroup = L.layerGroup().addTo(mapInstance);
+              if (!orienteeringMap) { placingControls = false; return; }
+              controlGroup = L.layerGroup().addTo(orienteeringMap);
               controlLayers = [];
 
               var baseMapRadius = imageW * 0.024;
@@ -1346,7 +1376,7 @@
                     }),
                   }).addTo(controlGroup);
 
-                  (function (idx) {
+                  (function (idx, ctrlId) {
                     dragMarker.on("drag", function (e) {
                       var pos = e.target.getLatLng();
                       var entry = controlLayers[idx];
@@ -1361,22 +1391,22 @@
                         adjustControlSizes();
                       }
                     });
-                  })(layerIdx);
 
-                  dragMarker.on("dragend", function (e) {
-                    var pos = e.target.getLatLng();
-                    $.ajax({
-                      url: "/api/v1/Controls/" + controlId + "/MapPosition",
-                      method: "PATCH",
-                      data: JSON.stringify({ mapX: pos.lat, mapY: pos.lng }),
-                      dataType: "json",
+                    dragMarker.on("dragend", function (e) {
+                      var pos = e.target.getLatLng();
+                      $.ajax({
+                        url: "/api/v1/Controls/" + ctrlId + "/MapPosition",
+                        method: "PATCH",
+                        data: JSON.stringify({ mapX: pos.lat, mapY: pos.lng }),
+                        dataType: "json",
+                      });
+                      if (georefPoints.p1Lat) {
+                        setTimeout(function () {
+                          placeControlsOnSatelliteMap(mapImgWidth, mapImgHeight);
+                        }, 300);
+                      }
                     });
-                    if (georefPoints.p1Lat) {
-                      setTimeout(function () {
-                        placeControlsOnSatelliteMap(mapImgWidth, mapImgHeight);
-                      }, 300);
-                    }
-                  });
+                  })(layerIdx, controlId);
                 }
               });
 
@@ -1399,20 +1429,21 @@
 
         function adjustSatelliteControlSizes() {
           if (!satelliteMap || !georefPoints.p1Lat || !mapMeta.mapScale) return;
-          // Compute sizes from mapScale: same meters → same screen pixels on both maps
-          var oZoom = orienteeringMap ? orienteeringMap.getZoom() : 0;
-          var mPerPx = 1.0 / mapMeta.mapScale; // meters per pixel at orienteering zoom 0
-          var metersPerScreenPx = mPerPx / Math.pow(2, oZoom);
-          // Web Mercator: meters per pixel at zoom Z = 156543 * cos(lat) / 2^Z
+          // Skip when container has no real size (satellite tab not yet shown)
+          var satEl = satelliteMap.getContainer();
+          if (!satEl || satEl.clientHeight === 0) return;
+
           var satLat = georefPoints.p1Lat;
           var cosLat = Math.cos(satLat * Math.PI / 180);
           var sZoom = satelliteMap.getZoom();
           var satMetersPerPx = 156543 * cosLat / Math.pow(2, sZoom);
-          var sizeFactor = metersPerScreenPx / satMetersPerPx;
-
-          var ctrlSize = Math.round(45 * sizeFactor);
-          var hdrSize = Math.round(20 * sizeFactor);
-          var markerRadius = Math.round(24 * sizeFactor);
+          // Orientering controls use font-size 45 pixels at zoom0, scaled up by orienteering zoom.
+          // The physical size in meters covered by the control text is always 45 / mapScale
+          // because both pixel size and map resolution scale by 2^oZoom, which cancels out.
+          var targetMeters = 45 / mapMeta.mapScale;
+          var ctrlSize = Math.round(targetMeters / satMetersPerPx);
+          var hdrSize = Math.round(20 / mapMeta.mapScale / satMetersPerPx);
+          var markerRadius = Math.round(24 / mapMeta.mapScale / satMetersPerPx);
 
           $.each(satelliteControlLayers, function () {
 
@@ -1420,7 +1451,7 @@
             if (this.circleMarker) {
               this.circleMarker.setStyle({
                 radius: markerRadius,
-                weight: Math.round(4 * sizeFactor),
+                weight: Math.max(2, Math.round(markerRadius / 6)),
               });
             }
 
@@ -1649,6 +1680,7 @@
                 });
               }
 
+              var layerIdx = satelliteControlLayers.length;
               satelliteControlLayers.push({
                 lat: ll.lat,
                 lng: ll.lng,
@@ -1660,7 +1692,55 @@
                 sym: sym,
                 displayLabel: displayLabel,
                 devNames: devNames,
+                controlId: this.id,
               });
+
+              // Draggable for edit access users on satellite map
+              if (hasEditAccess) {
+                var sDragMarker = L.marker([ll.lat, ll.lng], {
+                  draggable: true,
+                  icon: L.divIcon({
+                    className: "drag-target",
+                    html: "",
+                    iconSize: [100, 100],
+                    iconAnchor: [50, 50],
+                  }),
+                }).addTo(satelliteControlGroup);
+
+                (function (idx, ctrlId) {
+                  sDragMarker.on("drag", function (e) {
+                    var pos = e.target.getLatLng();
+                    var entry = satelliteControlLayers[idx];
+                    if (entry) {
+                      if (entry.circleMarker) entry.circleMarker.setLatLng(pos);
+                      if (entry.symbol) entry.symbol.setLatLng(pos);
+                      entry.ctrlLabel.setLatLng(pos);
+                      if (entry.devLabel) entry.devLabel.setLatLng(pos);
+                      entry.lat = pos.lat;
+                      entry.lng = pos.lng;
+                      adjustingSatellite();
+                    }
+                  });
+
+                  sDragMarker.on("dragend", function (e) {
+                    var pos = e.target.getLatLng();
+                    var pixel = latLngToPixel(pos.lat, pos.lng);
+                    if (!pixel) return;
+                    $.ajax({
+                      url: "/api/v1/Controls/" + ctrlId + "/MapPosition",
+                      method: "PATCH",
+                      data: JSON.stringify({ mapX: pixel.mapX, mapY: pixel.mapY }),
+                      dataType: "json",
+                    });
+                    // Refresh orienteering map
+                    setTimeout(function () {
+                      if (mapInstance && mapImgWidth > 0) {
+                        placeControlsOnMap(mapImgWidth, mapImgHeight);
+                      }
+                    }, 300);
+                  });
+                })(layerIdx, this.id);
+              }
             });
             adjustingSatellite();
             satelliteMap.off("zoomend", adjustingSatellite);

@@ -34,6 +34,7 @@ class DeviceView
     public $relayPathNo;
     public $competitionId;
     public $competitionName;
+    public $controlId;
     public $batteryIsLow;
     public $batteryIsLowTime;
     /**
@@ -57,6 +58,7 @@ class DeviceView
     public $createdTime;
     public $controlNumber;
     public $controlName;
+    public $controlType;
     public $batteryLevel;
     public $batteryLevelTime;
 }

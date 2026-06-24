@@ -280,6 +280,7 @@
       </div>
 
       <div id="addcontrol-modal-placeholder"></div>
+      <div id="competitionaccess-modal-placeholder"></div>
       <div id="controlsSection" style="display: none">
         <hr />
         <div class="d-flex align-items-center mb-2">
@@ -293,6 +294,14 @@
             style="display: none"
           >
             Add new control
+          </button>
+          <button
+            type="button"
+            id="btnOpenAccess"
+            class="btn btn-outline-dark btn-sm ms-1"
+            style="display: none"
+          >
+            Access
           </button>
         </div>
         <div
@@ -405,10 +414,7 @@
               const competition = JSON.parse(data);
               $("#header").text("Competition: " + competition.name);
               $("#controlsHeader").text("Controls for " + competition.name);
-              $("#controlsSection").show();
-              loadControlsTable(competitionId, function () {
-                loadDeviceTable();
-              });
+              loadDeviceTable();
               loadMap();
               checkControlsAccess(competition);
             },
@@ -548,7 +554,29 @@
             url: urlDeviceView,
           }).then(function (data) {
             const devices = JSON.parse(data);
+
+            // Build allControls from device data if not loaded yet (for anonymous users)
+            if (allControls.length === 0) {
+              var ctrlMap = {};
+              $.each(devices, function() {
+                if (this.controlId && !ctrlMap[this.controlId]) {
+                  ctrlMap[this.controlId] = {
+                    id: this.controlId,
+                    controlNumber: this.controlNumber,
+                    controlType: this.controlType || 'Control'
+                  };
+                }
+              });
+              allControls = Object.values(ctrlMap);
+            }
+
             $.each(devices, function () {
+              var ctrlCell;
+              if (hasEditAccess) {
+                ctrlCell = buildControlSelect(this.controlId, this.BTAddress);
+              } else {
+                ctrlCell = (this.controlNumber != null) ? (this.controlType && this.controlType != 'Control' ? this.controlType + ' ' : '') + this.controlNumber : '-';
+              }
               $("#WiRocDevices tbody").append(
                 "<tr><td>" +
                   (this.recentlyReported == 1
@@ -569,8 +597,7 @@
                   this.name +
                   "</a></td><td>" +
                   (this.description != null ? this.description : "") +
-                  "</td><td>" +
-                  buildControlSelect(this.controlId, this.BTAddress) +
+                  "</td><td>" + ctrlCell +
                   "</td><td>" +
                   this.BTAddress +
                   "</td><td>" +
@@ -686,15 +713,18 @@
           getIsLoggedIn(function (isLoggedIn) {
             if (!isLoggedIn) {
               $("#btnOpenAddControl").hide();
+              $("#btnOpenAccess").hide();
               showMapEditButtons(false);
               return;
             }
             getIsAdmin(function (isAdmin) {
               if (isAdmin) {
                 $("#btnOpenAddControl").show();
+                $("#btnOpenAccess").show();
                 $(".control-editcol, .control-deletecol").show();
                 hasEditAccess = true;
                 showMapEditButtons(true);
+                reloadWithEditAccess();
                 return;
               }
               $.ajax({
@@ -704,6 +734,7 @@
                 function (loginResp) {
                   if (!loginResp.isLoggedIn) {
                     $("#btnOpenAddControl").hide();
+                    $("#btnOpenAccess").hide();
                     showMapEditButtons(false);
                     return;
                   }
@@ -712,9 +743,11 @@
                     competition.createdByUserId == loginResp.userId
                   ) {
                     $("#btnOpenAddControl").show();
+                    $("#btnOpenAccess").show();
                     $(".control-editcol, .control-deletecol").show();
                     hasEditAccess = true;
                     showMapEditButtons(true);
+                    reloadWithEditAccess();
                   } else {
                     $.ajax({
                       url: "/api/v1/CompetitionAccess",
@@ -735,14 +768,18 @@
                           $(".control-editcol, .control-deletecol").show();
                           hasEditAccess = true;
                           showMapEditButtons(true);
+                          reloadWithEditAccess();
                         } else {
                           $("#btnOpenAddControl").hide();
                           $(".control-editcol, .control-deletecol").hide();
                           showMapEditButtons(false);
                         }
+                        // Access button: only for creator or admin
+                        $("#btnOpenAccess").hide();
                       },
                       function () {
                         $("#btnOpenAddControl").hide();
+                        $("#btnOpenAccess").hide();
                         showMapEditButtons(false);
                       },
                     );
@@ -750,10 +787,82 @@
                 },
                 function () {
                   $("#btnOpenAddControl").hide();
+                  $("#btnOpenAccess").hide();
                   showMapEditButtons(false);
                 },
               );
             });
+
+            function reloadWithEditAccess() {
+              loadControlsTable(competitionId, function () {
+                loadDeviceTable();
+                if (mapInstance && mapImgWidth > 0) {
+                  placeControlsOnMap(mapImgWidth, mapImgHeight);
+                }
+              });
+              $("#controlsSection").show();
+            }
+          });
+        }
+
+        function initCompetitionAccess() {
+          $("#competitionaccess-modal-placeholder").load("competitionaccessmodal.html", function() {
+            $("#btnOpenAccess").click(function() {
+              $("#modalTitle").text("Manage Access");
+              loadAccessTable(competitionId);
+              var accessModalElement = document.querySelector('#competitionaccess');
+              var accessModal = bootstrap.Modal.getOrCreateInstance(accessModalElement);
+              accessModal.show();
+            });
+
+            $("#buttonGrantAccess").click(function() {
+              var userEmail = $("#userEmailInput").val();
+              if (!userEmail) return;
+              $.ajax({
+                url: "/api/v1/CompetitionAccess/grant",
+                method: "POST",
+                data: JSON.stringify({ competitionId: competitionId, UserEmail: userEmail }),
+                dataType: "json"
+              }).then(function(res) {
+                $("#grantErrorAlert").addClass("collapse");
+                $("#grantSuccessAlert").removeClass("collapse");
+                $("#userEmailInput").val("");
+                loadAccessTable(competitionId);
+              }, function(fail) {
+                var msg = "Failed to grant access";
+                if (fail.responseJSON && fail.responseJSON.message) msg = fail.responseJSON.message;
+                $("#grantErrorAlert").text(msg).removeClass("collapse");
+                $("#grantSuccessAlert").addClass("collapse");
+              });
+            });
+
+            $(document).on("click", ".revokeaccess", function() {
+              var userId = $(this).data('userid');
+              $.ajax({
+                url: "/api/v1/CompetitionAccess/revoke",
+                method: "POST",
+                data: JSON.stringify({ competitionId: competitionId, UserId: userId }),
+                dataType: "json"
+              }).then(function(res) {
+                loadAccessTable(competitionId);
+              }, function(fail) {});
+            });
+          });
+        }
+
+        function loadAccessTable(compId) {
+          $.ajax({
+            url: "/api/v1/CompetitionAccess",
+            dataType: "json"
+          }).then(function(entries) {
+            $("#CompetitionAccesses tbody").empty();
+            if (entries) {
+              $.each(entries, function() {
+                if (this.competitionId == compId) {
+                  $("#CompetitionAccesses tbody").append('<tr><td>' + this.UserEmail + '</td><td>' + this.GrantedAt + '</td><td><button class="btn btn-sm btn-danger revokeaccess" data-userid="' + this.UserId + '">Revoke</button></td></tr>');
+                }
+              });
+            }
           });
         }
 
@@ -1074,7 +1183,7 @@
         }
 
         function placeControlsOnMap(imageW, imageH) {
-          if (placingControls) return;
+          if (!hasEditAccess || placingControls) return;
           placingControls = true;
           $.ajax({
             url:
@@ -2501,6 +2610,7 @@
         $(document).ready(function () {
           $("#nav-placeholder").load("navigation.html", function () {
             initNavigation();
+            initCompetitionAccess();
             $.each($(".navbar").find(".nav-link"), function () {
               $(this).toggleClass(
                 "active",

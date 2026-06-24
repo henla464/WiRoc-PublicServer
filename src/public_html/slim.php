@@ -605,7 +605,7 @@ $app->get('/api/v1/DevicesView', function ($request, $response) use ($app) {
 	$cls = DeviceView::class;
 	$sql = 'SELECT CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -6 MINUTE) THEN true ELSE false END recentlyReported, 
         CASE WHEN Devices.connectedToInternetTime > DATE_ADD(SYSDATE(), INTERVAL -1 MINUTE) THEN true ELSE false END connectedToInternet,
-        Devices.*, Competitions.name as competitionName, Controls.controlNumber as controlNumber, Controls.name as controlName, IFNULL(DeviceStatuses.batteryLevel, 0) as batteryLevel, IFNULL(DeviceStatuses.createdTime, "1980-01-01T00:00:08.000Z") as batteryLevelTime
+        Devices.*, Competitions.name as competitionName, Controls.controlNumber as controlNumber, Controls.name as controlName, Controls.controlType as controlType, IFNULL(DeviceStatuses.batteryLevel, 0) as batteryLevel, IFNULL(DeviceStatuses.createdTime, "1980-01-01T00:00:08.000Z") as batteryLevelTime
         FROM Devices LEFT JOIN Competitions ON Devices.competitionId = Competitions.id
         LEFT JOIN Controls ON Devices.controlId = Controls.id
         LEFT JOIN DeviceStatuses ON (DeviceStatuses.Id = (SELECT Id FROM DeviceStatuses WHERE BTAddress = Devices.BTAddress ORDER BY createdTime DESC LIMIT 1))';
@@ -4183,12 +4183,14 @@ $app->get('/api/v1/CompetitionAccess', function (Request $request, Response $res
             $sql = "$selectFields ORDER BY ca.competitionId, ca.UserId";
             $entries = $this->get('helper')->GetAllBySql($compAccessCls, $sql, []);
         } else {
+            // Show entries where user is creator (to manage grants) OR is the grant recipient
             $sql = "$selectFields WHERE ca.competitionId IN (
                     SELECT id FROM Competitions WHERE createdByUserId = :CurrentUserId
-                )
+                ) OR ca.UserId = :CurrentUserId2
                 ORDER BY ca.competitionId, ca.UserId";
             $entries = $this->get('helper')->GetAllBySql($compAccessCls, $sql, [
-                'CurrentUserId' => $currentUserId
+                'CurrentUserId' => $currentUserId,
+                'CurrentUserId2' => $currentUserId
             ]);
         }
     } catch (\PDOException $e) {

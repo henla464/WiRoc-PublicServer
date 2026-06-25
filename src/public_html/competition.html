@@ -1760,8 +1760,8 @@
         function adjustPopupSizes() {
           if (!mapInstance) return;
           var zoom = mapInstance.getZoom();
-          if (activeMapType === "satellite") zoom -= 16; // normalize to orienteering zoom
-          var halfScale = Math.pow(2, zoom / 2);
+          if (activeMapType === "satellite") zoom -= 16;
+          var halfScale = Math.pow(2, Math.max(0, zoom) / 2);
           var fontSize = Math.round(14 * halfScale) + "px";
           var w = Math.round(280 * halfScale) + "px";
           $(".device-info-card-popup").css("font-size", fontSize);
@@ -2458,27 +2458,6 @@
               adjustingSatellite();
               renderScaleBar();
             });
-            satelliteMap.on("popupopen", function (e) {
-              adjustPopupSizes();
-              if (
-                !e.popup._source ||
-                !e.popup._source.options.className ||
-                !e.popup._source.options.className.match("device-info-card")
-              )
-                return;
-
-              var popupEl = e.popup.getElement();
-              var wrapper = popupEl.querySelector(
-                ".leaflet-popup-content-wrapper",
-              );
-              if (!wrapper) return;
-              var w = wrapper.offsetWidth;
-              var h = wrapper.offsetHeight;
-              e.popup.options.offset = L.point(Math.round(w / 2), -h - 30);
-              e.popup.update();
-            });
-
-            // Measurement click handler on satellite map
             satelliteMap.on("click", function (e) {
               if (measuringMode) { handleMeasureClick(e.originalEvent); return; }
             });
@@ -2643,25 +2622,7 @@
                 return;
               }
             });
-            mapInstance.on("popupopen", function (e) {
-              adjustPopupSizes();
-              if (
-                !e.popup._source ||
-                !e.popup._source.options.className ||
-                !e.popup._source.options.className.match("device-info-card")
-              )
-                return;
-
-              var popupEl = e.popup.getElement();
-              var wrapper = popupEl.querySelector(
-                ".leaflet-popup-content-wrapper",
-              );
-              if (!wrapper) return;
-              var w = wrapper.offsetWidth;
-              var h = wrapper.offsetHeight;
-              e.popup.options.offset = L.point(Math.round(w / 2), -h - 15);
-              e.popup.update();
-            });
+            // Popups stay centered on markers by default — no repositioning needed.
 
             renderScaleBar();
             $("#mapTabs").show();

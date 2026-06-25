@@ -1529,11 +1529,11 @@
                 satelliteMap.containerPointToLatLng(devPoint),
               );
 
-              // Store label top-left pixel coords for popup positioning
-              this.devLabel._labelTopY = devPoint.y - Math.round(hdrSize * 1.3);
-              this.devLabel._labelLeftX = devPoint.x;
-              this.devLabel._srcPointY = devPoint.y;
-              this.devLabel._srcPointX = devPoint.x;
+              // Popup sits above the device card. The card extends upward from the marker
+              // by hdrSize*1.3 (iconAnchor). Minimal offset to place popup just above.
+              if (this.devLabel && this.devLabel.getPopup()) {
+                this.devLabel.getPopup().options.offset = L.point(0, -Math.round(hdrSize * 1.3));
+              }
             }
           });
         }
@@ -1636,11 +1636,6 @@
                   }),
                   interactive: true,
                 }).addTo(satelliteControlGroup);
-                symbolMarker.bindPopup(popupHtml, {
-                  className: "device-info-card-popup",
-                  autoPan: false,
-                  offset: L.point(0, 0),
-                });
               } else {
                 circleMarker = L.circleMarker([ll.lat, ll.lng], {
                   radius: 24,
@@ -1649,6 +1644,8 @@
                   weight: 4,
                 }).addTo(satelliteControlGroup);
               }
+
+
 
               var ctrlLabel = L.marker([ll.lat, ll.lng], {
                 icon: L.divIcon({
@@ -1674,7 +1671,14 @@
                   }),
                   interactive: true,
                 }).addTo(satelliteControlGroup);
+
                 devLabel.bindPopup(popupHtml, {
+                  className: "device-info-card-popup",
+                  autoPan: false,
+                });
+              } else {
+                // No device name — popup on the control label instead
+                ctrlLabel.bindPopup(popupHtml, {
                   className: "device-info-card-popup",
                   autoPan: false,
                 });

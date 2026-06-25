@@ -1510,18 +1510,24 @@
               var endX = gwLayer.x - ux * (gwRadius + endGap);
               var endY = gwLayer.y - uy * (gwRadius + endGap);
 
-              // Draw dashed line
+              // Draw dashed line — scale with zoom (half-scale, matches device cards)
+              var zoom = orienteeringMap.getZoom();
+              var lineScale = Math.pow(2, zoom / 2);
+              var lineWeight = Math.round(5 * lineScale);
+              var dashLen = Math.round(16 * lineScale);
+              var gapLen = Math.round(12 * lineScale);
               var line = L.polyline([[startY, startX], [endY, endX]], {
                 color: '#228B22',
-                weight: 5,
-                dashArray: '16, 12',
+                weight: lineWeight,
+                dashArray: dashLen + ', ' + gapLen,
                 interactive: false,
               }).addTo(gatewayLinesGroup);
 
-              // Invisible hit-target line for reliable click on any part
+              // Invisible hit-target line — scale proportionally
+              var hitWeight = Math.round(20 * lineScale);
               var hitLine = L.polyline([[startY, startX], [endY, endX]], {
                 color: 'transparent',
-                weight: 20,
+                weight: hitWeight,
                 opacity: 0,
                 interactive: true,
                 bubblingMouseEvents: false,
@@ -1540,10 +1546,10 @@
                 L.DomEvent.stopPropagation(e);
               });
 
-              // Arrowhead at end point (points toward gateway center)
+              // Arrowhead — scale with zoom (half-scale, matches device cards)
               // CRS.Simple: y increases upward, CSS rotation is screen y-down.
               // CSS triangle (border-left) points RIGHT at 0° rotation.
-              var arrowLen = Math.round(srcLayer.baseMapRadius * 0.5);
+              var arrowLen = Math.round(srcLayer.baseMapRadius * 0.5 * lineScale);
               var arrowHalf = Math.round(arrowLen * 0.5);
               var iconSz = Math.round(arrowLen * 1.1);
               var anchorCtr = Math.round(iconSz / 2);
@@ -1919,15 +1925,16 @@
 
               var line = L.polyline([startLL, endLL], {
                 color: '#228B22',
-                weight: 5,
-                dashArray: '16, 12',
+                weight: Math.round(ctrlRadius * 0.2),
+                dashArray: Math.round(ctrlRadius * 0.9) + ', ' + Math.round(ctrlRadius * 0.7),
                 interactive: false,
               }).addTo(satelliteGatewayLinesGroup);
 
-              // Invisible hit-target line for reliable click on any part
+              // Invisible hit-target line — scale proportionally
+              var hitWeight = Math.round(ctrlRadius * 1.2);
               var hitLine = L.polyline([startLL, endLL], {
                 color: 'transparent',
-                weight: 20,
+                weight: hitWeight,
                 opacity: 0,
                 interactive: true,
                 bubblingMouseEvents: false,

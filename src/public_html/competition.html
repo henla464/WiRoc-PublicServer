@@ -1505,6 +1505,28 @@
                 interactive: false,
               }).addTo(gatewayLinesGroup);
 
+              // Invisible hit-target line for reliable click on any part
+              var hitLine = L.polyline([[startY, startX], [endY, endX]], {
+                color: 'transparent',
+                weight: 20,
+                opacity: 0,
+                interactive: true,
+                bubblingMouseEvents: false,
+              }).addTo(gatewayLinesGroup);
+              if (hitLine.getElement()) hitLine.getElement().style.cursor = 'pointer';
+
+              // Store control center coords for height profile lookup
+              hitLine._gatewaySrc = { x: srcLayer.x, y: srcLayer.y };
+              hitLine._gatewayDst = { x: gwLayer.x, y: gwLayer.y };
+              hitLine.on("click", function(e) {
+                if (georefPoints.p1Lat) {
+                  var p1 = pixelToLatLng(hitLine._gatewaySrc.y, hitLine._gatewaySrc.x);
+                  var p2 = pixelToLatLng(hitLine._gatewayDst.y, hitLine._gatewayDst.x);
+                  if (p1 && p2) sampleElevationProfile(L.latLng(p1), L.latLng(p2));
+                }
+                L.DomEvent.stopPropagation(e);
+              });
+
               // Arrowhead at end point (points toward gateway center)
               // CRS.Simple: y increases upward, CSS rotation is screen y-down.
               // CSS triangle (border-left) points RIGHT at 0° rotation.
@@ -1921,12 +1943,31 @@
               var startLL = satelliteMap.containerPointToLatLng(startPoint);
               var endLL = satelliteMap.containerPointToLatLng(endPoint);
 
-              L.polyline([startLL, endLL], {
+              // Store source & dest control lat/lng for height profile
+              var srcLL = L.latLng(srcLayer.lat, srcLayer.lng);
+              var dstLL = L.latLng(gwLayer.lat, gwLayer.lng);
+
+              var line = L.polyline([startLL, endLL], {
                 color: '#228B22',
                 weight: 5,
                 dashArray: '16, 12',
                 interactive: false,
               }).addTo(satelliteGatewayLinesGroup);
+
+              // Invisible hit-target line for reliable click on any part
+              var hitLine = L.polyline([startLL, endLL], {
+                color: 'transparent',
+                weight: 20,
+                opacity: 0,
+                interactive: true,
+                bubblingMouseEvents: false,
+              }).addTo(satelliteGatewayLinesGroup);
+              if (hitLine.getElement()) hitLine.getElement().style.cursor = 'pointer';
+
+              hitLine.on("click", function(e) {
+                sampleElevationProfile(srcLL, dstLL);
+                L.DomEvent.stopPropagation(e);
+              });
 
               // Arrowhead at end — scale proportional to control circle radius
               var cssAngle = Math.atan2(dy, dx) * 180 / Math.PI;

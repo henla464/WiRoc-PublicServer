@@ -710,35 +710,6 @@
               };
               $("#WiRocDevices").tableFilter(optionsbasic);
             }
-            /*
-            var tooltip =
-              'Quotes (") match phrases. (not) excludes a match from the results. (or) can be used to do Or searches. I.e. [red or blue] will match either red or blue. Numeric values support >=, >, <=, <, = and != operators.';
-            // Initialise Plugin
-            var optionsbasic = {
-              columnFilters: [
-                { columnName: "Alive", inputType: "None" },
-                { columnName: "Internet", inputType: "None" },
-                {
-                  columnName: "Name",
-                  inputType: "text",
-                  toolTipMessage: tooltip,
-                },
-                {
-                  columnName: "BT Address",
-                  inputType: "text",
-                  toolTipMessage: tooltip,
-                },
-                {
-                  columnName: "Last contact",
-                  inputType: "text",
-                  toolTipMessage: tooltip,
-                },
-              ],
-              enableCookies: false,
-            };
-
-            $("#WiRocDevices").tableFilter(optionsbasic);
-            */
           });
         }
 
@@ -759,10 +730,107 @@
         var mapImgWidth = 0;
         var mapImgHeight = 0;
         var placingControls = false;
-        var georefState = null; // null | 'o1' | 's1' | 'o2' | 's2' | 'done'
-        var georefPoint = {}; // px, py for current orienteering point
         var georefP1 = null,
           georefP2 = null;
+        var georefState = null; // null | 'o1' | 's1' | 'o2' | 's2' | 'done'
+        var georefPoint = {}; // px, py for current orienteering point
+        var georefPoints = {};
+        var controlLayers = [];
+        var satelliteControlLayers = [];
+        var placingSatellite = false;
+        var mapMeta = null;
+        var heightProfileData = null;
+        var heightProfilePoints = null; // {lat1, lng1, lat2, lng2}
+        var heightProfileSampling = false;
+        var measuringMode = false;
+        var measMarkers = []; // [point1, point2, line, label]
+
+        // ============================================================
+        // Shared helpers
+        // ============================================================
+
+        function getControlColor(controlType) {
+          if (controlType == "Repeater") return "#0066CC";
+          if (controlType == "Receiver") return "#228B22";
+          return "#800080"; // Control
+        }
+
+        function getControlDisplayLabel(controlType, controlNumber) {
+          if (controlType && controlType != "Control")
+            return (controlType == "Repeater" ? "Rep " : "Rec ") + controlNumber;
+          return "" + controlNumber;
+        }
+
+        function buildControlPopup(controlType, controlNumber, controlName, description, devices) {
+          var typeLabel = controlType || "Control";
+          var html = "<div><b>" + typeLabel + " " + controlNumber + ": " + (controlName || "") + "</b><br/>";
+          if (description) html += "Description: " + description + "<br/>";
+          html += "<br/>";
+          if (devices && devices.length > 0) {
+            $.each(devices, function () {
+              html += '<b>WiRoc Device:</b> <a href="device.html?devicebt=' +
+                (this.deviceBTAddress || "") + '">' + this.deviceName + "</a><br/>";
+              html += "BT Address: " + (this.deviceBTAddress || "") + "<br/>";
+              html += "Battery: " + this.batteryLevel + "%";
+              if (this.batteryIsLow == 1) html += ' <span style="color:red">(LOW)</span>';
+              html += "<br/>";
+            });
+          } else {
+            html += "<em>No device assigned</em><br/>";
+          }
+          html += "</div>";
+          return html;
+        }
+
+        function joinDeviceNames(devices) {
+          return $.map(devices || [], function (d) { return d.deviceName; }).join(" | ");
+        }
+
+        function createSatelliteTileLayers(satMap) {
+          var satLayer = L.tileLayer(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            { attribution: "Esri", maxZoom: 19 }
+          );
+          var streetLayer = L.tileLayer(
+            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+            { attribution: "© OpenStreetMap contributors", maxZoom: 19 }
+          );
+          satLayer.addTo(satMap);
+          L.control.layers({ "Satellite": satLayer, "Street Map": streetLayer }, null,
+            { position: "topright", collapsed: false }).addTo(satMap);
+
+          var brightnessLevels = [1.0, 1.3, 1.5, 1.8];
+          function setBrightness(val) {
+            var pane = satMap.getPane("tilePane");
+            if (pane) pane.style.filter = "brightness(" + val + ")";
+            $(".brightness-btn").removeClass("active");
+            $(".brightness-btn[data-brightness='" + val + "']").addClass("active");
+          }
+
+          var BrightnessControl = L.Control.extend({
+            options: { position: "topright" },
+            onAdd: function () {
+              var div = L.DomUtil.create("div", "leaflet-bar leaflet-control");
+              div.style.cssText = "background:#fff; padding:3px 5px; font-size:12px; white-space:nowrap;";
+              var h = '<span style="color:#333;font-weight:bold;margin-right:4px;">Brightness</span>';
+              $.each(brightnessLevels, function (i, b) {
+                h += '<button class="brightness-btn" data-brightness="' + b +
+                  '" style="border:1px solid #ccc; background:#fff; padding:1px 5px; cursor:pointer; font-size:11px; border-radius:2px; margin:0 1px;">' +
+                  Math.round(b * 100) + '%</button>';
+              });
+              div.innerHTML = h;
+              L.DomEvent.disableClickPropagation(div);
+              L.DomEvent.disableScrollPropagation(div);
+              div.addEventListener("click", function (e) {
+                var btn = e.target.closest(".brightness-btn");
+                if (btn) setBrightness(parseFloat(btn.getAttribute("data-brightness")));
+              });
+              return div;
+            }
+          });
+          new BrightnessControl().addTo(satMap);
+          return satLayer;
+        }
 
         // Access is checked via loadHeader() which calls the access API endpoint
 
@@ -971,9 +1039,6 @@
             },
           );
         }
-
-        var controlLayers = [];
-        var georefPoints = {};
 
         function getActiveMap() {
           return mapInstance;
@@ -1265,62 +1330,17 @@
                 var devices = this.devices;
                 var controlId = this.id;
 
-                // Popup: shows all devices assigned
-                var typeLabel = this.controlType || "Control";
-                var popupHtml =
-                  "<div>" +
-                  "<b>" +
-                  typeLabel +
-                  " " +
-                  this.controlNumber +
-                  ": " +
-                  (this.controlName || "") +
-                  "</b><br/>";
-                if (this.description) {
-                  popupHtml += "Description: " + this.description + "<br/>";
-                }
-                popupHtml += "<br/>";
-                if (devices.length > 0) {
-                  $.each(devices, function () {
-                    popupHtml +=
-                      '<b>WiRoc Device:</b> <a href="device.html?devicebt=' +
-                      (this.deviceBTAddress || "") +
-                      '">' +
-                      this.deviceName +
-                      "</a><br/>";
-                    popupHtml +=
-                      "BT Address: " + (this.deviceBTAddress || "") + "<br/>";
-                    popupHtml += "Battery: " + this.batteryLevel + "%";
-                    if (this.batteryIsLow == 1)
-                      popupHtml += ' <span style="color:red">(LOW)</span>';
-                    popupHtml += "<br/>";
-                  });
-                } else {
-                  popupHtml += "<em>No device assigned</em><br/>";
-                }
-                popupHtml += "</div>";
-
-                // Symbol based on controlType
-                var symbolColor;
-                var circle = null; // L.circle for Control
-                var symbolMarker = null; // divIcon marker for Repeater/Receiver
-                if (
-                  this.controlType == "Repeater" ||
-                  this.controlType == "Receiver"
-                ) {
-                  symbolColor =
-                    this.controlType == "Repeater" ? "#0066CC" : "#228B22";
+                // Popup and control symbol
+                var popupHtml = buildControlPopup(this.controlType, this.controlNumber, this.controlName, this.description, devices);
+                var symbolColor = getControlColor(this.controlType);
+                var circle = null;
+                var symbolMarker = null;
+                if (this.controlType == "Repeater" || this.controlType == "Receiver") {
                   symbolMarker = L.marker([cy, cx], {
-                    icon: L.divIcon({
-                      className: "role-symbol",
-                      html: "",
-                      iconSize: [0, 0],
-                      iconAnchor: [0, 0],
-                    }),
+                    icon: L.divIcon({ className: "role-symbol", html: "", iconSize: [0, 0], iconAnchor: [0, 0] }),
                     interactive: false,
                   }).addTo(controlGroup);
                 } else {
-                  symbolColor = "#800080";
                   circle = L.circle([cy, cx], {
                     radius: baseMapRadius,
                     color: symbolColor,
@@ -1329,12 +1349,7 @@
                   }).addTo(controlGroup);
                 }
 
-                // Label: control type + number (e.g. "1", "Rep 1", "Rec 1")
-                var displayLabel =
-                  this.controlType && this.controlType != "Control"
-                    ? (this.controlType == "Repeater" ? "Rep " : "Rec ") +
-                      this.controlNumber
-                    : "" + this.controlNumber;
+                var displayLabel = getControlDisplayLabel(this.controlType, this.controlNumber);
                 var ctrlLabel = L.marker([cy, cx], {
                   icon: L.divIcon({
                     className: "control-label-icon",
@@ -1346,9 +1361,7 @@
                 }).addTo(controlGroup);
 
                 // Device info card: concatenated device names with |
-                var devNames = $.map(devices, function (d) {
-                  return d.deviceName;
-                }).join(" | ");
+                var devNames = joinDeviceNames(devices);
                 var devLabel = null;
                 if (devNames) {
                   devLabel = L.marker([cy, cx], {
@@ -1549,9 +1562,6 @@
           });
         }
 
-        var placingSatellite = false;
-        var satelliteControlLayers = [];
-
         function adjustSatelliteControlSizes() {
           if (!satelliteMap || !georefPoints.p1Lat || !mapMeta.mapScale) return;
           var sZoom = satelliteMap.getZoom();
@@ -1702,49 +1712,11 @@
               var ll = pixelToLatLng(this.mapY, this.mapX);
               if (!ll) return;
 
-              var displayLabel =
-                this.controlType && this.controlType != "Control"
-                  ? (this.controlType == "Repeater" ? "Rep " : "Rec ") +
-                    this.controlNumber
-                  : "" + this.controlNumber;
-              var color =
-                this.controlType == "Repeater"
-                  ? "#0066CC"
-                  : this.controlType == "Receiver"
-                    ? "#228B22"
-                    : "#800080";
+              var displayLabel = getControlDisplayLabel(this.controlType, this.controlNumber);
+              var color = getControlColor(this.controlType);
               var devices = this.devices;
 
-              var popupHtml =
-                "<div><b>" +
-                (this.controlType || "Control") +
-                " " +
-                this.controlNumber +
-                ": " +
-                (this.controlName || "") +
-                "</b><br/>";
-              if (this.description)
-                popupHtml += "Description: " + this.description + "<br/>";
-              popupHtml += "<br/>";
-              if (devices.length > 0) {
-                $.each(devices, function () {
-                  popupHtml +=
-                    '<b>WiRoc Device:</b> <a href="device.html?devicebt=' +
-                    (this.deviceBTAddress || "") +
-                    '">' +
-                    this.deviceName +
-                    "</a><br/>";
-                  popupHtml +=
-                    "BT Address: " + (this.deviceBTAddress || "") + "<br/>";
-                  popupHtml += "Battery: " + this.batteryLevel + "%";
-                  if (this.batteryIsLow == 1)
-                    popupHtml += ' <span style="color:red">(LOW)</span>';
-                  popupHtml += "<br/>";
-                });
-              } else {
-                popupHtml += "<em>No device assigned</em><br/>";
-              }
-              popupHtml += "</div>";
+              var popupHtml = buildControlPopup(this.controlType, this.controlNumber, this.controlName, this.description, devices);
 
               var sym = null,
                 symbolMarker = null,
@@ -1784,9 +1756,7 @@
               }).addTo(satelliteControlGroup);
 
               var devLabel = null;
-              var devNames = $.map(devices, function (d) {
-                return d.deviceName;
-              }).join(" | ");
+              var devNames = joinDeviceNames(devices);
               if (devNames) {
                 devLabel = L.marker([ll.lat, ll.lng], {
                   icon: L.divIcon({
@@ -2005,10 +1975,6 @@
             maxWidth: "none",
           });
         }
-
-        var heightProfileData = null;
-        var heightProfilePoints = null; // {lat1, lng1, lat2, lng2}
-        var heightProfileSampling = false;
 
         function sampleElevationProfile(p1, p2, callback) {
           if (!p1 || !p2 || !p1.lat || !p1.lng || !p2.lat || !p2.lng) return;
@@ -2446,9 +2412,6 @@
           $("#scaleBar").show();
         }
 
-        var measuringMode = false;
-        var measMarkers = []; // [point1, point2, line, label]
-
         function startMeasuring() {
           cancelGeoreference();
           stopMeasuring(); // clear any previous
@@ -2560,56 +2523,10 @@
             zoom: 1,
             scrollWheelZoom: true,
           });
-
-          var satLayer = L.tileLayer(
-            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-            { attribution: "Esri", maxZoom: 19 }
-          );
-          var streetLayer = L.tileLayer(
-            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-            { attribution: "© OpenStreetMap contributors", maxZoom: 19 }
-          );
-          satLayer.addTo(satelliteMap);
-
-          var brightnessLevels = [1.0, 1.3, 1.5, 1.8];
-          var currentBrightness = 1.0;
-
-          function setBrightness(val) {
-            currentBrightness = val;
-            var pane = satelliteMap.getPane("tilePane");
-            if (pane) pane.style.filter = "brightness(" + val + ")";
-            $(".brightness-btn").removeClass("active");
-            $(".brightness-btn[data-brightness='" + val + "']").addClass("active");
-          }
-
-          var BrightnessControl = L.Control.extend({
-            options: { position: "topright" },
-            onAdd: function () {
-              var div = L.DomUtil.create("div", "leaflet-bar leaflet-control");
-              div.style.cssText = "background:#fff; padding:3px 5px; font-size:12px; white-space:nowrap;";
-              var html = '<span style="color:#333;font-weight:bold;margin-right:4px;">Brightness</span>';
-              $.each(brightnessLevels, function (i, b) {
-                html += '<button class="brightness-btn" data-brightness="' + b + '" style="border:1px solid #ccc; background:#fff; padding:1px 5px; cursor:pointer; font-size:11px; border-radius:2px; margin:0 1px;">' + Math.round(b * 100) + '%</button>';
-              });
-              div.innerHTML = html;
-              L.DomEvent.disableClickPropagation(div);
-              L.DomEvent.disableScrollPropagation(div);
-              div.addEventListener("click", function (e) {
-                var btn = e.target.closest(".brightness-btn");
-                if (btn) setBrightness(parseFloat(btn.getAttribute("data-brightness")));
-              });
-              return div;
-            }
-          });
-          new BrightnessControl().addTo(satelliteMap);
-
-          L.control.layers({ "Satellite": satLayer, "Street Map": streetLayer }, null, { position: "topright", collapsed: false }).addTo(satelliteMap);
-
+          createSatelliteTileLayers(satelliteMap);
           satelliteMap.on("click", function (e) {
             if (measuringMode) { handleMeasureClick(e.originalEvent); return; }
           });
-
-          // Try to set view based on georef data
           if (georefPoints.p1Lat) {
             var centerLat = (georefPoints.p1Lat + georefPoints.p2Lat) / 2;
             var centerLng = (georefPoints.p1Lng + georefPoints.p2Lng) / 2;
@@ -2639,50 +2556,7 @@
               zoom: 1,
               scrollWheelZoom: true,
             });
-
-            var satLayer = L.tileLayer(
-              "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-              { attribution: "Esri", maxZoom: 19 }
-            );
-            var streetLayer = L.tileLayer(
-              "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-              { attribution: "© OpenStreetMap contributors", maxZoom: 19 }
-            );
-            satLayer.addTo(satelliteMap);
-
-            var brightnessLevels = [1.0, 1.3, 1.5, 1.8];
-            var currentBrightness = 1.0;
-
-            function setBrightness(val) {
-              currentBrightness = val;
-              var pane = satelliteMap.getPane("tilePane");
-              if (pane) pane.style.filter = "brightness(" + val + ")";
-              $(".brightness-btn").removeClass("active");
-              $(".brightness-btn[data-brightness='" + val + "']").addClass("active");
-            }
-
-            var BrightnessControl = L.Control.extend({
-              options: { position: "topright" },
-              onAdd: function () {
-                var div = L.DomUtil.create("div", "leaflet-bar leaflet-control");
-                div.style.cssText = "background:#fff; padding:3px 5px; font-size:12px; white-space:nowrap;";
-                var html = '<span style="color:#333;font-weight:bold;margin-right:4px;">Brightness</span>';
-                $.each(brightnessLevels, function (i, b) {
-                  html += '<button class="brightness-btn" data-brightness="' + b + '" style="border:1px solid #ccc; background:#fff; padding:1px 5px; cursor:pointer; font-size:11px; border-radius:2px; margin:0 1px;">' + Math.round(b * 100) + '%</button>';
-                });
-                div.innerHTML = html;
-                L.DomEvent.disableClickPropagation(div);
-                L.DomEvent.disableScrollPropagation(div);
-                div.addEventListener("click", function (e) {
-                  var btn = e.target.closest(".brightness-btn");
-                  if (btn) setBrightness(parseFloat(btn.getAttribute("data-brightness")));
-                });
-                return div;
-              }
-            });
-            new BrightnessControl().addTo(satelliteMap);
-
-            L.control.layers({ "Satellite": satLayer, "Street Map": streetLayer }, null, { position: "topright", collapsed: false }).addTo(satelliteMap);
+            createSatelliteTileLayers(satelliteMap);
 
             // Set up zoom handler for satellite map
             satelliteMap.on("zoomend", function () {

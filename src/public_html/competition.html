@@ -452,9 +452,23 @@
                   }
                   initCompetitionAccess();
                 }
+              }).fail(function () {
+                // Fallback for public users: if access endpoint fails, show public content
+                isLoggedIn = false;
+                hasViewAccess = false;
+                hasEditAccess = false;
+                loadMap();
+                loadDeviceTable();
               });
             },
-            function (fail) {},
+            function (fail) {
+              // If competition fetch fails, still try to load map and devices
+              isLoggedIn = false;
+              hasViewAccess = false;
+              hasEditAccess = false;
+              loadMap();
+              loadDeviceTable();
+            },
           );
         }
 
@@ -736,6 +750,8 @@
         var activeMapType = "orienteering";
         var controlGroup = null;
         var satelliteControlGroup = null;
+        var gatewayLinesGroup = null;
+        var satelliteGatewayLinesGroup = null;
         var hasViewAccess = false;
         var hasEditAccess = false;
         var isLoggedIn = false;
@@ -900,7 +916,7 @@
                 $("#mapMeasureArea").show();
                 $("#orienteeringMapContainer").show();
                 $("#map").hide();
-                $("#mapNoFile").show().text("Log in to view the orienteering map.");
+                $("#mapNoFile").show().text(isLoggedIn ? "You don't have access to view the orienteering map." : "Log in to view the orienteering map.");
                 $("#mapOrienteeringButtons").hide();
                 $("#mapEditButtons").hide();
                 $("#mapTabs").show();
@@ -1220,6 +1236,8 @@
                 }
                 if (this.deviceName && this.deviceName !== "undefined") {
                   controlMap[this.id].devices.push(this);
+                  controlMap[this.id]._deviceBTMap = controlMap[this.id]._deviceBTMap || {};
+                  controlMap[this.id]._deviceBTMap[this.deviceBTAddress] = this.deviceHeadBTAddress || '';
                 }
               });
               var groupedControls = Object.values(controlMap);
@@ -1350,6 +1368,7 @@
                 }
 
                 var layerEntry = {
+                  controlId: controlId,
                   circle: circle,
                   symbolMarker: symbolMarker,
                   ctrlLabel: ctrlLabel,
@@ -1362,6 +1381,7 @@
                   controlNumber: this.controlNumber,
                   displayLabel: displayLabel,
                   symbolColor: symbolColor,
+                  deviceBTMap: this._deviceBTMap || {},
                 };
                 var layerIdx = controlLayers.length;
                 controlLayers.push(layerEntry);
@@ -1391,6 +1411,7 @@
                         entry.x = pos.lng;
                         entry.y = pos.lat;
                         adjustControlSizes();
+                        drawGatewayLinesOrient();
                       }
                     });
 
@@ -1413,6 +1434,7 @@
               });
 
               adjustControlSizes();
+              drawGatewayLinesOrient();
               placingControls = false;
               // Also update satellite map
               if (georefPoints.p1Lat) {
@@ -1424,6 +1446,85 @@
             .fail(function () {
               placingControls = false;
             });
+        }
+
+        function drawGatewayLinesOrient() {
+          if (!orienteeringMap) return;
+          if (gatewayLinesGroup && orienteeringMap) {
+            orienteeringMap.removeLayer(gatewayLinesGroup);
+          }
+          gatewayLinesGroup = L.layerGroup().addTo(orienteeringMap);
+
+          // Build map: BTAddress -> controlLayer
+          var btToLayer = {};
+          $.each(controlLayers, function() {
+            $.each(this.deviceBTMap, function(btAddr, headBT) {
+              btToLayer[btAddr] = this;
+            }.bind(this));
+          });
+
+          // For each control layer, check if any device is a gateway or remote
+          $.each(controlLayers, function() {
+            var srcLayer = this;
+            var devMap = this.deviceBTMap;
+            $.each(devMap, function(remoteBT, headBT) {
+              // Skip if no headBT or it's its own gateway (direct internet)
+              if (!headBT || headBT === remoteBT) return;
+              // Find gateway device's control
+              var gwLayer = btToLayer[headBT];
+              if (!gwLayer) return;
+              // Don't draw self-loops
+              if (gwLayer.controlId === srcLayer.controlId) return;
+
+              // Compute visual radius for both ends
+              var srcRadius = srcLayer.circle ? srcLayer.baseMapRadius : srcLayer.baseMapRadius * 0.75;
+              var gwRadius = gwLayer.circle ? gwLayer.baseMapRadius : gwLayer.baseMapRadius * 0.75;
+
+              // Start at edge of source circle, end at edge of gateway circle
+              var dx = gwLayer.x - srcLayer.x;
+              var dy = gwLayer.y - srcLayer.y;
+              var dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < 1) return;
+
+              var ux = dx / dist;
+              var uy = dy / dist;
+
+              // Gap outside the circle: 30% of the radius + fixed 4px
+              var startGap = srcRadius * 0.3 + 4;
+              var endGap = gwRadius * 0.3 + 4;
+              var startX = srcLayer.x + ux * (srcRadius + startGap);
+              var startY = srcLayer.y + uy * (srcRadius + startGap);
+              var endX = gwLayer.x - ux * (gwRadius + endGap);
+              var endY = gwLayer.y - uy * (gwRadius + endGap);
+
+              // Draw dashed line
+              var line = L.polyline([[startY, startX], [endY, endX]], {
+                color: '#228B22',
+                weight: 5,
+                dashArray: '16, 12',
+                interactive: false,
+              }).addTo(gatewayLinesGroup);
+
+              // Arrowhead at end point (points toward gateway center)
+              // CRS.Simple: y increases upward, CSS rotation is screen y-down.
+              // CSS triangle (border-left) points RIGHT at 0° rotation.
+              var arrowLen = Math.round(srcLayer.baseMapRadius * 0.5);
+              var arrowHalf = Math.round(arrowLen * 0.5);
+              var iconSz = Math.round(arrowLen * 1.1);
+              var anchorCtr = Math.round(iconSz / 2);
+              // Negate dy: CRS.Simple y-up → screen y-down
+              var cssAngle = Math.atan2(-dy, dx) * 180 / Math.PI;
+              L.marker([endY, endX], {
+                icon: L.divIcon({
+                  className: 'gateway-arrow',
+                  html: '<div style="width:0;height:0;border-left:' + arrowLen + 'px solid #228B22;border-top:' + arrowHalf + 'px solid transparent;border-bottom:' + arrowHalf + 'px solid transparent;transform:rotate(' + cssAngle + 'deg);"></div>',
+                  iconSize: [iconSz, iconSz],
+                  iconAnchor: [anchorCtr, anchorCtr],
+                }),
+                interactive: false,
+              }).addTo(gatewayLinesGroup);
+            }.bind(this));
+          });
         }
 
         var placingSatellite = false;
@@ -1566,8 +1667,11 @@
                   devices: [],
                 };
               }
-              if (this.deviceName && this.deviceName !== "undefined")
+              if (this.deviceName && this.deviceName !== "undefined") {
                 cm[this.id].devices.push(this);
+                cm[this.id]._deviceBTMap = cm[this.id]._deviceBTMap || {};
+                cm[this.id]._deviceBTMap[this.deviceBTAddress] = this.deviceHeadBTAddress || '';
+              }
             });
             var gc = Object.values(cm);
 
@@ -1697,6 +1801,7 @@
                 displayLabel: displayLabel,
                 devNames: devNames,
                 controlId: this.id,
+                deviceBTMap: this._deviceBTMap || {},
               });
 
               // Draggable for edit access users on satellite map (only when unlocked)
@@ -1723,6 +1828,7 @@
                       entry.lat = pos.lat;
                       entry.lng = pos.lng;
                       adjustingSatellite();
+                      drawGatewayLinesSatellite();
                     }
                   });
 
@@ -1747,8 +1853,11 @@
               }
             });
             adjustingSatellite();
+            drawGatewayLinesSatellite();
             satelliteMap.off("zoomend", adjustingSatellite);
             satelliteMap.on("zoomend", adjustingSatellite);
+            satelliteMap.off("zoomend", drawGatewayLinesSatellite);
+            satelliteMap.on("zoomend", drawGatewayLinesSatellite);
             placingSatellite = false;
           });
         }
@@ -1759,6 +1868,83 @@
           mapInstance = satelliteMap;
           adjustPopupSizes();
           mapInstance = prev;
+        }
+
+        function drawGatewayLinesSatellite() {
+          if (!satelliteMap || !georefPoints.p1Lat || !mapMeta || !mapMeta.mapScale) return;
+          if (satelliteGatewayLinesGroup && satelliteMap) {
+            satelliteMap.removeLayer(satelliteGatewayLinesGroup);
+          }
+          satelliteGatewayLinesGroup = L.layerGroup().addTo(satelliteMap);
+
+          // Build map: BTAddress -> satelliteControlLayer
+          var btToLayer = {};
+          $.each(satelliteControlLayers, function() {
+            $.each(this.deviceBTMap, function(btAddr, headBT) {
+              btToLayer[btAddr] = this;
+            }.bind(this));
+          });
+
+          // For each control, draw lines from remote devices to their gateway
+          $.each(satelliteControlLayers, function() {
+            var srcLayer = this;
+            var devMap = this.deviceBTMap;
+            $.each(devMap, function(remoteBT, headBT) {
+              if (!headBT || headBT === remoteBT) return;
+              var gwLayer = btToLayer[headBT];
+              if (!gwLayer || gwLayer.controlId === srcLayer.controlId) return;
+
+              // Convert lat/lng to container points for pixel math
+              var srcPoint = satelliteMap.latLngToContainerPoint(L.latLng(srcLayer.lat, srcLayer.lng));
+              var gwPoint = satelliteMap.latLngToContainerPoint(L.latLng(gwLayer.lat, gwLayer.lng));
+
+              // Estimate visual radius in pixels
+              var sZoom = satelliteMap.getZoom();
+              var cosLat = Math.cos(srcLayer.lat * Math.PI / 180);
+              var mPerPx = 156543 * cosLat / Math.pow(2, sZoom);
+              var ctrlRadius = Math.round(24 / mapMeta.mapScale * 1.25 / mPerPx);
+              if (!ctrlRadius || ctrlRadius < 4) ctrlRadius = 4;
+
+              var dx = gwPoint.x - srcPoint.x;
+              var dy = gwPoint.y - srcPoint.y;
+              var dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < 4) return;
+
+              var ux = dx / dist;
+              var uy = dy / dist;
+              // Gap outside the circle: 30% of the radius + fixed 4px
+              var pad = ctrlRadius * 1.3 + 4;
+
+              var startPoint = L.point(srcPoint.x + ux * pad, srcPoint.y + uy * pad);
+              var endPoint = L.point(gwPoint.x - ux * pad, gwPoint.y - uy * pad);
+
+              var startLL = satelliteMap.containerPointToLatLng(startPoint);
+              var endLL = satelliteMap.containerPointToLatLng(endPoint);
+
+              L.polyline([startLL, endLL], {
+                color: '#228B22',
+                weight: 5,
+                dashArray: '16, 12',
+                interactive: false,
+              }).addTo(satelliteGatewayLinesGroup);
+
+              // Arrowhead at end — scale proportional to control circle radius
+              var cssAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+              var arrowLen = Math.round(ctrlRadius * 0.5);
+              var arrowHalf = Math.round(arrowLen * 0.5);
+              var iconSz = Math.round(arrowLen * 1.1);
+              var anchorCtr = Math.round(iconSz / 2);
+              L.marker(endLL, {
+                icon: L.divIcon({
+                  className: 'gateway-arrow-sat',
+                  html: '<div style="width:0;height:0;border-left:' + arrowLen + 'px solid #228B22;border-top:' + arrowHalf + 'px solid transparent;border-bottom:' + arrowHalf + 'px solid transparent;transform:rotate(' + cssAngle + 'deg);"></div>',
+                  iconSize: [iconSz, iconSz],
+                  iconAnchor: [anchorCtr, anchorCtr],
+                }),
+                interactive: false,
+              }).addTo(satelliteGatewayLinesGroup);
+            }.bind(this));
+          });
         }
 
         function adjustPopupSizes() {
@@ -2616,6 +2802,7 @@
             // Scale popup font with half-zoom; close on zoom so position recalculates
             mapInstance.on("zoomend", function () {
               adjustControlSizes();
+              drawGatewayLinesOrient();
               adjustPopupSizes();
               renderScaleBar();
               mapInstance.closePopup();

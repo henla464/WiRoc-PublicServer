@@ -3327,6 +3327,7 @@ $app->get('/api/v1/Competitions/{competitionId}/Controls/withDevices', function 
 
     $sql = "SELECT c.id, c.controlNumber, c.name as controlName, c.description, c.mapX, c.mapY, c.controlType,
                    d.id as deviceId, d.name as deviceName, d.BTAddress as deviceBTAddress,
+                   d.headBTAddress as deviceHeadBTAddress,
                    d.batteryIsLow, IFNULL(ds.batteryLevel, 0) as batteryLevel
             FROM Controls c
             LEFT JOIN Devices d ON d.controlId = c.id

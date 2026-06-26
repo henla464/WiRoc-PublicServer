@@ -147,3 +147,8 @@
 .leaflet-marker-icon.leaflet-interactive {
   cursor: pointer !important;
 }
+
+.gateway-lines-hidden .gateway-arrow,
+.gateway-lines-hidden .gateway-arrow-sat {
+  display: none !important;
+}

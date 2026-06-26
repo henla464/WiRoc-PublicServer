@@ -64,6 +64,7 @@
           </div>
           <div id="mapMeasureArea" style="display:none">
             <button type="button" id="btnMeasure" class="btn btn-outline-dark btn me-1"><i class="fa fa-arrows-h"></i> Measure distance</button>
+            <button type="button" id="btnToggleGatewayLines" class="btn btn-outline-dark btn me-1"><i class="fa fa-exchange"></i> Hide gateway lines</button>
             <span id="measureResult" style="font-size:13px; color:#333; display:none"></span>
           </div>
         </div>
@@ -723,6 +724,7 @@
         var satelliteControlGroup = null;
         var gatewayLinesGroup = null;
         var satelliteGatewayLinesGroup = null;
+        var gatewayLinesVisible = true;
         var hasViewAccess = false;
         var hasEditAccess = false;
         var isLoggedIn = false;
@@ -1466,7 +1468,10 @@
           if (gatewayLinesGroup && orienteeringMap) {
             orienteeringMap.removeLayer(gatewayLinesGroup);
           }
-          gatewayLinesGroup = L.layerGroup().addTo(orienteeringMap);
+          gatewayLinesGroup = L.layerGroup();
+          if (gatewayLinesVisible) {
+            gatewayLinesGroup.addTo(orienteeringMap);
+          }
 
           // Build map: BTAddress -> controlLayer
           var btToLayer = {};
@@ -1873,7 +1878,10 @@
           if (satelliteGatewayLinesGroup && satelliteMap) {
             satelliteMap.removeLayer(satelliteGatewayLinesGroup);
           }
-          satelliteGatewayLinesGroup = L.layerGroup().addTo(satelliteMap);
+          satelliteGatewayLinesGroup = L.layerGroup();
+          if (gatewayLinesVisible) {
+            satelliteGatewayLinesGroup.addTo(satelliteMap);
+          }
 
           // Build map: BTAddress -> satelliteControlLayer
           var btToLayer = {};
@@ -1963,6 +1971,33 @@
               }).addTo(satelliteGatewayLinesGroup);
             }.bind(this));
           });
+        }
+
+        function toggleGatewayLines() {
+          gatewayLinesVisible = !gatewayLinesVisible;
+          if (gatewayLinesVisible) {
+            $("#btnToggleGatewayLines").html('<i class="fa fa-exchange"></i> Hide gateway lines');
+            $("#btnToggleGatewayLines").removeClass("btn-dark").addClass("btn-outline-dark");
+          } else {
+            $("#btnToggleGatewayLines").html('<i class="fa fa-exchange"></i> Show gateway lines');
+            $("#btnToggleGatewayLines").removeClass("btn-outline-dark").addClass("btn-dark");
+          }
+          // Update orienteering map
+          if (orienteeringMap) {
+            if (gatewayLinesVisible && gatewayLinesGroup) {
+              orienteeringMap.addLayer(gatewayLinesGroup);
+            } else if (!gatewayLinesVisible && gatewayLinesGroup && orienteeringMap.hasLayer(gatewayLinesGroup)) {
+              orienteeringMap.removeLayer(gatewayLinesGroup);
+            }
+          }
+          // Update satellite map
+          if (satelliteMap) {
+            if (gatewayLinesVisible && satelliteGatewayLinesGroup) {
+              satelliteMap.addLayer(satelliteGatewayLinesGroup);
+            } else if (!gatewayLinesVisible && satelliteGatewayLinesGroup && satelliteMap.hasLayer(satelliteGatewayLinesGroup)) {
+              satelliteMap.removeLayer(satelliteGatewayLinesGroup);
+            }
+          }
         }
 
         function adjustPopupSizes() {
@@ -2879,6 +2914,10 @@
               } else {
                 startMeasuring();
               }
+            });
+
+            $("#btnToggleGatewayLines").click(function () {
+              toggleGatewayLines();
             });
 
             $("#profileHeight1, #profileHeight2").on("input", function () {

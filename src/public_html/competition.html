@@ -1544,6 +1544,7 @@
               hitLine._gatewaySrc = { x: srcLayer.x, y: srcLayer.y };
               hitLine._gatewayDst = { x: gwLayer.x, y: gwLayer.y };
               hitLine.on("click", function(e) {
+                if (measMarkers.length > 0) clearMeasMarkers();
                 if (georefPoints.p1Lat) {
                   var p1 = pixelToLatLng(hitLine._gatewaySrc.y, hitLine._gatewaySrc.x);
                   var p2 = pixelToLatLng(hitLine._gatewayDst.y, hitLine._gatewayDst.x);
@@ -1952,6 +1953,7 @@
               if (hitLine.getElement()) hitLine.getElement().style.cursor = measuringMode ? '' : 'pointer';
 
               hitLine.on("click", function(e) {
+                if (measMarkers.length > 0) clearMeasMarkers();
                 sampleElevationProfile(srcLL, dstLL);
                 L.DomEvent.stopPropagation(e);
               });
@@ -2530,30 +2532,31 @@
           if (satelliteMap) satelliteMap.getContainer().classList.add("measuring-mode");
         }
 
-        function stopMeasuring() {
-          measuringMode = false;
-          // Re-enable lock button
-          if (hasEditAccess) $("#btnLockControls").prop("disabled", false);
+        function clearMeasMarkers() {
           $.each(measMarkers, function () {
             if (orienteeringMap) orienteeringMap.removeLayer(this);
             if (satelliteMap) satelliteMap.removeLayer(this);
           });
           measMarkers = [];
-          // Restore interactivity on control and gateway line layers
-          setGroupInteractive(controlGroup, true);
-          setGroupInteractive(satelliteControlGroup, true);
-          setGroupInteractive(gatewayLinesGroup, true);
-          setGroupInteractive(satelliteGatewayLinesGroup, true);
-          // Remove crosshair cursor override
+          measuringMode = false;
+          if (hasEditAccess) $("#btnLockControls").prop("disabled", false);
           setMapCursor(orienteeringMap, "");
           setMapCursor(satelliteMap, "");
           if (orienteeringMap) orienteeringMap.getContainer().classList.remove("measuring-mode");
           if (satelliteMap) satelliteMap.getContainer().classList.remove("measuring-mode");
+          setGroupInteractive(controlGroup, true);
+          setGroupInteractive(satelliteControlGroup, true);
+          setGroupInteractive(gatewayLinesGroup, true);
+          setGroupInteractive(satelliteGatewayLinesGroup, true);
           $("#btnMeasure")
             .html('<i class="fa fa-arrows-h"></i> Measure distance')
             .removeClass("btn-dark")
             .addClass("btn-outline-dark");
           $("#measureResult").hide().text("");
+        }
+
+        function stopMeasuring() {
+          clearMeasMarkers();
           // Clear height profile
           heightProfileData = null;
           heightProfilePoints = null;

@@ -1405,7 +1405,7 @@
                 // Draggable for repositioning (only when unlocked)
                 if (hasEditAccess && !controlsLocked) {
                   var dragMarker = L.marker([cy, cx], {
-                    draggable: true,
+                    draggable: !measuringMode,
                     icon: L.divIcon({
                       className: "drag-target",
                       html: "",
@@ -1812,7 +1812,7 @@
               // Draggable for edit access users on satellite map (only when unlocked)
               if (hasEditAccess && !controlsLocked) {
                 var sDragMarker = L.marker([ll.lat, ll.lng], {
-                  draggable: true,
+                  draggable: !measuringMode,
                   icon: L.divIcon({
                     className: "drag-target",
                     html: "",
@@ -2460,18 +2460,61 @@
           if (!group) return;
           group.eachLayer(function(layer) {
             if (layer.setInteractive) layer.setInteractive(interactive);
-            // Recurse into sub-groups (e.g. gateway hit-target lines)
+            // Force cursor on the DOM element and all its children
+            var el = layer.getElement ? layer.getElement() : null;
+            if (el) {
+              el.style.cursor = interactive ? '' : 'crosshair';
+              var children = el.querySelectorAll('*');
+              for (var j = 0; j < children.length; j++) {
+                children[j].style.cursor = interactive ? '' : 'crosshair';
+              }
+            }
+            // Suppress popups during measuring — store content to rebind later
+            if (!interactive) {
+              if (layer.getPopup && layer.getPopup()) {
+                layer._savedPopup = layer.getPopup();
+                layer.unbindPopup();
+              }
+            } else {
+              if (layer._savedPopup) {
+                layer.bindPopup(layer._savedPopup);
+                delete layer._savedPopup;
+              }
+            }
+            // Recurse into sub-groups
             if (layer.eachLayer) setGroupInteractive(layer, interactive);
           });
+        }
+
+        function setMapCursor(map, cursor) {
+          if (!map) return;
+          var container = map.getContainer();
+          if (container) container.style.cursor = cursor;
+          // Also force cursor on all panes (overlayPane, markerPane, etc.)
+          var panes = container.querySelectorAll('.leaflet-pane');
+          for (var i = 0; i < panes.length; i++) {
+            panes[i].style.cursor = cursor;
+          }
         }
 
         function startMeasuring() {
           cancelGeoreference();
           stopMeasuring(); // clear any previous
+          // Measuring and unlocked dragging are mutually exclusive — lock controls
+          if (!controlsLocked) {
+            controlsLocked = true;
+            $("#btnLockControls").html('<i class="fa fa-lock"></i> Unlock controls');
+            $("#btnLockControls").removeClass("btn-dark").addClass("btn-outline-dark");
+            // Re-render to remove drag markers
+            if (orienteeringMap && mapImgWidth > 0) placeControlsOnMap(mapImgWidth, mapImgHeight);
+            if (georefPoints.p1Lat) setTimeout(function() { placeControlsOnSatelliteMap(mapImgWidth, mapImgHeight); }, 300);
+          }
           // Don't force orienteering — let user measure on whichever map is active
           measuringMode = true;
+          // Disable lock button during measuring
+          $("#btnLockControls").prop("disabled", true);
           $("#btnMeasure")
-            .text("Measuring...")
+            .html('<i class="fa fa-arrows-h"></i> Measuring...')
             .removeClass("btn-outline-dark")
             .addClass("btn-dark");
           $("#measureResult").hide().text("");
@@ -2480,11 +2523,17 @@
           setGroupInteractive(satelliteControlGroup, false);
           setGroupInteractive(gatewayLinesGroup, false);
           setGroupInteractive(satelliteGatewayLinesGroup, false);
-          mapInstance.getContainer().style.cursor = "crosshair";
+          // Force crosshair cursor on both map containers and all panes
+          setMapCursor(orienteeringMap, "crosshair");
+          setMapCursor(satelliteMap, "crosshair");
+          if (orienteeringMap) orienteeringMap.getContainer().classList.add("measuring-mode");
+          if (satelliteMap) satelliteMap.getContainer().classList.add("measuring-mode");
         }
 
         function stopMeasuring() {
           measuringMode = false;
+          // Re-enable lock button
+          if (hasEditAccess) $("#btnLockControls").prop("disabled", false);
           $.each(measMarkers, function () {
             if (orienteeringMap) orienteeringMap.removeLayer(this);
             if (satelliteMap) satelliteMap.removeLayer(this);
@@ -2495,13 +2544,16 @@
           setGroupInteractive(satelliteControlGroup, true);
           setGroupInteractive(gatewayLinesGroup, true);
           setGroupInteractive(satelliteGatewayLinesGroup, true);
+          // Remove crosshair cursor override
+          setMapCursor(orienteeringMap, "");
+          setMapCursor(satelliteMap, "");
+          if (orienteeringMap) orienteeringMap.getContainer().classList.remove("measuring-mode");
+          if (satelliteMap) satelliteMap.getContainer().classList.remove("measuring-mode");
           $("#btnMeasure")
-            .text("Measure distance")
+            .html('<i class="fa fa-arrows-h"></i> Measure distance')
             .removeClass("btn-dark")
             .addClass("btn-outline-dark");
           $("#measureResult").hide().text("");
-          if (orienteeringMap) orienteeringMap.getContainer().style.cursor = "";
-          if (satelliteMap) satelliteMap.getContainer().style.cursor = "";
           // Clear height profile
           heightProfileData = null;
           heightProfilePoints = null;
@@ -2558,8 +2610,16 @@
             measMarkers.push(label);
 
             measuringMode = false;
-            mapInstance.getContainer().style.cursor = "";
-            $("#btnMeasure").text("Clear distance").removeClass("btn-outline-dark").addClass("btn-dark");
+            if (hasEditAccess) $("#btnLockControls").prop("disabled", false);
+            setMapCursor(orienteeringMap, "");
+            setMapCursor(satelliteMap, "");
+            if (orienteeringMap) orienteeringMap.getContainer().classList.remove("measuring-mode");
+            if (satelliteMap) satelliteMap.getContainer().classList.remove("measuring-mode");
+            setGroupInteractive(controlGroup, true);
+            setGroupInteractive(satelliteControlGroup, true);
+            setGroupInteractive(gatewayLinesGroup, true);
+            setGroupInteractive(satelliteGatewayLinesGroup, true);
+            $("#btnMeasure").html('<i class="fa fa-arrows-h"></i> Clear distance').removeClass("btn-outline-dark").addClass("btn-dark");
             // Sample elevation profile for line-of-sight
             var measP1 = p1, measP2 = pos;
             if (activeMapType === 'orienteering' && georefPoints.p1Lat) {
@@ -3002,6 +3062,8 @@
             });
 
             $("#btnLockControls").click(function () {
+              // Measuring and unlocked dragging are mutually exclusive
+              if (measuringMode) stopMeasuring();
               controlsLocked = !controlsLocked;
               if (controlsLocked) {
                 $(this).html('<i class="fa fa-lock"></i> Unlock controls');
@@ -3009,6 +3071,8 @@
               } else {
                 $(this).html('<i class="fa fa-unlock"></i> Lock controls');
                 $(this).removeClass("btn-outline-dark").addClass("btn-dark");
+                // Unlocking: exit measure mode so dragging works
+                if (measuringMode) stopMeasuring();
               }
               // Re-render controls on both maps with new draggable state
               loadControlsTable(competitionId, function () {

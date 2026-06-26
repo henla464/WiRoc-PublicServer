@@ -152,3 +152,42 @@
 .gateway-lines-hidden .gateway-arrow-sat {
   display: none !important;
 }
+
+.measuring-mode,
+.measuring-mode *,
+.measuring-mode.leaflet-container,
+.measuring-mode .leaflet-interactive,
+.measuring-mode .leaflet-marker-icon,
+.measuring-mode .leaflet-marker-icon.leaflet-interactive,
+.measuring-mode .leaflet-grab,
+.measuring-mode .leaflet-grabbing,
+.measuring-mode .device-info-card,
+.measuring-mode .drag-target,
+.measuring-mode .leaflet-control,
+.measuring-mode .leaflet-popup-content-wrapper,
+.measuring-mode .leaflet-popup-tip,
+#map.measuring-mode,
+#map.measuring-mode *,
+#map.measuring-mode .leaflet-interactive,
+#map.measuring-mode .leaflet-marker-icon,
+#map.measuring-mode .leaflet-marker-icon.leaflet-interactive,
+#map.measuring-mode .leaflet-grab,
+#map.measuring-mode .leaflet-grabbing,
+#satelliteMap.measuring-mode,
+#satelliteMap.measuring-mode *,
+#satelliteMap.measuring-mode .leaflet-interactive,
+#satelliteMap.measuring-mode .leaflet-marker-icon,
+#satelliteMap.measuring-mode .leaflet-marker-icon.leaflet-interactive,
+#satelliteMap.measuring-mode .leaflet-grab,
+#satelliteMap.measuring-mode .leaflet-grabbing {
+  cursor: crosshair !important;
+}
+
+/* Block clicks on DivIcon content during measuring — setInteractive(false) only
+   sets pointer-events:none on the outer .leaflet-marker-icon, but the inner
+   HTML children still receive clicks and can trigger popups. */
+.measuring-mode .leaflet-marker-icon > *,
+#map.measuring-mode .leaflet-marker-icon > *,
+#satelliteMap.measuring-mode .leaflet-marker-icon > * {
+  pointer-events: none !important;
+}

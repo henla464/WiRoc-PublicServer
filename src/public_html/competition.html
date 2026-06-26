@@ -1348,6 +1348,7 @@
                     color: symbolColor,
                     fillOpacity: 0,
                     weight: 4,
+                    interactive: !measuringMode,
                   }).addTo(controlGroup);
                 }
 
@@ -1373,7 +1374,7 @@
                       iconSize: [0, 0],
                       iconAnchor: [0, 0],
                     }),
-                    interactive: true,
+                    interactive: !measuringMode,
                   }).addTo(controlGroup);
                   devLabel.bindPopup(popupHtml, {
                     className: "device-info-card-popup",
@@ -1534,10 +1535,10 @@
                 color: 'transparent',
                 weight: hitWeight,
                 opacity: 0,
-                interactive: true,
+                interactive: !measuringMode,
                 bubblingMouseEvents: false,
               }).addTo(gatewayLinesGroup);
-              if (hitLine.getElement()) hitLine.getElement().style.cursor = 'pointer';
+              if (hitLine.getElement()) hitLine.getElement().style.cursor = measuringMode ? '' : 'pointer';
 
               // Store control center coords for height profile lookup
               hitLine._gatewaySrc = { x: srcLayer.x, y: srcLayer.y };
@@ -1743,7 +1744,7 @@
                     iconSize: [0, 0],
                     iconAnchor: [0, 0],
                   }),
-                  interactive: true,
+                  interactive: !measuringMode,
                 }).addTo(satelliteControlGroup);
               } else {
                 circleMarker = L.circleMarker([ll.lat, ll.lng], {
@@ -1751,6 +1752,7 @@
                   color: color,
                   fillOpacity: 0,
                   weight: 4,
+                  interactive: !measuringMode,
                 }).addTo(satelliteControlGroup);
               }
 
@@ -1763,7 +1765,7 @@
                   iconSize: [0, 0],
                   iconAnchor: [0, 0],
                 }),
-                interactive: true,
+                interactive: !measuringMode,
               }).addTo(satelliteControlGroup);
 
               var devLabel = null;
@@ -1776,7 +1778,7 @@
                     iconSize: [0, 0],
                     iconAnchor: [0, 0],
                   }),
-                  interactive: true,
+                  interactive: !measuringMode,
                 }).addTo(satelliteControlGroup);
 
                 devLabel.bindPopup(popupHtml, {
@@ -1944,10 +1946,10 @@
                 color: 'transparent',
                 weight: hitWeight,
                 opacity: 0,
-                interactive: true,
+                interactive: !measuringMode,
                 bubblingMouseEvents: false,
               }).addTo(satelliteGatewayLinesGroup);
-              if (hitLine.getElement()) hitLine.getElement().style.cursor = 'pointer';
+              if (hitLine.getElement()) hitLine.getElement().style.cursor = measuringMode ? '' : 'pointer';
 
               hitLine.on("click", function(e) {
                 sampleElevationProfile(srcLL, dstLL);
@@ -2454,6 +2456,15 @@
           $("#scaleBar").show();
         }
 
+        function setGroupInteractive(group, interactive) {
+          if (!group) return;
+          group.eachLayer(function(layer) {
+            if (layer.setInteractive) layer.setInteractive(interactive);
+            // Recurse into sub-groups (e.g. gateway hit-target lines)
+            if (layer.eachLayer) setGroupInteractive(layer, interactive);
+          });
+        }
+
         function startMeasuring() {
           cancelGeoreference();
           stopMeasuring(); // clear any previous
@@ -2464,6 +2475,11 @@
             .removeClass("btn-outline-dark")
             .addClass("btn-dark");
           $("#measureResult").hide().text("");
+          // Make control layers non-interactive so clicks pass through to the map
+          setGroupInteractive(controlGroup, false);
+          setGroupInteractive(satelliteControlGroup, false);
+          setGroupInteractive(gatewayLinesGroup, false);
+          setGroupInteractive(satelliteGatewayLinesGroup, false);
           mapInstance.getContainer().style.cursor = "crosshair";
         }
 
@@ -2474,6 +2490,11 @@
             if (satelliteMap) satelliteMap.removeLayer(this);
           });
           measMarkers = [];
+          // Restore interactivity on control and gateway line layers
+          setGroupInteractive(controlGroup, true);
+          setGroupInteractive(satelliteControlGroup, true);
+          setGroupInteractive(gatewayLinesGroup, true);
+          setGroupInteractive(satelliteGatewayLinesGroup, true);
           $("#btnMeasure")
             .text("Measure distance")
             .removeClass("btn-dark")
@@ -2494,16 +2515,17 @@
 
           if (measMarkers.length === 0) {
             // First point (sender = blue)
-            var m = L.circle(pos, { radius: 5, color: "#0066CC", fill: true, fillColor: "#0066CC", fillOpacity: 1, weight: 2 }).addTo(mapInstance);
+            var m = L.circle(pos, { radius: 5, color: "#0066CC", fill: true, fillColor: "#0066CC", fillOpacity: 1, weight: 2, interactive: false }).addTo(mapInstance);
             measMarkers.push(m);
           } else if (measMarkers.length === 1) {
             // Second point (receiver = red) — draw line, calculate, show label
             var p1 = measMarkers[0].getLatLng();
-            var m = L.circle(pos, { radius: 5, color: "#CC0000", fill: true, fillColor: "#CC0000", fillOpacity: 1, weight: 2 }).addTo(mapInstance);
+            var m = L.circle(pos, { radius: 5, color: "#CC0000", fill: true, fillColor: "#CC0000", fillOpacity: 1, weight: 2, interactive: false }).addTo(mapInstance);
             measMarkers.push(m);
             var line = L.polyline([p1, pos], {
               color: "#000",
               weight: 2,
+              interactive: false,
             }).addTo(mapInstance);
             measMarkers.push(line);
 

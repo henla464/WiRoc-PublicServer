@@ -101,12 +101,14 @@
             <div style="position: relative">
               <div
                 id="map"
+                class="map-resizable"
                 style="
                   height: 450px;
                   border: 1px solid #ccc;
                   border-radius: 4px;
                 "
               ></div>
+              <div id="mapResizeHandle" class="map-resize-handle" title="Drag to resize map"></div>
               <div
                 id="scaleBar"
                 style="
@@ -150,8 +152,10 @@
           <div id="satelliteMapContainer" style="display: none">
             <div
               id="satelliteMap"
+              class="map-resizable"
               style="height: 450px; border: 1px solid #ccc; border-radius: 4px"
             ></div>
+            <div id="satelliteMapResizeHandle" class="map-resize-handle" title="Drag to resize map"></div>
             <div
               id="satelliteMapNoGeo"
               class="text-muted text-center p-5"
@@ -1545,9 +1549,17 @@
               hitLine._gatewayDst = { x: gwLayer.x, y: gwLayer.y };
               hitLine.on("click", function(e) {
                 if (measMarkers.length > 0) clearMeasMarkers();
+                // Draw blue/red dots on orienteering map at control centers
+                // In CRS.Simple: L.latLng(lat, lng) where lat=y (mapX), lng=x (mapY)
+                // Control layers: x=mapY(CRS lng), y=mapX(CRS lat)
+                var srcLL = L.latLng(hitLine._gatewaySrc.y, hitLine._gatewaySrc.x);
+                var dstLL = L.latLng(hitLine._gatewayDst.y, hitLine._gatewayDst.x);
+                drawMeasureDots(orienteeringMap, srcLL, dstLL);
                 if (georefPoints.p1Lat) {
-                  var p1 = pixelToLatLng(hitLine._gatewaySrc.y, hitLine._gatewaySrc.x);
-                  var p2 = pixelToLatLng(hitLine._gatewayDst.y, hitLine._gatewayDst.x);
+                  // pixelToLatLng(px, py): px=CRS lng (x-axis), py=CRS lat (y-axis)
+                  // layer.x = CRS lng, layer.y = CRS lat
+                  var p1 = pixelToLatLng(hitLine._gatewaySrc.x, hitLine._gatewaySrc.y);
+                  var p2 = pixelToLatLng(hitLine._gatewayDst.x, hitLine._gatewayDst.y);
                   if (p1 && p2) sampleElevationProfile(L.latLng(p1), L.latLng(p2));
                 }
                 L.DomEvent.stopPropagation(e);
@@ -1954,6 +1966,7 @@
 
               hitLine.on("click", function(e) {
                 if (measMarkers.length > 0) clearMeasMarkers();
+                drawMeasureDots(satelliteMap, srcLL, dstLL);
                 sampleElevationProfile(srcLL, dstLL);
                 L.DomEvent.stopPropagation(e);
               });
@@ -2022,11 +2035,33 @@
           });
         }
 
-        function sampleElevationProfile(p1, p2, callback) {
+        var elevationSampling = false; // prevent concurrent requests
+        var elevationCache = {}; // key -> elevation[] avoids hitting rate limits
+
+        function sampleElevationProfile(p1, p2) {
           if (!p1 || !p2 || !p1.lat || !p1.lng || !p2.lat || !p2.lng) return;
-          heightProfileSampling = true;
+
+          // Check cache first (rounded to ~10m to avoid float mismatches)
+          var key = Math.round(p1.lat * 100000) + ',' + Math.round(p1.lng * 100000) + '-' +
+                    Math.round(p2.lat * 100000) + ',' + Math.round(p2.lng * 100000);
+          if (elevationCache[key]) {
+            heightProfileData = elevationCache[key];
+            var hDistCached = p1.distanceTo ? p1.distanceTo(p2) : 0;
+            var nCached = heightProfileData.length;
+            var cl = [], cg = [];
+            for (var ci = 0; ci < nCached; ci++) {
+              var ct = ci / (nCached - 1);
+              cl.push(p1.lat + (p2.lat - p1.lat) * ct);
+              cg.push(p1.lng + (p2.lng - p1.lng) * ct);
+            }
+            heightProfilePoints = { p1: p1, p2: p2, lats: cl, lngs: cg, dist: hDistCached };
+            renderHeightProfile(parseFloat($("#profileHeight1").val()) || 2, parseFloat($("#profileHeight2").val()) || 2);
+            return;
+          }
+          if (elevationSampling) return; // one request at a time
+          elevationSampling = true;
           var distM = p1.distanceTo ? p1.distanceTo(p2) : 0;
-          var n = distM > 400 ? 100 : 50; // more points for longer distances
+          var n = Math.min(distM > 2000 ? 80 : (distM > 400 ? 40 : 25), 100); // fewer points to avoid rate limits
           var lats = [], lngs = [];
           for (var i = 0; i < n; i++) {
             var t = i / (n - 1);
@@ -2040,16 +2075,20 @@
             dataType: "json"
           }).then(function (data) {
             if (data && data.elevation) {
+              elevationCache[key] = data.elevation; // cache for reuse
               heightProfileData = data.elevation;
-              // Compute total distance along profile
               var hDist = 0;
               if (p1.distanceTo && p2.distanceTo) hDist = p1.distanceTo(p2);
               heightProfilePoints = { p1: p1, p2: p2, lats: lats, lngs: lngs, dist: hDist };
               renderHeightProfile(parseFloat($("#profileHeight1").val()) || 2, parseFloat($("#profileHeight2").val()) || 2);
             }
-            heightProfileSampling = false;
-          }, function () {
-            heightProfileSampling = false;
+            elevationSampling = false;
+          }, function (jqXHR) {
+            elevationSampling = false;
+            var msg = "Could not load elevation data.";
+            if (jqXHR.status === 429) msg = "Elevation API rate limit reached. Please wait a moment and try again.";
+            $("#linkBudgetResult").html('<span style="color:red;">' + msg + '</span>');
+            $("#linkBudgetSection").show();
           });
         }
 
@@ -2532,6 +2571,42 @@
           if (satelliteMap) satelliteMap.getContainer().classList.add("measuring-mode");
         }
 
+        function drawMeasureDots(map, p1, p2) {
+          if (!map) return;
+          var m1 = L.circle(p1, { radius: 5, color: "#0066CC", fill: true, fillColor: "#0066CC", fillOpacity: 1, weight: 2, interactive: false }).addTo(map);
+          measMarkers.push(m1);
+          var m2 = L.circle(p2, { radius: 5, color: "#CC0000", fill: true, fillColor: "#CC0000", fillOpacity: 1, weight: 2, interactive: false }).addTo(map);
+          measMarkers.push(m2);
+          var dline = L.polyline([p1, p2], { color: "#000", weight: 2, interactive: false }).addTo(map);
+          measMarkers.push(dline);
+          // Distance label
+          var meters = null;
+          if (map === satelliteMap && p1.lat != null && p2.lat != null) {
+            meters = p1.distanceTo(p2);
+          } else if (map === orienteeringMap) {
+            var totalPx = map.distance(p1, p2);
+            var ppm = mapMeta && mapMeta.mapScale ? mapMeta.mapScale : 0;
+            meters = ppm > 0 ? totalPx / ppm : null;
+          }
+          var distText = meters
+            ? (meters >= 1000 ? (meters / 1000).toFixed(2) + " km" : Math.round(meters) + " m")
+            : Math.round(map.distance(p1, p2)) + " px";
+          var label = L.marker(p2, {
+            icon: L.divIcon({
+              className: "meas-distance-label",
+              html: '<div style="background:#fff; border:1px solid #333; border-radius:3px; padding:3px 7px; font-size:24px; font-weight:bold; white-space:nowrap; color:#333; display:inline-block;">' + distText + '</div>',
+              iconSize: [200, 50],
+              iconAnchor: [-20, 5],
+            }),
+            interactive: false,
+          }).addTo(map);
+          measMarkers.push(label);
+          $("#btnMeasure")
+            .html('<i class="fa fa-arrows-h"></i> Clear distance')
+            .removeClass("btn-outline-dark")
+            .addClass("btn-dark");
+        }
+
         function clearMeasMarkers() {
           $.each(measMarkers, function () {
             if (orienteeringMap) orienteeringMap.removeLayer(this);
@@ -2644,6 +2719,36 @@
 
 
 
+        function setupMapResize(handleId, mapId) {
+          var handle = document.getElementById(handleId);
+          var mapEl = document.getElementById(mapId);
+          var otherEl = document.getElementById(mapId === "map" ? "satelliteMap" : "map");
+          if (!handle || !mapEl) return;
+          var startY, startHeight;
+          handle.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            startY = e.clientY;
+            startHeight = mapEl.offsetHeight;
+            document.addEventListener('mousemove', resizeMove);
+            document.addEventListener('mouseup', resizeEnd);
+            document.body.style.userSelect = 'none';
+          });
+          function resizeMove(e) {
+            var newH = Math.max(200, startHeight + (e.clientY - startY));
+            mapEl.style.height = newH + 'px';
+            if (otherEl) otherEl.style.height = newH + 'px';
+            if (orienteeringMap) orienteeringMap.invalidateSize();
+            if (satelliteMap) satelliteMap.invalidateSize();
+          }
+          function resizeEnd() {
+            document.removeEventListener('mousemove', resizeMove);
+            document.removeEventListener('mouseup', resizeEnd);
+            document.body.style.userSelect = '';
+            if (orienteeringMap) orienteeringMap.invalidateSize();
+            if (satelliteMap) satelliteMap.invalidateSize();
+          }
+        }
+
         function initSatelliteOnlyMap() {
           satelliteMap = L.map("satelliteMap", {
             center: [0, 0],
@@ -2651,6 +2756,7 @@
             scrollWheelZoom: true,
           });
           createSatelliteTileLayers(satelliteMap);
+          setupMapResize("satelliteMapResizeHandle", "satelliteMap");
           satelliteMap.on("click", function (e) {
             if (measuringMode) { handleMeasureClick(e.originalEvent); return; }
           });
@@ -2684,6 +2790,10 @@
               scrollWheelZoom: true,
             });
             createSatelliteTileLayers(satelliteMap);
+
+            // Resize handles
+            setupMapResize("mapResizeHandle", "map");
+            setupMapResize("satelliteMapResizeHandle", "satelliteMap");
 
             // Set up zoom handler for satellite map
             satelliteMap.on("zoomend", function () {

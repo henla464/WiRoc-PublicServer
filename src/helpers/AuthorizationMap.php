@@ -36,7 +36,9 @@ class AuthorizationMap {
             'getCompetitionMap',
             'getCompetitionAccessLevel',
             'postPasswordRecovery',
-            'postSetNewPassword');
+            'postSetNewPassword',
+            'getLogArchivesDevices',
+            'getLogArchivesFiles');
 
         
         
@@ -130,7 +132,8 @@ class AuthorizationMap {
             'getControls',
             'getControl',
             'getCompetitionControlsWithDevices',
-            'getCompetitionMapFile');
+            'getCompetitionMapFile',
+            'getLogArchivesAnalyze');
     }
 
     public function needsAuthorization(ServerRequestInterface $request) {

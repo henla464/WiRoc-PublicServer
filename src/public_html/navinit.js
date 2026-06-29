@@ -198,7 +198,8 @@ function setupDynamicNav() {
 
     if (isLoggedIn) {
       $("ul.navbar-nav").append(
-        '<li class="nav-item dynamic-nav-item"><a class="nav-link" href="deviceaccess.html">Device Access</a></li>'
+        '<li class="nav-item dynamic-nav-item"><a class="nav-link" href="deviceaccess.html">Device Access</a></li>' +
+        '<li class="nav-item dynamic-nav-item"><a class="nav-link" href="analyze.html">Analyze Logs</a></li>'
       );
     }
 

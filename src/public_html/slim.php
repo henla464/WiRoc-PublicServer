@@ -4628,5 +4628,358 @@ $app->post('/api/v1/Users/SetNewPassword', function (Request $request, Response 
 })->setName("postSetNewPassword");
 
 
+/**
+ * @SWG\Get(
+ *     path="/api/v1/LogArchives/Devices",
+ *     description="Returns devices that have log archive zip files",
+ *     operationId="getLogArchivesDevices",
+ *     produces={"application/json"},
+ *     @SWG\Response(
+ *         response=200,
+ *         description="JSON array of devices with log archives"
+ *     )
+ * )
+ */
+$app->get('/api/v1/LogArchives/Devices', function (Request $request, Response $response) {
+    $logArchiveDir = __DIR__ . '/LogArchives/';
+    $devices = [];
+
+    // Scan for BTAddresses from zip filenames
+    $btAddressesFromFiles = [];
+    if (is_dir($logArchiveDir)) {
+        $files = scandir($logArchiveDir);
+        foreach ($files as $file) {
+            // Match: LogArchive_<BTAddress>_<date part>.zip
+            // BTAddress is MAC hex:colons, date starts with digits/dashes
+            if (preg_match('/^LogArchive_([0-9A-Fa-f:]+)_(.+)\.zip$/', $file, $matches)) {
+                $btAddr = $matches[1];
+                $btAddressesFromFiles[$btAddr] = true;
+            }
+        }
+    }
+
+    // Try to enrich with device info from DB
+    if (!empty($btAddressesFromFiles)) {
+        $btList = array_keys($btAddressesFromFiles);
+
+        try {
+            // First try exact match
+            $placeholders = implode(',', array_fill(0, count($btList), '?'));
+            $sql = "SELECT BTAddress, name, description FROM Devices WHERE BTAddress IN ($placeholders) ORDER BY name";
+            $stmt = $this->get('db')->prepare($sql);
+            $stmt->execute($btList);
+            $dbDevices = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Index by BTAddress for quick lookup
+            $dbIndex = [];
+            foreach ($dbDevices as $d) {
+                $dbIndex[$d['BTAddress']] = $d;
+            }
+
+            // Build result: for each BTAddress found in files, include device info if available
+            foreach ($btList as $bt) {
+                if (isset($dbIndex[$bt])) {
+                    $devices[] = $dbIndex[$bt];
+                } else {
+                    // Device not in DB yet — include with BTAddress only
+                    $devices[] = [
+                        'BTAddress' => $bt,
+                        'name' => null,
+                        'description' => null
+                    ];
+                }
+            }
+        } catch (Exception $e) {
+            // DB unavailable — return raw BTAddress list
+            foreach ($btList as $bt) {
+                $devices[] = [
+                    'BTAddress' => $bt,
+                    'name' => null,
+                    'description' => null
+                ];
+            }
+        }
+    }
+
+    // Debug: include raw scanning info
+    $result = [
+        'logArchiveDir' => $logArchiveDir,
+        'dirExists' => is_dir($logArchiveDir),
+        'dirReadable' => is_readable($logArchiveDir),
+        'btAddressesFromFiles' => array_keys($btAddressesFromFiles),
+        'devices' => $devices
+    ];
+
+    $response->getBody()->write(json_encode($result));
+    return $response->withHeader('Content-Type', 'application/json');
+})->setName("getLogArchivesDevices");
+
+/**
+ * @SWG\Get(
+ *     path="/api/v1/LogArchives/Files",
+ *     description="Returns zip files for a specific device BTAddress",
+ *     operationId="getLogArchivesFiles",
+ *     produces={"application/json"},
+ *     @SWG\Parameter(name="BTAddress", in="query", required=true, type="string"),
+ *     @SWG\Response(response=200, description="JSON array of zip filenames with metadata")
+ * )
+ */
+$app->get('/api/v1/LogArchives/Files', function (Request $request, Response $response) {
+    $btAddress = $request->getQueryParams()['BTAddress'] ?? '';
+    if (empty($btAddress)) {
+        $response->getBody()->write(json_encode([]));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    $logArchiveDir = __DIR__ . '/LogArchives/';
+    $files = [];
+
+    if (is_dir($logArchiveDir)) {
+        $allFiles = scandir($logArchiveDir);
+        foreach ($allFiles as $file) {
+            $pattern = '/^LogArchive_' . preg_quote($btAddress, '/') . '_(.+)$/';
+            if (preg_match($pattern, $file, $matches)) {
+                $dateStr = $matches[1];
+                $files[] = [
+                    'filename' => $file,
+                    'dateTime' => $dateStr,
+                    'size' => filesize($logArchiveDir . $file)
+                ];
+            }
+        }
+    }
+
+    // Sort by date descending
+    usort($files, function ($a, $b) {
+        return strcmp($b['dateTime'], $a['dateTime']);
+    });
+
+    $response->getBody()->write(json_encode($files));
+    return $response->withHeader('Content-Type', 'application/json');
+})->setName("getLogArchivesFiles");
+
+/**
+ * @SWG\Get(
+ *     path="/api/v1/LogArchives/Analyze",
+ *     description="Analyze a sender zip file and optionally merge with receiver data",
+ *     operationId="getLogArchivesAnalyze",
+ *     produces={"application/json"},
+ *     @SWG\Parameter(name="senderZip", in="query", required=true, type="string"),
+ *     @SWG\Parameter(name="receiverZip", in="query", required=false, type="string"),
+ *     @SWG\Response(response=200, description="JSON array of analyzed message data")
+ * )
+ */
+$app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $response) {
+    $senderZip = $request->getQueryParams()['senderZip'] ?? '';
+    $receiverZip = $request->getQueryParams()['receiverZip'] ?? '';
+
+    if (empty($senderZip)) {
+        $res = new CommandResponse();
+        $res->code = 1;
+        $res->message = "senderZip parameter is required";
+        $response->getBody()->write(json_encode($res));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+    }
+
+    // Require logged-in user
+    if (empty($_SESSION['userId'])) {
+        $res = new CommandResponse();
+        $res->code = 2;
+        $res->message = "Login required";
+        $response->getBody()->write(json_encode($res));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
+    }
+
+    $logArchiveDir = __DIR__ . '/LogArchives/';
+
+    // Validate and sanitize filenames - prevent path traversal
+    $senderPath = $logArchiveDir . basename($senderZip);
+    if (!file_exists($senderPath) || !is_file($senderPath)) {
+        $res = new CommandResponse();
+        $res->code = 3;
+        $res->message = "Sender zip file not found";
+        $response->getBody()->write(json_encode($res));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
+    }
+
+    $receiverPath = null;
+    if (!empty($receiverZip)) {
+        $receiverPath = $logArchiveDir . basename($receiverZip);
+        if (!file_exists($receiverPath) || !is_file($receiverPath)) {
+            $res = new CommandResponse();
+            $res->code = 4;
+            $res->message = "Receiver zip file not found";
+            $response->getBody()->write(json_encode($res));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
+        }
+    }
+
+    // Helper: unzip a file and find WiRoc.db inside, return [dbPath, tmpDir]
+    $extractDbFromZip = function ($zipPath) {
+        $tmpDir = sys_get_temp_dir() . '/wiroc_analyze_' . uniqid();
+        mkdir($tmpDir, 0700, true);
+
+        $cmd = '/usr/bin/unzip -o ' . escapeshellarg($zipPath) . ' -d ' . escapeshellarg($tmpDir) . ' 2>&1';
+        shell_exec($cmd);
+
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($tmpDir, RecursiveDirectoryIterator::SKIP_DOTS)
+        );
+        foreach ($iterator as $file) {
+            if ($file->getFilename() === 'WiRoc.db') {
+                return ['dbPath' => $file->getPathname(), 'tmpDir' => $tmpDir];
+            }
+        }
+        // Cleanup on failure
+        $items = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($tmpDir, RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($items as $item) {
+            $item->isDir() ? rmdir($item) : unlink($item);
+        }
+        rmdir($tmpDir);
+        return null;
+    };
+
+    // Helper: delete a temp directory recursively
+    $deleteDir = function ($tmpDir) {
+        if (!is_dir($tmpDir)) return;
+        $items = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($tmpDir, RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($items as $item) {
+            $item->isDir() ? rmdir($item) : unlink($item);
+        }
+        rmdir($tmpDir);
+    };
+
+    $debug = [];
+
+    // Helper: query WiRoc.db via sqlite3 CLI, return parsed JSON
+    $queryMessagesFromDb = function ($dbPath, $label) use (&$debug) {
+        $sql = "SELECT "
+            . "mbd.MessageTypeName, mbd.InstanceName, mbd.MessageSubTypeName, "
+            . "mbd.SICardNumber, "
+            . "mbd.SportIdentHour, mbd.SportIdentMinute, mbd.SportIdentSecond, "
+            . "mbd.SIStationNumber, "
+            . "mbd.SICardNumber2, mbd.SportIdentHour2, mbd.SportIdentMinute2, mbd.SportIdentSecond2, mbd.SIStationNumber2, "
+            . "mbd.ChecksumOK, mbd.CreatedDate, mbd.RSSIValue, "
+            . "msd.SentDate, msd.SendFailedDate, msd.AckReceivedDate, "
+            . "msd.NoOfSendTries, "
+            . "NULL AS SubscriberTypeName, NULL AS TransformName, "
+            . "'active' AS source, mbd.id AS orig_id "
+            . "FROM MessageBoxData mbd "
+            . "JOIN MessageSubscriptionData msd ON mbd.id = msd.MessageBoxId "
+            . "UNION ALL SELECT "
+            . "mbad.MessageTypeName, mbad.InstanceName, mbad.MessageSubTypeName, "
+            . "mbad.SICardNumber, "
+            . "mbad.SportIdentHour, mbad.SportIdentMinute, mbad.SportIdentSecond, "
+            . "mbad.SIStationNumber, "
+            . "mbad.SICardNumber2, mbad.SportIdentHour2, mbad.SportIdentMinute2, mbad.SportIdentSecond2, mbad.SIStationNumber2, "
+            . "mbad.ChecksumOK, mbad.CreatedDate, mbad.RSSIValue, "
+            . "msad.SentDate, msad.SendFailedDate, msad.AckReceivedDate, "
+            . "msad.NoOfSendTries, "
+            . "msad.SubscriberTypeName, msad.TransformName, "
+            . "'archive' AS source, mbad.OrigId AS orig_id "
+            . "FROM MessageBoxArchiveData mbad "
+            . "JOIN MessageSubscriptionArchiveData msad ON mbad.OrigId = msad.MessageBoxId "
+            . "ORDER BY SentDate DESC, CreatedDate DESC";
+
+        $cmd = '/usr/local/bin/sqlite3 -readonly -json ' . escapeshellarg($dbPath) . ' ' . escapeshellarg($sql) . ' 2>&1';
+        $output = shell_exec($cmd);
+
+        $debug["{$label}_sql"] = $sql;
+        $debug["{$label}_cmd"] = $cmd;
+        $debug["{$label}_outputLen"] = strlen($output ?? '');
+        $debug["{$label}_outputPreview"] = substr($output ?? '', 0, 2000);
+
+        if ($output === null || trim($output) === '') {
+            $debug["{$label}_result"] = 'empty output';
+            return [];
+        }
+        $rows = json_decode($output, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $debug["{$label}_jsonError"] = json_last_error_msg();
+            return [];
+        }
+        if (!is_array($rows)) {
+            $debug["{$label}_result"] = 'not an array: ' . gettype($rows);
+            return [];
+        }
+        $debug["{$label}_rowCount"] = count($rows);
+        return $rows;
+    };
+
+    // Extract and query sender DB
+    $senderExtracted = $extractDbFromZip($senderPath);
+    if (!$senderExtracted) {
+        $res = new CommandResponse();
+        $res->code = 5;
+        $res->message = "Could not find WiRoc.db in sender zip file";
+        $response->getBody()->write(json_encode($res));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+    }
+
+    $messages = $queryMessagesFromDb($senderExtracted['dbPath'], 'sender');
+
+    // Build receiver lookup if receiver zip provided
+    $receiverLookup = null;
+    if ($receiverPath) {
+        $recvExtracted = $extractDbFromZip($receiverPath);
+        if ($recvExtracted) {
+            $recvMessages = $queryMessagesFromDb($recvExtracted['dbPath'], 'receiver');
+            $receiverLookup = [];
+            foreach ($recvMessages as $rm) {
+                $key = ($rm['SICardNumber'] ?? '') . '|'
+                     . ($rm['SportIdentHour'] ?? '') . '|'
+                     . ($rm['SportIdentMinute'] ?? '') . '|'
+                     . ($rm['SportIdentSecond'] ?? '') . '|'
+                     . ($rm['SIStationNumber'] ?? '');
+                if (!isset($receiverLookup[$key])) {
+                    $receiverLookup[$key] = $rm;
+                }
+            }
+            $deleteDir($recvExtracted['tmpDir']);
+        }
+    }
+
+    // Merge receiver data into sender messages
+    if ($receiverLookup !== null) {
+        foreach ($messages as &$msg) {
+            $key = ($msg['SICardNumber'] ?? '') . '|'
+                 . ($msg['SportIdentHour'] ?? '') . '|'
+                 . ($msg['SportIdentMinute'] ?? '') . '|'
+                 . ($msg['SportIdentSecond'] ?? '') . '|'
+                 . ($msg['SIStationNumber'] ?? '');
+            if (isset($receiverLookup[$key])) {
+                $msg['recv_ChecksumOK'] = $receiverLookup[$key]['ChecksumOK'];
+                $msg['recv_CreatedDate'] = $receiverLookup[$key]['CreatedDate'];
+                $msg['recv_RSSIValue'] = $receiverLookup[$key]['RSSIValue'];
+                $msg['recv_MessageTypeName'] = $receiverLookup[$key]['MessageTypeName'];
+            } else {
+                $msg['recv_ChecksumOK'] = null;
+                $msg['recv_CreatedDate'] = null;
+                $msg['recv_RSSIValue'] = null;
+                $msg['recv_MessageTypeName'] = null;
+            }
+        }
+    }
+
+    $deleteDir($senderExtracted['tmpDir']);
+
+    $debug['messageCount'] = count($messages);
+    $debug['receiverLookupSize'] = $receiverLookup ? count($receiverLookup) : 0;
+
+    $result = [
+        'debug' => $debug,
+        'messages' => $messages
+    ];
+
+    $response->getBody()->write(json_encode($result));
+    return $response->withHeader('Content-Type', 'application/json');
+})->setName("getLogArchivesAnalyze");
+
 $app->run();
 

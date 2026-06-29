@@ -191,3 +191,36 @@
 #satelliteMap.measuring-mode .leaflet-marker-icon > * {
   pointer-events: none !important;
 }
+
+.map-resize-handle {
+  height: 6px;
+  background: #dee2e6;
+  border-width: 0 1px 1px 1px;
+  border-style: solid;
+  border-color: #ccc;
+  border-radius: 0 0 4px 4px;
+  cursor: ns-resize;
+}
+.map-resize-handle:hover {
+  background: #6c757d;
+}
+.map-resizable {
+  border-radius: 4px 4px 0 0 !important;
+}
+
+/* Analyze Log page */
+.ack-cell {
+  background-color: #d4edda !important;
+}
+.sendfailed-cell {
+  background-color: #f8d7da !important;
+}
+#analyzeResultsTable td {
+  white-space: nowrap;
+}
+#analyzeLoading {
+  display: none;
+}
+.analyze-selector {
+  max-width: 400px;
+}

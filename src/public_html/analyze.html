@@ -108,73 +108,24 @@
 
         <div class="row mb-3 align-items-end">
           <div class="col-auto">
-            <button
-              type="button"
-              id="btnAnalyze"
-              class="btn btn-primary"
-              disabled
-            >
-              <span
-                id="btnAnalyzeSpinner"
-                class="spinner-border spinner-border-sm"
-                style="display: none"
-                role="status"
-                aria-hidden="true"
-              ></span>
-              Analyze
-            </button>
-          </div>
-          <div class="col-auto">
             <label class="form-label small mb-1">From</label>
-            <div
-              class="input-group input-group-sm"
-              id="pickerFrom"
-              data-td-target-input="nearest"
-              data-td-target-toggle="nearest"
-            >
-              <input
-                id="filterFrom"
-                type="text"
-                class="form-control"
-                data-td-target="#pickerFrom"
-                style="width: 170px"
-                placeholder="yyyy-MM-dd HH:mm"
-                autocomplete="off"
-              />
-              <span
-                class="input-group-text"
-                data-td-target="#pickerFrom"
-                data-td-toggle="datetimepicker"
-                style="cursor: pointer"
-                ><i class="fa fa-calendar"></i
-              ></span>
+            <div class="input-group input-group-sm" id="pickerFrom" data-td-target-input="nearest" data-td-target-toggle="nearest">
+              <input id="filterFrom" type="text" class="form-control" data-td-target="#pickerFrom" style="width:170px" placeholder="yyyy-MM-dd HH:mm" autocomplete="off">
+              <span class="input-group-text" data-td-target="#pickerFrom" data-td-toggle="datetimepicker" style="cursor:pointer"><i class="fa fa-calendar"></i></span>
             </div>
           </div>
           <div class="col-auto">
             <label class="form-label small mb-1">To</label>
-            <div
-              class="input-group input-group-sm"
-              id="pickerTo"
-              data-td-target-input="nearest"
-              data-td-target-toggle="nearest"
-            >
-              <input
-                id="filterTo"
-                type="text"
-                class="form-control"
-                data-td-target="#pickerTo"
-                style="width: 170px"
-                placeholder="yyyy-MM-dd HH:mm"
-                autocomplete="off"
-              />
-              <span
-                class="input-group-text"
-                data-td-target="#pickerTo"
-                data-td-toggle="datetimepicker"
-                style="cursor: pointer"
-                ><i class="fa fa-calendar"></i
-              ></span>
+            <div class="input-group input-group-sm" id="pickerTo" data-td-target-input="nearest" data-td-target-toggle="nearest">
+              <input id="filterTo" type="text" class="form-control" data-td-target="#pickerTo" style="width:170px" placeholder="yyyy-MM-dd HH:mm" autocomplete="off">
+              <span class="input-group-text" data-td-target="#pickerTo" data-td-toggle="datetimepicker" style="cursor:pointer"><i class="fa fa-calendar"></i></span>
             </div>
+          </div>
+          <div class="col-auto">
+            <button type="button" id="btnAnalyze" class="btn btn-primary" disabled>
+              <span id="btnAnalyzeSpinner" class="spinner-border spinner-border-sm" style="display:none" role="status" aria-hidden="true"></span>
+              Analyze
+            </button>
           </div>
         </div>
 
@@ -197,6 +148,10 @@
           <div class="table-responsive" id="tableScrollWrapper">
             <div id="analyzeTableContainer"></div>
           </div>
+          <div id="summarySection" style="display:none;margin-top:20px">
+            <h5>Message Summary</h5>
+            <div id="summaryContainer"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -217,6 +172,7 @@
       var senderZipFiles = [];
       var receiverZipFiles = [];
       var hasReceiverData = false;
+      var tdFrom = null, tdTo = null;
 
       // localStorage helpers
       var ls = {
@@ -319,9 +275,9 @@
                 saved.senderDevice,
                 function (files) {
                   senderZipFiles = files;
-                  updateAnalyzeButton();
                   if (saved.senderZip)
                     $("#senderZipSelect").val(saved.senderZip);
+                  updateAnalyzeButton();
                 },
                 $("#senderZipSelect"),
               );
@@ -332,9 +288,9 @@
                 saved.receiverDevice,
                 function (files) {
                   receiverZipFiles = files;
-                  updateAnalyzeButton();
                   if (saved.receiverZip)
                     $("#receiverZipSelect").val(saved.receiverZip);
+                  updateAnalyzeButton();
                 },
                 $("#receiverZipSelect"),
               );
@@ -672,6 +628,148 @@
         });
         standalone.sort(sortBySentDate);
 
+        // --- Compute summary stats per MessageTypeName ---
+        var summaryStats = {}; // key: MessageTypeName -> { total, ackedIncl, ackedExcl, tryCounts: [0,0,0,0,0,0] }
+        function ensureStats(mt) {
+          if (!summaryStats[mt]) summaryStats[mt] = { total: 0, ackedIncl: 0, ackedExcl: 0, tryCounts: [0,0,0,0,0,0] };
+        }
+        $.each(parents, function () {
+          var mt = this.row.MessageTypeName || '(empty)';
+          ensureStats(mt);
+          var st = summaryStats[mt];
+          st.total++;
+          var hasKids = !!(childrenByKey[this.key] && childrenByKey[this.key].length > 0);
+          var childAcked = hasKids && childrenByKey[this.key].some(function (c) { return !!c.AckReceivedDate; });
+          if (this.row.AckReceivedDate) {
+            st.ackedIncl++;
+            st.ackedExcl++;
+            var tries = parseInt(this.row.NoOfSendTries) || 0;
+            if (tries >= 1 && tries <= 5) st.tryCounts[tries - 1]++;
+          } else if (childAcked) {
+            st.ackedIncl++;
+          }
+        });
+        $.each(standalone, function () {
+          var mt = this.MessageTypeName || '(empty)';
+          ensureStats(mt);
+          var st = summaryStats[mt];
+          st.total++;
+          if (this.AckReceivedDate) {
+            st.ackedIncl++;
+            st.ackedExcl++;
+            var tries = parseInt(this.NoOfSendTries) || 0;
+            if (tries >= 1 && tries <= 5) st.tryCounts[tries - 1]++;
+          }
+        });
+
+        // --- Build summary sections per MessageTypeName ---
+        // LORA and STATUS get their own cards, but excluded from grand totals
+        var $summaryContainer = $('#summaryContainer').empty();
+        var mtNames = Object.keys(summaryStats).sort();
+        var grandTotal = 0, grandIncl = 0, grandExcl = 0, grandTries = [0,0,0,0,0];
+        var cardCount = 0;
+        var excludedCards = []; // STATUS cards go here
+
+        function buildSummaryCard(name, st, dark) {
+          var pct = function (n) { return st.total > 0 ? (n / st.total * 100).toFixed(1) + '% (' + n + ')' : '-'; };
+          var full = function (n) {
+            if (st.total === 0) return '-';
+            var perc = (n / st.total * 100).toFixed(1);
+            return perc + '% (' + n + ')';
+          };
+          var maybeGreen = function (n) {
+            if (st.total > 0 && n === st.total) return ' style="background-color:#d4edda"';
+            return '';
+          };
+          var headerClass = dark ? 'bg-dark text-white' : '';
+          var borderStyle = dark ? 'border-width:2px;border-color:#333;break-inside:avoid' : 'break-inside:avoid';
+          var $card = $('<div class="card mb-2" style="' + borderStyle + '"><div class="card-header py-1 ' + headerClass + '"><strong>' + name + '</strong> (' + st.total + ' total)</div></div>');
+          var $list = $('<ul class="list-group list-group-flush"></ul>');
+          $list.append('<li class="list-group-item py-1"' + maybeGreen(st.ackedIncl) + '><span class="text-muted">% Acked (incl. resubmit):</span> <strong>' + full(st.ackedIncl) + '</strong></li>');
+          $list.append('<li class="list-group-item py-1"' + maybeGreen(st.ackedExcl) + '><span class="text-muted">% Acked (excl. resubmit):</span> <strong>' + full(st.ackedExcl) + '</strong></li>');
+          var indent = 'ps-5';
+          $list.append('<li class="list-group-item py-1 ' + indent + '"' + maybeGreen(st.tryCounts[0]) + '><span class="text-muted">&#8627; % Acked on 1st try:</span> <strong>' + full(st.tryCounts[0]) + '</strong></li>');
+          $list.append('<li class="list-group-item py-1 ' + indent + '"' + maybeGreen(st.tryCounts[1]) + '><span class="text-muted">&#8627; % Acked on 2nd try:</span> <strong>' + full(st.tryCounts[1]) + '</strong></li>');
+          $list.append('<li class="list-group-item py-1 ' + indent + '"' + maybeGreen(st.tryCounts[2]) + '><span class="text-muted">&#8627; % Acked on 3rd try:</span> <strong>' + full(st.tryCounts[2]) + '</strong></li>');
+          $list.append('<li class="list-group-item py-1 ' + indent + '"' + maybeGreen(st.tryCounts[3]) + '><span class="text-muted">&#8627; % Acked on 4th try:</span> <strong>' + full(st.tryCounts[3]) + '</strong></li>');
+          $list.append('<li class="list-group-item py-1 ' + indent + '"' + maybeGreen(st.tryCounts[4]) + '><span class="text-muted">&#8627; % Acked on 5th try:</span> <strong>' + full(st.tryCounts[4]) + '</strong></li>');
+          $card.append($list);
+          return $card;
+        }
+
+        $.each(mtNames, function () {
+          var name = this;
+          var st = summaryStats[name];
+          // LORA: skip entirely
+          if (name == 'LORA') {
+            return;
+          }
+          // STATUS: show card now but exclude from grand totals
+          if (name == 'STATUS') {
+            excludedCards.push({ name: name, st: st, isStatus: true });
+            return;
+          }
+          grandTotal += st.total; grandIncl += st.ackedIncl; grandExcl += st.ackedExcl;
+          for (var t = 0; t < 5; t++) grandTries[t] += st.tryCounts[t];
+          cardCount++;
+          $summaryContainer.append(buildSummaryCard(name, st, false));
+        });
+
+        // Grand total card (excl. LORA and STATUS)
+        if (cardCount > 0) {
+          var full = function (n) {
+            if (grandTotal === 0) return '-';
+            return (n / grandTotal * 100).toFixed(1) + '% (' + n + ')';
+          };
+          var maybeGreen = function (n) {
+            if (grandTotal > 0 && n === grandTotal) return ' style="background-color:#d4edda"';
+            return '';
+          };
+          var includedTypes = mtNames.filter(function (n) { return n != 'LORA' && n != 'STATUS'; }).join(', ');
+          var $allCard = $('<div class="card mb-2" style="break-inside:avoid;border:2px solid #333"><div class="card-header py-1 bg-dark text-white"><strong>ALL</strong> (' + grandTotal + ' total) <small style="font-weight:normal">from: ' + includedTypes + '</small></div></div>');
+          var $allList = $('<ul class="list-group list-group-flush"></ul>');
+          $allList.append('<li class="list-group-item py-1"' + maybeGreen(grandIncl) + '><span>% Acked (incl. resubmit):</span> <strong>' + full(grandIncl) + '</strong></li>');
+          $allList.append('<li class="list-group-item py-1"' + maybeGreen(grandExcl) + '><span>% Acked (excl. resubmit):</span> <strong>' + full(grandExcl) + '</strong></li>');
+          var indent = 'ps-5';
+          $allList.append('<li class="list-group-item py-1 ' + indent + '"' + maybeGreen(grandTries[0]) + '><span class="text-muted">&#8627; % Acked on 1st try:</span> <strong>' + full(grandTries[0]) + '</strong></li>');
+          $allList.append('<li class="list-group-item py-1 ' + indent + '"' + maybeGreen(grandTries[1]) + '><span class="text-muted">&#8627; % Acked on 2nd try:</span> <strong>' + full(grandTries[1]) + '</strong></li>');
+          $allList.append('<li class="list-group-item py-1 ' + indent + '"' + maybeGreen(grandTries[2]) + '><span class="text-muted">&#8627; % Acked on 3rd try:</span> <strong>' + full(grandTries[2]) + '</strong></li>');
+          $allList.append('<li class="list-group-item py-1 ' + indent + '"' + maybeGreen(grandTries[3]) + '><span class="text-muted">&#8627; % Acked on 4th try:</span> <strong>' + full(grandTries[3]) + '</strong></li>');
+          $allList.append('<li class="list-group-item py-1 ' + indent + '"' + maybeGreen(grandTries[4]) + '><span class="text-muted">&#8627; % Acked on 5th try:</span> <strong>' + full(grandTries[4]) + '</strong></li>');
+          $allCard.append($allList);
+          $summaryContainer.append($allCard);
+        }
+
+        // Append excluded cards (STATUS) after grand total, with muted styling
+        $.each(excludedCards, function () {
+          var st = this.st;
+          var full = function (n) {
+            if (st.total === 0) return '-';
+            return (n / st.total * 100).toFixed(1) + '% (' + n + ')';
+          };
+          var maybeGreen = function (n) {
+            if (st.total > 0 && n === st.total) return ' style="background-color:#d4edda"';
+            return '';
+          };
+          var label = 'STATUS (excluded from totals)';
+          var $card = $('<div class="card mb-2 border-secondary" style="break-inside:avoid;opacity:0.85"><div class="card-header py-1 bg-light text-muted"><strong>' + this.name + '</strong> (' + st.total + ' total) <small>' + label + '</small></div></div>');
+          var $list = $('<ul class="list-group list-group-flush"></ul>');
+          $list.append('<li class="list-group-item py-1"' + maybeGreen(st.ackedIncl) + '><span class="text-muted">% Acked (incl. resubmit):</span> <strong>' + full(st.ackedIncl) + '</strong></li>');
+          $list.append('<li class="list-group-item py-1"' + maybeGreen(st.ackedExcl) + '><span class="text-muted">% Acked (excl. resubmit):</span> <strong>' + full(st.ackedExcl) + '</strong></li>');
+          var indent = 'ps-5';
+          $list.append('<li class="list-group-item py-1 ' + indent + '"' + maybeGreen(st.tryCounts[0]) + '><span class="text-muted">&#8627; % Acked on 1st try:</span> <strong>' + full(st.tryCounts[0]) + '</strong></li>');
+          $list.append('<li class="list-group-item py-1 ' + indent + '"' + maybeGreen(st.tryCounts[1]) + '><span class="text-muted">&#8627; % Acked on 2nd try:</span> <strong>' + full(st.tryCounts[1]) + '</strong></li>');
+          $list.append('<li class="list-group-item py-1 ' + indent + '"' + maybeGreen(st.tryCounts[2]) + '><span class="text-muted">&#8627; % Acked on 3rd try:</span> <strong>' + full(st.tryCounts[2]) + '</strong></li>');
+          $list.append('<li class="list-group-item py-1 ' + indent + '"' + maybeGreen(st.tryCounts[3]) + '><span class="text-muted">&#8627; % Acked on 4th try:</span> <strong>' + full(st.tryCounts[3]) + '</strong></li>');
+          $list.append('<li class="list-group-item py-1 ' + indent + '"' + maybeGreen(st.tryCounts[4]) + '><span class="text-muted">&#8627; % Acked on 5th try:</span> <strong>' + full(st.tryCounts[4]) + '</strong></li>');
+          $card.append($list);
+          $summaryContainer.append($card);
+        });
+
+        // Layout cards in columns if many
+        if (cardCount >= 2) $summaryContainer.css({columns: '2', columnGap: '1rem'});
+        $('#summarySection').show();
+
         // Output: each parent + its children, then standalone rows
         var parentIdx = 0;
         $.each(parents, function () {
@@ -944,7 +1042,7 @@
         });
 
         // Initialize Tempus Dominus date/time pickers
-        var tdFrom = new tempusDominus.TempusDominus(
+        tdFrom = new tempusDominus.TempusDominus(
           document.getElementById("pickerFrom"),
           {
             display: {
@@ -969,7 +1067,7 @@
             localization: { format: "yyyy-MM-dd HH:mm" },
           },
         );
-        var tdTo = new tempusDominus.TempusDominus(
+        tdTo = new tempusDominus.TempusDominus(
           document.getElementById("pickerTo"),
           {
             display: {

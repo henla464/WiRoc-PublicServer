@@ -13,8 +13,15 @@
       crossorigin="anonymous"
     />
     <link rel="stylesheet" href="ui/css/wiroc.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.11/dist/css/tempus-dominus.min.css" crossorigin="anonymous" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.11/dist/css/tempus-dominus.min.css"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
     <title>Analyze Logs - WiRoc Monitor</title>
   </head>
   <body>
@@ -101,29 +108,84 @@
 
         <div class="row mb-3 align-items-end">
           <div class="col-auto">
-            <button type="button" id="btnAnalyze" class="btn btn-primary" disabled>
-              <span id="btnAnalyzeSpinner" class="spinner-border spinner-border-sm" style="display:none" role="status" aria-hidden="true"></span>
+            <button
+              type="button"
+              id="btnAnalyze"
+              class="btn btn-primary"
+              disabled
+            >
+              <span
+                id="btnAnalyzeSpinner"
+                class="spinner-border spinner-border-sm"
+                style="display: none"
+                role="status"
+                aria-hidden="true"
+              ></span>
               Analyze
             </button>
           </div>
           <div class="col-auto">
             <label class="form-label small mb-1">From</label>
-            <div class="input-group input-group-sm" id="pickerFrom" data-td-target-input="nearest" data-td-target-toggle="nearest">
-              <input id="filterFrom" type="text" class="form-control" data-td-target="#pickerFrom" style="width:170px" placeholder="yyyy-MM-dd HH:mm" autocomplete="off">
-              <span class="input-group-text" data-td-target="#pickerFrom" data-td-toggle="datetimepicker" style="cursor:pointer"><i class="fa fa-calendar"></i></span>
+            <div
+              class="input-group input-group-sm"
+              id="pickerFrom"
+              data-td-target-input="nearest"
+              data-td-target-toggle="nearest"
+            >
+              <input
+                id="filterFrom"
+                type="text"
+                class="form-control"
+                data-td-target="#pickerFrom"
+                style="width: 170px"
+                placeholder="yyyy-MM-dd HH:mm"
+                autocomplete="off"
+              />
+              <span
+                class="input-group-text"
+                data-td-target="#pickerFrom"
+                data-td-toggle="datetimepicker"
+                style="cursor: pointer"
+                ><i class="fa fa-calendar"></i
+              ></span>
             </div>
           </div>
           <div class="col-auto">
             <label class="form-label small mb-1">To</label>
-            <div class="input-group input-group-sm" id="pickerTo" data-td-target-input="nearest" data-td-target-toggle="nearest">
-              <input id="filterTo" type="text" class="form-control" data-td-target="#pickerTo" style="width:170px" placeholder="yyyy-MM-dd HH:mm" autocomplete="off">
-              <span class="input-group-text" data-td-target="#pickerTo" data-td-toggle="datetimepicker" style="cursor:pointer"><i class="fa fa-calendar"></i></span>
+            <div
+              class="input-group input-group-sm"
+              id="pickerTo"
+              data-td-target-input="nearest"
+              data-td-target-toggle="nearest"
+            >
+              <input
+                id="filterTo"
+                type="text"
+                class="form-control"
+                data-td-target="#pickerTo"
+                style="width: 170px"
+                placeholder="yyyy-MM-dd HH:mm"
+                autocomplete="off"
+              />
+              <span
+                class="input-group-text"
+                data-td-target="#pickerTo"
+                data-td-toggle="datetimepicker"
+                style="cursor: pointer"
+                ><i class="fa fa-calendar"></i
+              ></span>
             </div>
           </div>
         </div>
 
-        <div id="analyzeError" class="alert alert-danger collapse" role="alert"></div>
-        <div id="analyzeLoading" class="text-muted">Analyzing... this may take a moment for large files.</div>
+        <div
+          id="analyzeError"
+          class="alert alert-danger collapse"
+          role="alert"
+        ></div>
+        <div id="analyzeLoading" class="text-muted">
+          Analyzing... this may take a moment for large files.
+        </div>
 
         <div id="resultsSection" style="display: none">
           <div
@@ -158,40 +220,53 @@
 
       // localStorage helpers
       var ls = {
-        get: function (k) { try { return localStorage.getItem('analyze_' + k); } catch (e) { return null; } },
-        set: function (k, v) { try { localStorage.setItem('analyze_' + k, v); } catch (e) {} },
-        getSel: function () { return {
-          senderDevice: ls.get('senderDevice') || '',
-          senderZip: ls.get('senderZip') || '',
-          receiverDevice: ls.get('receiverDevice') || '',
-          receiverZip: ls.get('receiverZip') || '',
-          filterFrom: ls.get('filterFrom') || '',
-          filterTo: ls.get('filterTo') || ''
-        };},
+        get: function (k) {
+          try {
+            return localStorage.getItem("analyze_" + k);
+          } catch (e) {
+            return null;
+          }
+        },
+        set: function (k, v) {
+          try {
+            localStorage.setItem("analyze_" + k, v);
+          } catch (e) {}
+        },
+        getSel: function () {
+          return {
+            senderDevice: ls.get("senderDevice") || "",
+            senderZip: ls.get("senderZip") || "",
+            receiverDevice: ls.get("receiverDevice") || "",
+            receiverZip: ls.get("receiverZip") || "",
+            filterFrom: ls.get("filterFrom") || "",
+            filterTo: ls.get("filterTo") || "",
+          };
+        },
         saveSel: function () {
-          ls.set('senderDevice', $('#senderDeviceSelect').val() || '');
-          ls.set('senderZip', $('#senderZipSelect').val() || '');
-          ls.set('receiverDevice', $('#receiverDeviceSelect').val() || '');
-          ls.set('receiverZip', $('#receiverZipSelect').val() || '');
-          ls.set('filterFrom', $('#filterFrom').val() || '');
-          ls.set('filterTo', $('#filterTo').val() || '');
-        }
+          ls.set("senderDevice", $("#senderDeviceSelect").val() || "");
+          ls.set("senderZip", $("#senderZipSelect").val() || "");
+          ls.set("receiverDevice", $("#receiverDeviceSelect").val() || "");
+          ls.set("receiverZip", $("#receiverZipSelect").val() || "");
+          ls.set("filterFrom", $("#filterFrom").val() || "");
+          ls.set("filterTo", $("#filterTo").val() || "");
+        },
       };
 
       var theadHtml =
         "<thead><tr>" +
-        '<th scope="col" colspan="12" class="sorter-false filter-false">Sender</th>' +
-        '<th scope="col" colspan="5" class="sorter-false filter-false recv-group">Receiver</th>' +
+        '<th scope="col" colspan="13" class="sorter-false filter-false">Sender</th>' +
+        '<th scope="col" colspan="6" class="sorter-false filter-false recv-group">Receiver</th>' +
         "</tr><tr>" +
         '<th scope="col" style="width:24px" class="sorter-false filter-false"></th>' +
         '<th scope="col">MessageTypeName</th>' +
         '<th scope="col">InstanceName</th>' +
         '<th scope="col">MessageSubTypeName</th>' +
         '<th scope="col">SICardNumber</th>' +
-        '<th scope="col">SportIdent</th>' +
+        '<th scope="col">Punch time</th>' +
         '<th scope="col">SIStationNumber</th>' +
         '<th scope="col" class="sorter-shortDate" data-sorter="shortDate">SentDate</th>' +
         '<th scope="col">Ack/SendFailed</th>' +
+        '<th scope="col">Time to Ack (s)</th>' +
         '<th scope="col">NoOfSendTries</th>' +
         '<th scope="col">SubscriberTypeName</th>' +
         '<th scope="col">TransformName</th>' +
@@ -200,6 +275,7 @@
         '<th scope="col" class="recv-group">Recv NoOfSendTries</th>' +
         '<th scope="col" class="recv-group">Recv SubscriberTypeName</th>' +
         '<th scope="col" class="recv-group">Recv TransformName</th>' +
+        '<th scope="col" class="recv-group" title="Punch time to SentDate in receiver">Total time</th>' +
         "</tr></thead>";
 
       function formatSportIdentTime(hour, minute, second) {
@@ -239,27 +315,39 @@
             var saved = ls.getSel();
             if (saved.senderDevice) {
               senderSelect.val(saved.senderDevice);
-              loadZipFiles(saved.senderDevice, function (files) {
-                senderZipFiles = files;
-                updateAnalyzeButton();
-                if (saved.senderZip) $('#senderZipSelect').val(saved.senderZip);
-              }, $('#senderZipSelect'));
+              loadZipFiles(
+                saved.senderDevice,
+                function (files) {
+                  senderZipFiles = files;
+                  updateAnalyzeButton();
+                  if (saved.senderZip)
+                    $("#senderZipSelect").val(saved.senderZip);
+                },
+                $("#senderZipSelect"),
+              );
             }
             if (saved.receiverDevice) {
               receiverSelect.val(saved.receiverDevice);
-              loadZipFiles(saved.receiverDevice, function (files) {
-                receiverZipFiles = files;
-                updateAnalyzeButton();
-                if (saved.receiverZip) $('#receiverZipSelect').val(saved.receiverZip);
-              }, $('#receiverZipSelect'));
+              loadZipFiles(
+                saved.receiverDevice,
+                function (files) {
+                  receiverZipFiles = files;
+                  updateAnalyzeButton();
+                  if (saved.receiverZip)
+                    $("#receiverZipSelect").val(saved.receiverZip);
+                },
+                $("#receiverZipSelect"),
+              );
             }
             if (saved.filterFrom) {
-              $('#filterFrom').val(saved.filterFrom);
-              if (tdFrom && saved.filterFrom) tdFrom.dates.setFromInput(saved.filterFrom);
+              $("#filterFrom").val(saved.filterFrom);
+              if (tdFrom && saved.filterFrom)
+                tdFrom.dates.setFromInput(saved.filterFrom);
             }
             if (saved.filterTo) {
-              $('#filterTo').val(saved.filterTo);
-              if (tdTo && saved.filterTo) tdTo.dates.setFromInput(saved.filterTo);
+              $("#filterTo").val(saved.filterTo);
+              if (tdTo && saved.filterTo)
+                tdTo.dates.setFromInput(saved.filterTo);
             }
           },
         );
@@ -374,6 +462,45 @@
           ackCell = '<td style="' + ackCellBg + '"></td>';
         }
 
+        // Time to Ack (seconds) — computed from row or child data
+        var timeToAck = "";
+        var ackFinished =
+          row._bestAckFinishedDate && row._bestAckFinishedDate !== "none"
+            ? row._bestAckFinishedDate
+            : row.AckReceivedDate;
+        if (ackFinished && row.SentDate) {
+          var ackDate = new Date(ackFinished.replace(" ", "T") + "Z");
+          var sentDate = new Date(row.SentDate.replace(" ", "T") + "Z");
+          if (!isNaN(ackDate.getTime()) && !isNaN(sentDate.getTime())) {
+            timeToAck = Math.round(
+              (ackDate.getTime() - sentDate.getTime()) / 1000,
+            );
+          }
+        }
+
+        // Total time: receiver SentDate minus punch time (seconds)
+        var totalTime = "";
+        if (
+          hasReceiverData &&
+          row.recv_SentDate &&
+          row.SportIdentHour != null
+        ) {
+          var h = parseInt(row.SportIdentHour) || 0;
+          var m = parseInt(row.SportIdentMinute) || 0;
+          var s = parseInt(row.SportIdentSecond) || 0;
+          var punchSeconds = h * 3600 + m * 60 + s;
+          // Extract time portion from receiver SentDate (format: yyyy-MM-dd HH:mm:ss)
+          var recvSent = row.recv_SentDate;
+          var timeMatch = recvSent.match(/(\d{2}):(\d{2}):(\d{2})/);
+          if (timeMatch) {
+            var recvSeconds =
+              (parseInt(timeMatch[1]) || 0) * 3600 +
+              (parseInt(timeMatch[2]) || 0) * 60 +
+              (parseInt(timeMatch[3]) || 0);
+            totalTime = recvSeconds - punchSeconds;
+          }
+        }
+
         var receiverCols = "";
         if (hasReceiverData) {
           var recvAckBg = isChild ? ackCellBg : cellBg;
@@ -416,6 +543,11 @@
             cellBg +
             '">' +
             (row.recv_TransformName || "") +
+            "</td>" +
+            '<td style="' +
+            cellBg +
+            '">' +
+            totalTime +
             "</td>";
         }
 
@@ -459,6 +591,7 @@
           td(row.SIStationNumber) +
           td(row.SentDate) +
           ackCell +
+          td(timeToAck) +
           td(row.NoOfSendTries) +
           td(row.SubscriberTypeName) +
           td(row.TransformName) +
@@ -546,11 +679,20 @@
             childrenByKey[this.key] && childrenByKey[this.key].length > 0
           );
           var anyChildSucceeded = false;
+          var bestChildAckDate = null;
           if (hasKids) {
             anyChildSucceeded = childrenByKey[this.key].some(function (c) {
               return !!c.AckReceivedDate;
             });
+            // Find the first child ack date for time-to-ack fallback
+            $.each(childrenByKey[this.key], function () {
+              if (this.AckReceivedDate && !bestChildAckDate) {
+                bestChildAckDate = this.AckReceivedDate;
+                return false;
+              }
+            });
           }
+          this.row._bestAckFinishedDate = bestChildAckDate || "none";
           this.row._stripeIdx = parentIdx++;
           $tbody.append(
             buildRowHtml(this.row, false, hasKids, anyChildSucceeded),
@@ -662,7 +804,7 @@
               toolTipMessage: tip,
             },
             {
-              columnName: "SportIdent",
+              columnName: "Punch time",
               inputType: "text",
               toolTipMessage: tip,
             },
@@ -674,6 +816,11 @@
             { columnName: "SentDate", inputType: "text", toolTipMessage: tip },
             {
               columnName: "Ack/SendFailed",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "Time to Ack (s)",
               inputType: "text",
               toolTipMessage: tip,
             },
@@ -715,6 +862,11 @@
             {
               columnName: "Recv TransformName",
               inputType: "ddl",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "Total time",
+              inputType: "text",
               toolTipMessage: tip,
             },
           ],
@@ -762,7 +914,7 @@
         });
 
         $("#senderDeviceSelect").on("change", function () {
-          ls.set('senderDevice', $(this).val() || '');
+          ls.set("senderDevice", $(this).val() || "");
           loadZipFiles(
             $(this).val(),
             function (files) {
@@ -774,7 +926,7 @@
         });
 
         $("#receiverDeviceSelect").on("change", function () {
-          ls.set('receiverDevice', $(this).val() || '');
+          ls.set("receiverDevice", $(this).val() || "");
           loadZipFiles(
             $(this).val(),
             function (files) {
@@ -786,24 +938,66 @@
         });
 
         $("#senderZipSelect, #receiverZipSelect").on("change", function () {
-          ls.set('senderZip', $('#senderZipSelect').val() || '');
-          ls.set('receiverZip', $('#receiverZipSelect').val() || '');
+          ls.set("senderZip", $("#senderZipSelect").val() || "");
+          ls.set("receiverZip", $("#receiverZipSelect").val() || "");
           updateAnalyzeButton();
         });
 
         // Initialize Tempus Dominus date/time pickers
-        var tdFrom = new tempusDominus.TempusDominus(document.getElementById('pickerFrom'), {
-          display: { components: { clock: true, hours: 'numeric', minutes: 'numeric', seconds: false }, icons: { time: 'fa fa-clock', date: 'fa fa-calendar', up: 'fa fa-arrow-up', down: 'fa fa-arrow-down', previous: 'fa fa-chevron-left', next: 'fa fa-chevron-right', today: 'fa fa-calendar-check', clear: 'fa fa-trash', close: 'fa fa-xmark' } },
-          localization: { format: 'yyyy-MM-dd HH:mm' }
-        });
-        var tdTo = new tempusDominus.TempusDominus(document.getElementById('pickerTo'), {
-          display: { components: { clock: true, hours: 'numeric', minutes: 'numeric', seconds: false }, icons: { time: 'fa fa-clock', date: 'fa fa-calendar', up: 'fa fa-arrow-up', down: 'fa fa-arrow-down', previous: 'fa fa-chevron-left', next: 'fa fa-chevron-right', today: 'fa fa-calendar-check', clear: 'fa fa-trash', close: 'fa fa-xmark' } },
-          localization: { format: 'yyyy-MM-dd HH:mm' }
-        });
+        var tdFrom = new tempusDominus.TempusDominus(
+          document.getElementById("pickerFrom"),
+          {
+            display: {
+              components: {
+                clock: true,
+                hours: "numeric",
+                minutes: "numeric",
+                seconds: false,
+              },
+              icons: {
+                time: "fa fa-clock",
+                date: "fa fa-calendar",
+                up: "fa fa-arrow-up",
+                down: "fa fa-arrow-down",
+                previous: "fa fa-chevron-left",
+                next: "fa fa-chevron-right",
+                today: "fa fa-calendar-check",
+                clear: "fa fa-trash",
+                close: "fa fa-xmark",
+              },
+            },
+            localization: { format: "yyyy-MM-dd HH:mm" },
+          },
+        );
+        var tdTo = new tempusDominus.TempusDominus(
+          document.getElementById("pickerTo"),
+          {
+            display: {
+              components: {
+                clock: true,
+                hours: "numeric",
+                minutes: "numeric",
+                seconds: false,
+              },
+              icons: {
+                time: "fa fa-clock",
+                date: "fa fa-calendar",
+                up: "fa fa-arrow-up",
+                down: "fa fa-arrow-down",
+                previous: "fa fa-chevron-left",
+                next: "fa fa-chevron-right",
+                today: "fa fa-calendar-check",
+                clear: "fa fa-trash",
+                close: "fa fa-xmark",
+              },
+            },
+            localization: { format: "yyyy-MM-dd HH:mm" },
+          },
+        );
 
-        $('#filterFrom, #filterTo').on('change', function () {
-          ls.set('filterFrom', $('#filterFrom').val() || '');
-          ls.set('filterTo', $('#filterTo').val() || '');
+        $("#filterFrom, #filterTo").on("change", function () {
+          ls.set("filterFrom", $("#filterFrom").val() || "");
+          ls.set("filterTo", $("#filterTo").val() || "");
         });
 
         $("#btnAnalyze").on("click", function () {
@@ -822,8 +1016,8 @@
             encodeURIComponent(senderZip);
           if (receiverZip)
             url += "&receiverZip=" + encodeURIComponent(receiverZip);
-          var fromDate = $('#filterFrom').val();
-          var toDate = $('#filterTo').val();
+          var fromDate = $("#filterFrom").val();
+          var toDate = $("#filterTo").val();
           if (fromDate) url += "&fromDate=" + encodeURIComponent(fromDate);
           if (toDate) url += "&toDate=" + encodeURIComponent(toDate);
 

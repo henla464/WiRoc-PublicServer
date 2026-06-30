@@ -1,86 +1,83 @@
 .signup-form form {
-	color: #999;
+  color: #999;
 }
 .signup-form .form-group {
-	margin-bottom: 20px;
+  margin-bottom: 20px;
 }
 .signup-form .input-group-addon {
-	width: 30px;
+  width: 30px;
 }
 .signup-form input[type="checkbox"] {
-	margin-top: 2px;
-}   
+  margin-top: 2px;
+}
 .signup-form .fa {
-	font-size: 21px;
-	margin-top: 10px;
+  font-size: 21px;
+  margin-top: 10px;
 }
 .signup-form .fa-paper-plane {
-	font-size: 18px;
+  font-size: 18px;
 }
 .signup-form .fa-check {
-	color: #fff;
-	left: 5px;
-	top: 10px;
-	font-size: 7px;
-	position: absolute;
+  color: #fff;
+  left: 5px;
+  top: 10px;
+  font-size: 7px;
+  position: absolute;
 }
-
 
 .additem-form form {
-	color: #999;
+  color: #999;
 }
 .additem-form .form-group {
-	margin-bottom: 20px;
+  margin-bottom: 20px;
 }
 .additem-form .input-group-addon {
-	width: 30px;
+  width: 30px;
 }
 .additem-form input[type="checkbox"] {
-	margin-top: 2px;
-}   
+  margin-top: 2px;
+}
 .additem-form .fa {
-	font-size: 21px;
-	margin-top: 10px;
+  font-size: 21px;
+  margin-top: 10px;
 }
 .additemform .fa-paper-plane {
-	font-size: 18px;
+  font-size: 18px;
 }
 .additem-form .fa-check {
-	color: #fff;
-	left: 5px;
-	top: 10px;
-	font-size: 7px;
-	position: absolute;
+  color: #fff;
+  left: 5px;
+  top: 10px;
+  font-size: 7px;
+  position: absolute;
 }
-
 
 .recorvery-form form {
-	color: #999;
+  color: #999;
 }
 .recovery-form .form-group {
-	margin-bottom: 20px;
+  margin-bottom: 20px;
 }
 .recovery-form .input-group-addon {
-	width: 30px;
+  width: 30px;
 }
 .recovery-form input[type="checkbox"] {
-	margin-top: 2px;
-}   
+  margin-top: 2px;
+}
 .recovery-form .fa {
-	font-size: 21px;
-	margin-top: 10px;
+  font-size: 21px;
+  margin-top: 10px;
 }
 .recovery-form .fa-paper-plane {
-	font-size: 18px;
+  font-size: 18px;
 }
 .recovery-form .fa-check {
-	color: #fff;
-	left: 5px;
-	top: 10px;
-	font-size: 7px;
-	position: absolute;
+  color: #fff;
+  left: 5px;
+  top: 10px;
+  font-size: 7px;
+  position: absolute;
 }
-
 
 .close {
   position: absolute;
@@ -90,7 +87,7 @@
 }
 
 .bg-top {
- background-color: darkgrey;
+  background-color: darkgrey;
 }
 
 .control-label-icon {
@@ -217,6 +214,20 @@
 }
 #analyzeResultsTable td {
   white-space: nowrap;
+  box-shadow: none !important;
+}
+#analyzeResultsTable thead th {
+  background-color: #a9a9a9 !important;
+  color: #fff !important;
+}
+tr.subrow td {
+  background-color: #faf3d1 !important;
+}
+tr.subrow td.ack-cell {
+  background-color: #d4edda !important;
+}
+tr.subrow td.sendfailed-cell {
+  background-color: #f8d7da !important;
 }
 #analyzeLoading {
   display: none;

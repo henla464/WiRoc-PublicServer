@@ -7,33 +7,56 @@
     <link rel="manifest" href="/site.webmanifest" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link href="libs/bootstrap-5.3.3-dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
+    <link
+      href="libs/bootstrap-5.3.3-dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      crossorigin="anonymous"
+    />
     <link rel="stylesheet" href="ui/css/wiroc.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.11/dist/css/tempus-dominus.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <title>Analyze Logs - WiRoc Monitor</title>
   </head>
   <body>
     <div id="nav-placeholder"></div>
     <div class="container-fluid">
       <h1>Analyze Logs</h1>
-      <div id="loginRequiredAlert" class="alert alert-warning collapse" role="alert">
+      <div
+        id="loginRequiredAlert"
+        class="alert alert-warning collapse"
+        role="alert"
+      >
         <strong>Please log in to use the log analyzer.</strong>
       </div>
 
-      <div id="analyzerSection" style="display:none">
+      <div id="analyzerSection" style="display: none">
         <div class="row mb-3">
           <div class="col-md-6">
             <div class="card">
-              <div class="card-header"><strong>Sender WiRoc Device</strong></div>
+              <div class="card-header">
+                <strong>Sender WiRoc Device</strong>
+              </div>
               <div class="card-body">
                 <div class="mb-2">
-                  <label for="senderDeviceSelect" class="form-label">Device</label>
-                  <select id="senderDeviceSelect" class="form-select analyze-selector">
+                  <label for="senderDeviceSelect" class="form-label"
+                    >Device</label
+                  >
+                  <select
+                    id="senderDeviceSelect"
+                    class="form-select analyze-selector"
+                  >
                     <option value="">-- Select a sender device --</option>
                   </select>
                 </div>
                 <div class="mb-2">
-                  <label for="senderZipSelect" class="form-label">Zip File</label>
-                  <select id="senderZipSelect" class="form-select analyze-selector" disabled>
+                  <label for="senderZipSelect" class="form-label"
+                    >Zip File</label
+                  >
+                  <select
+                    id="senderZipSelect"
+                    class="form-select analyze-selector"
+                    disabled
+                  >
                     <option value="">-- First select a device --</option>
                   </select>
                 </div>
@@ -43,17 +66,31 @@
 
           <div class="col-md-6">
             <div class="card">
-              <div class="card-header"><strong>Receiver WiRoc Device</strong> <small class="text-muted">(optional)</small></div>
+              <div class="card-header">
+                <strong>Receiver WiRoc Device</strong>
+                <small class="text-muted">(optional)</small>
+              </div>
               <div class="card-body">
                 <div class="mb-2">
-                  <label for="receiverDeviceSelect" class="form-label">Device</label>
-                  <select id="receiverDeviceSelect" class="form-select analyze-selector">
+                  <label for="receiverDeviceSelect" class="form-label"
+                    >Device</label
+                  >
+                  <select
+                    id="receiverDeviceSelect"
+                    class="form-select analyze-selector"
+                  >
                     <option value="">-- Optional: select receiver --</option>
                   </select>
                 </div>
                 <div class="mb-2">
-                  <label for="receiverZipSelect" class="form-label">Zip File</label>
-                  <select id="receiverZipSelect" class="form-select analyze-selector" disabled>
+                  <label for="receiverZipSelect" class="form-label"
+                    >Zip File</label
+                  >
+                  <select
+                    id="receiverZipSelect"
+                    class="form-select analyze-selector"
+                    disabled
+                  >
                     <option value="">-- First select a device --</option>
                   </select>
                 </div>
@@ -62,24 +99,53 @@
           </div>
         </div>
 
-        <div class="mb-3">
-          <button type="button" id="btnAnalyze" class="btn btn-primary" disabled>
-            <span id="btnAnalyzeSpinner" class="spinner-border spinner-border-sm" style="display:none" role="status" aria-hidden="true"></span>
-            Analyze
-          </button>
+        <div class="row mb-3 align-items-end">
+          <div class="col-auto">
+            <button type="button" id="btnAnalyze" class="btn btn-primary" disabled>
+              <span id="btnAnalyzeSpinner" class="spinner-border spinner-border-sm" style="display:none" role="status" aria-hidden="true"></span>
+              Analyze
+            </button>
+          </div>
+          <div class="col-auto">
+            <label class="form-label small mb-1">From</label>
+            <div class="input-group input-group-sm" id="pickerFrom" data-td-target-input="nearest" data-td-target-toggle="nearest">
+              <input id="filterFrom" type="text" class="form-control" data-td-target="#pickerFrom" style="width:170px" placeholder="yyyy-MM-dd HH:mm" autocomplete="off">
+              <span class="input-group-text" data-td-target="#pickerFrom" data-td-toggle="datetimepicker" style="cursor:pointer"><i class="fa fa-calendar"></i></span>
+            </div>
+          </div>
+          <div class="col-auto">
+            <label class="form-label small mb-1">To</label>
+            <div class="input-group input-group-sm" id="pickerTo" data-td-target-input="nearest" data-td-target-toggle="nearest">
+              <input id="filterTo" type="text" class="form-control" data-td-target="#pickerTo" style="width:170px" placeholder="yyyy-MM-dd HH:mm" autocomplete="off">
+              <span class="input-group-text" data-td-target="#pickerTo" data-td-toggle="datetimepicker" style="cursor:pointer"><i class="fa fa-calendar"></i></span>
+            </div>
+          </div>
         </div>
 
         <div id="analyzeError" class="alert alert-danger collapse" role="alert"></div>
         <div id="analyzeLoading" class="text-muted">Analyzing... this may take a moment for large files.</div>
 
-        <div class="table-responsive" id="resultsSection" style="display:none">
-          <div id="analyzeTableContainer"></div>
+        <div id="resultsSection" style="display: none">
+          <div
+            id="topScrollBar"
+            style="overflow-x: auto; overflow-y: hidden; display: none"
+          >
+            <div style="height: 1px"></div>
+          </div>
+          <div class="table-responsive" id="tableScrollWrapper">
+            <div id="analyzeTableContainer"></div>
+          </div>
         </div>
       </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.11/dist/js/tempus-dominus.min.js"></script>
     <script src="libs/TableFilter/TableFilter.js"></script>
     <script src="libs/TableSorter/js/jquery.tablesorter.min.js"></script>
     <script src="libs/TableSorter/js/jquery.tablesorter.widgets.min.js"></script>
@@ -90,228 +156,708 @@
       var receiverZipFiles = [];
       var hasReceiverData = false;
 
-      var theadHtml = '<thead><tr>' +
+      // localStorage helpers
+      var ls = {
+        get: function (k) { try { return localStorage.getItem('analyze_' + k); } catch (e) { return null; } },
+        set: function (k, v) { try { localStorage.setItem('analyze_' + k, v); } catch (e) {} },
+        getSel: function () { return {
+          senderDevice: ls.get('senderDevice') || '',
+          senderZip: ls.get('senderZip') || '',
+          receiverDevice: ls.get('receiverDevice') || '',
+          receiverZip: ls.get('receiverZip') || '',
+          filterFrom: ls.get('filterFrom') || '',
+          filterTo: ls.get('filterTo') || ''
+        };},
+        saveSel: function () {
+          ls.set('senderDevice', $('#senderDeviceSelect').val() || '');
+          ls.set('senderZip', $('#senderZipSelect').val() || '');
+          ls.set('receiverDevice', $('#receiverDeviceSelect').val() || '');
+          ls.set('receiverZip', $('#receiverZipSelect').val() || '');
+          ls.set('filterFrom', $('#filterFrom').val() || '');
+          ls.set('filterTo', $('#filterTo').val() || '');
+        }
+      };
+
+      var theadHtml =
+        "<thead><tr>" +
+        '<th scope="col" colspan="12" class="sorter-false filter-false">Sender</th>' +
+        '<th scope="col" colspan="5" class="sorter-false filter-false recv-group">Receiver</th>' +
+        "</tr><tr>" +
+        '<th scope="col" style="width:24px" class="sorter-false filter-false"></th>' +
         '<th scope="col">MessageTypeName</th>' +
         '<th scope="col">InstanceName</th>' +
         '<th scope="col">MessageSubTypeName</th>' +
         '<th scope="col">SICardNumber</th>' +
         '<th scope="col">SportIdent</th>' +
         '<th scope="col">SIStationNumber</th>' +
-        '<th scope="col">SICardNumber2</th>' +
-        '<th scope="col">SportIdent2</th>' +
-        '<th scope="col">SIStationNumber2</th>' +
-        '<th scope="col">SentDate</th>' +
+        '<th scope="col" class="sorter-shortDate" data-sorter="shortDate">SentDate</th>' +
         '<th scope="col">Ack/SendFailed</th>' +
         '<th scope="col">NoOfSendTries</th>' +
         '<th scope="col">SubscriberTypeName</th>' +
         '<th scope="col">TransformName</th>' +
-        '<th scope="col" class="receiver-col">Recv ChecksumOK</th>' +
-        '<th scope="col" class="receiver-col">Recv CreatedDate</th>' +
-        '</tr></thead>';
+        '<th scope="col" class="recv-group">Recv SentDate</th>' +
+        '<th scope="col" class="recv-group">Recv Ack/SendFailed</th>' +
+        '<th scope="col" class="recv-group">Recv NoOfSendTries</th>' +
+        '<th scope="col" class="recv-group">Recv SubscriberTypeName</th>' +
+        '<th scope="col" class="recv-group">Recv TransformName</th>' +
+        "</tr></thead>";
 
-      function formatSportIdent(hour, minute, second) {
-        if (hour == null && minute == null && second == null) return '';
-        return String(hour || '0').padStart(2, '0') + ':' +
-               String(minute || '0').padStart(2, '0') + ':' +
-               String(second || '0').padStart(2, '0');
+      function formatSportIdentTime(hour, minute, second) {
+        if (hour == null && minute == null && second == null) return "";
+        return (
+          String(hour || "0").padStart(2, "0") +
+          ":" +
+          String(minute || "0").padStart(2, "0") +
+          ":" +
+          String(second || "0").padStart(2, "0")
+        );
       }
 
       function loadDevices() {
-        $.ajax({ url: '/api/v1/LogArchives/Devices', dataType: 'json' }).then(function (data) {
-          var devices = Array.isArray(data) ? data : (data.devices || []);
-          var senderSelect = $('#senderDeviceSelect');
-          var receiverSelect = $('#receiverDeviceSelect');
-          senderSelect.find('option:not(:first)').remove();
-          receiverSelect.find('option:not(:first)').remove();
-          $.each(devices, function () {
-            var name = this.name || this.BTAddress;
-            var opt = '<option value="' + this.BTAddress + '">' + name + ' (' + this.BTAddress + ')</option>';
-            senderSelect.append(opt);
-            receiverSelect.append(opt);
-          });
-        });
+        $.ajax({ url: "/api/v1/LogArchives/Devices", dataType: "json" }).then(
+          function (data) {
+            var devices = Array.isArray(data) ? data : data.devices || [];
+            var senderSelect = $("#senderDeviceSelect");
+            var receiverSelect = $("#receiverDeviceSelect");
+            senderSelect.find("option:not(:first)").remove();
+            receiverSelect.find("option:not(:first)").remove();
+            $.each(devices, function () {
+              var name = this.name || this.BTAddress;
+              var opt =
+                '<option value="' +
+                this.BTAddress +
+                '">' +
+                name +
+                " (" +
+                this.BTAddress +
+                ")</option>";
+              senderSelect.append(opt);
+              receiverSelect.append(opt);
+            });
+
+            // Restore saved selections
+            var saved = ls.getSel();
+            if (saved.senderDevice) {
+              senderSelect.val(saved.senderDevice);
+              loadZipFiles(saved.senderDevice, function (files) {
+                senderZipFiles = files;
+                updateAnalyzeButton();
+                if (saved.senderZip) $('#senderZipSelect').val(saved.senderZip);
+              }, $('#senderZipSelect'));
+            }
+            if (saved.receiverDevice) {
+              receiverSelect.val(saved.receiverDevice);
+              loadZipFiles(saved.receiverDevice, function (files) {
+                receiverZipFiles = files;
+                updateAnalyzeButton();
+                if (saved.receiverZip) $('#receiverZipSelect').val(saved.receiverZip);
+              }, $('#receiverZipSelect'));
+            }
+            if (saved.filterFrom) {
+              $('#filterFrom').val(saved.filterFrom);
+              if (tdFrom && saved.filterFrom) tdFrom.dates.setFromInput(saved.filterFrom);
+            }
+            if (saved.filterTo) {
+              $('#filterTo').val(saved.filterTo);
+              if (tdTo && saved.filterTo) tdTo.dates.setFromInput(saved.filterTo);
+            }
+          },
+        );
       }
 
       function loadZipFiles(btAddress, callback, targetSelect) {
         if (!btAddress) {
-          targetSelect.empty().append('<option value="">-- First select a device --</option>').prop('disabled', true);
+          targetSelect
+            .empty()
+            .append('<option value="">-- First select a device --</option>')
+            .prop("disabled", true);
           callback([]);
           return;
         }
-        targetSelect.empty().append('<option value="">Loading...</option>').prop('disabled', true);
-        $.ajax({ url: '/api/v1/LogArchives/Files?BTAddress=' + encodeURIComponent(btAddress), dataType: 'json' })
+        targetSelect
+          .empty()
+          .append('<option value="">Loading...</option>')
+          .prop("disabled", true);
+        $.ajax({
+          url:
+            "/api/v1/LogArchives/Files?BTAddress=" +
+            encodeURIComponent(btAddress),
+          dataType: "json",
+        })
           .then(function (files) {
             targetSelect.empty();
             if (files.length === 0) {
-              targetSelect.append('<option value="">No zip files found</option>').prop('disabled', true);
+              targetSelect
+                .append('<option value="">No zip files found</option>')
+                .prop("disabled", true);
               callback([]);
               return;
             }
-            targetSelect.append('<option value="">-- Select a zip file --</option>');
+            targetSelect.append(
+              '<option value="">-- Select a zip file --</option>',
+            );
             $.each(files, function () {
-              targetSelect.append('<option value="' + this.filename + '">' + this.filename.replace('.zip', '') + '</option>');
+              targetSelect.append(
+                '<option value="' +
+                  this.filename +
+                  '">' +
+                  this.filename.replace(".zip", "") +
+                  "</option>",
+              );
             });
-            targetSelect.prop('disabled', false);
+            targetSelect.prop("disabled", false);
             callback(files);
           })
           .fail(function () {
-            targetSelect.empty().append('<option value="">Error loading files</option>').prop('disabled', true);
+            targetSelect
+              .empty()
+              .append('<option value="">Error loading files</option>')
+              .prop("disabled", true);
             callback([]);
           });
       }
 
       function updateAnalyzeButton() {
-        $('#btnAnalyze').prop('disabled', !$('#senderZipSelect').val());
+        $("#btnAnalyze").prop("disabled", !$("#senderZipSelect").val());
+      }
+
+      function buildRowHtml(row, isChild, hasChildren, childSucceeded) {
+        var sportIdent = formatSportIdentTime(
+          row.SportIdentHour,
+          row.SportIdentMinute,
+          row.SportIdentSecond,
+        );
+        var sportIdent2 = formatSportIdentTime(
+          row.SportIdentHour2,
+          row.SportIdentMinute2,
+          row.SportIdentSecond2,
+        );
+
+        // Per-cell inline style to kill Bootstrap's inset box-shadow and apply our own background
+        var cellBg = "";
+        if (isChild) {
+          cellBg = "box-shadow:none;background-color:#faf3d1";
+        } else if (row._stripeIdx !== undefined && row._stripeIdx % 2 === 1) {
+          cellBg = "box-shadow:none;background-color:rgba(0,0,0,.05)";
+        } else {
+          cellBg = "box-shadow:none";
+        }
+
+        // For child rows, Ack/SendFailed cell keeps its status color, not the sand background
+        var ackCellBg = isChild
+          ? "box-shadow:none" // let CSS classes .ack-cell/.sendfailed-cell handle the color
+          : cellBg;
+
+        var ackCell = "";
+        if (row.AckReceivedDate) {
+          ackCell =
+            '<td style="' +
+            ackCellBg +
+            '" class="ack-cell">' +
+            row.AckReceivedDate +
+            "</td>";
+        } else if (row.SendFailedDate) {
+          var extra = "";
+          if (!isChild && hasChildren) {
+            extra = childSucceeded
+              ? ' <span style="color:#198754;font-weight:bold;font-size:1.1em" title="Resubmit succeeded">&#10003;</span>'
+              : ' <span style="color:#dc3545;font-weight:bold;font-size:1.1em" title="Resubmit also failed">&#10007;</span>';
+          }
+          ackCell =
+            '<td style="' +
+            ackCellBg +
+            '" class="sendfailed-cell">' +
+            row.SendFailedDate +
+            extra +
+            "</td>";
+        } else {
+          ackCell = '<td style="' + ackCellBg + '"></td>';
+        }
+
+        var receiverCols = "";
+        if (hasReceiverData) {
+          var recvAckBg = isChild ? ackCellBg : cellBg;
+          var recvAckCell = "";
+          if (row.recv_AckReceivedDate) {
+            recvAckCell =
+              '<td style="' +
+              recvAckBg +
+              '" class="ack-cell">' +
+              row.recv_AckReceivedDate +
+              "</td>";
+          } else if (row.recv_SendFailedDate) {
+            recvAckCell =
+              '<td style="' +
+              recvAckBg +
+              '" class="sendfailed-cell">' +
+              row.recv_SendFailedDate +
+              "</td>";
+          } else {
+            recvAckCell = '<td style="' + recvAckBg + '"></td>';
+          }
+          receiverCols =
+            '<td style="' +
+            cellBg +
+            '">' +
+            (row.recv_SentDate || "") +
+            "</td>" +
+            recvAckCell +
+            '<td style="' +
+            cellBg +
+            '">' +
+            (row.recv_NoOfSendTries != null ? row.recv_NoOfSendTries : "") +
+            "</td>" +
+            '<td style="' +
+            cellBg +
+            '">' +
+            (row.recv_SubscriberTypeName || "") +
+            "</td>" +
+            '<td style="' +
+            cellBg +
+            '">' +
+            (row.recv_TransformName || "") +
+            "</td>";
+        }
+
+        var expandStyle = isChild
+          ? cellBg
+          : hasChildren
+            ? "box-shadow:none;cursor:pointer;text-align:center"
+            : "box-shadow:none";
+        var expandCell = "";
+        if (isChild) {
+          expandCell = '<td style="' + cellBg + '"></td>';
+        } else if (hasChildren) {
+          expandCell =
+            '<td class="subrow-toggle-cell" style="' +
+            expandStyle +
+            '"><span class="subrow-toggle closed">+</span></td>';
+        } else {
+          expandCell = '<td style="' + cellBg + '"></td>';
+        }
+
+        var rowCls = isChild
+          ? ' class="tablesorter-childRow subrow" style="display:none"'
+          : ' class="parent-row' + (hasChildren ? " has-children" : "") + '"';
+
+        function td(val) {
+          return (
+            '<td style="' + cellBg + '">' + (val == null ? "" : val) + "</td>"
+          );
+        }
+
+        return (
+          "<tr" +
+          rowCls +
+          ">" +
+          expandCell +
+          td(row.MessageTypeName) +
+          td(row.InstanceName) +
+          td(row.MessageSubTypeName) +
+          td(row.SICardNumber) +
+          td(sportIdent) +
+          td(row.SIStationNumber) +
+          td(row.SentDate) +
+          ackCell +
+          td(row.NoOfSendTries) +
+          td(row.SubscriberTypeName) +
+          td(row.TransformName) +
+          receiverCols +
+          "</tr>"
+        );
       }
 
       function buildTable(data) {
-        var $container = $('#analyzeTableContainer');
-
-        // Remove old table entirely so both plugins get a fresh DOM
+        var $container = $("#analyzeTableContainer");
         $container.empty();
 
-        // Build fresh table
-        var $table = $('<table class="table table-striped table-hover table-sm" id="analyzeResultsTable"></table>');
-        $table.append('<caption>Analyzed Messages</caption>');
+        var $table = $(
+          '<table class="table table-hover table-sm" id="analyzeResultsTable"></table>',
+        );
+        $table.append("<caption>Analyzed Messages</caption>");
         $table.append(theadHtml);
-        var $tbody = $('<tbody></tbody>');
+        var $tbody = $("<tbody></tbody>");
 
+        // Build row-key helper
+        function rowKey(row) {
+          return (
+            (row.SICardNumber || "") +
+            "|" +
+            formatSportIdentTime(
+              row.SportIdentHour,
+              row.SportIdentMinute,
+              row.SportIdentSecond,
+            ) +
+            "|" +
+            (row.SIStationNumber || "")
+          );
+        }
+
+        // Two passes: first find parents and children, then output
+        var parents = []; // {key, row, rendered:false}
+        var childrenByKey = {}; // key -> [child rows]
+        var parentRowsByKey = {};
+        var standalone = []; // rows with no parent/child relationship
+
+        // Pass 1: collect candidate parents (LORA messages that have SendFailedDate)
         $.each(data, function () {
-          var sportIdent = formatSportIdent(this.SportIdentHour, this.SportIdentMinute, this.SportIdentSecond);
-          var sportIdent2 = formatSportIdent(this.SportIdentHour2, this.SportIdentMinute2, this.SportIdentSecond2);
-
-          var ackCell = '';
-          if (this.AckReceivedDate) {
-            ackCell = '<td class="ack-cell">' + this.AckReceivedDate + '</td>';
-          } else if (this.SendFailedDate) {
-            ackCell = '<td class="sendfailed-cell">' + this.SendFailedDate + '</td>';
-          } else {
-            ackCell = '<td></td>';
+          if (this.SubscriberTypeName === "LORA" && this.SendFailedDate) {
+            var key = rowKey(this);
+            if (!parentRowsByKey[key]) {
+              parentRowsByKey[key] = this;
+              parents.push({ key: key, row: this });
+            }
           }
+        });
 
-          var receiverCols = '';
-          if (hasReceiverData) {
-            var cls = '';
-            if (this.recv_ChecksumOK === 1 || this.recv_ChecksumOK === '1') cls = 'ack-cell';
-            else if (this.recv_ChecksumOK === 0 || this.recv_ChecksumOK === '0') cls = 'sendfailed-cell';
-            receiverCols = '<td class="' + cls + '">' + (this.recv_ChecksumOK != null ? this.recv_ChecksumOK : '') + '</td>' +
-              '<td>' + (this.recv_CreatedDate || '') + '</td>';
+        // Pass 2: match children
+        $.each(data, function () {
+          if (this.InstanceName === "resubmit1") {
+            var key = rowKey(this);
+            if (parentRowsByKey[key]) {
+              if (!childrenByKey[key]) childrenByKey[key] = [];
+              childrenByKey[key].push(this);
+              return;
+            }
           }
+          // Skip rows already claimed as parents
+          for (var p = 0; p < parents.length; p++) {
+            if (parents[p].row === this) return;
+          }
+          standalone.push(this);
+        });
 
-          $tbody.append('<tr>' +
-            '<td>' + (this.MessageTypeName || '') + '</td>' +
-            '<td>' + (this.InstanceName || '') + '</td>' +
-            '<td>' + (this.MessageSubTypeName || '') + '</td>' +
-            '<td>' + (this.SICardNumber || '') + '</td>' +
-            '<td>' + sportIdent + '</td>' +
-            '<td>' + (this.SIStationNumber || '') + '</td>' +
-            '<td>' + (this.SICardNumber2 || '') + '</td>' +
-            '<td>' + sportIdent2 + '</td>' +
-            '<td>' + (this.SIStationNumber2 || '') + '</td>' +
-            '<td>' + (this.SentDate || '') + '</td>' +
-            ackCell +
-            '<td>' + (this.NoOfSendTries != null ? this.NoOfSendTries : '') + '</td>' +
-            '<td>' + (this.SubscriberTypeName || '') + '</td>' +
-            '<td>' + (this.TransformName || '') + '</td>' +
-            receiverCols +
-            '</tr>');
+        // Sort parents and standalone rows by SentDate ASC so DOM order is correct
+        // even after parent-child grouping
+        var sortBySentDate = function (a, b) {
+          var da = a.SentDate || "",
+            db = b.SentDate || "";
+          return da < db ? -1 : da > db ? 1 : 0;
+        };
+        parents.sort(function (a, b) {
+          return sortBySentDate(a.row, b.row);
+        });
+        standalone.sort(sortBySentDate);
+
+        // Output: each parent + its children, then standalone rows
+        var parentIdx = 0;
+        $.each(parents, function () {
+          var hasKids = !!(
+            childrenByKey[this.key] && childrenByKey[this.key].length > 0
+          );
+          var anyChildSucceeded = false;
+          if (hasKids) {
+            anyChildSucceeded = childrenByKey[this.key].some(function (c) {
+              return !!c.AckReceivedDate;
+            });
+          }
+          this.row._stripeIdx = parentIdx++;
+          $tbody.append(
+            buildRowHtml(this.row, false, hasKids, anyChildSucceeded),
+          );
+          if (hasKids) {
+            $.each(childrenByKey[this.key], function () {
+              $tbody.append(buildRowHtml(this, true, false, false));
+            });
+          }
+        });
+
+        $.each(standalone, function () {
+          this._stripeIdx = parentIdx++;
+          $tbody.append(buildRowHtml(this, false, false, false));
         });
 
         $table.append($tbody);
         $container.append($table);
 
-        // Init plugins on the brand-new table
-        $table.tablesorter({ theme: 'bootstrap', widgets: ['zebra'] });
+        // Toggle subrows on click (delegated, survives sort/filter DOM rewrites)
+        $table.on("click", ".subrow-toggle-cell", function (e) {
+          e.stopPropagation();
+          var $cell = $(this);
+          var $btn = $cell.find(".subrow-toggle");
+          var $parent = $cell.closest("tr");
+          if ($btn.hasClass("open")) {
+            // Collapse
+            $btn.removeClass("open").addClass("closed").text("+");
+            $parent.nextUntil(":not(.subrow)").hide();
+          } else {
+            // Expand
+            $btn.removeClass("closed").addClass("open").text("−");
+            $parent.nextUntil(":not(.subrow)").show();
+          }
+        });
 
+        function syncSubrowVisibility() {
+          $table.find("tr.parent-row.has-children").each(function () {
+            var $parent = $(this);
+            var $btn = $parent.find(".subrow-toggle");
+            var $children = $parent.nextUntil(":not(.subrow)");
+            if ($btn.hasClass("open")) {
+              $children.show();
+              $btn.text("−");
+            } else {
+              $children.hide();
+              $btn.text("+");
+            }
+          });
+        }
+
+        function restripeParents() {
+          $table.find("tr.subrow").each(function () {
+            var $sub = $(this);
+            var $prev = $sub.prev();
+            if (!$prev.hasClass("parent-row") || $prev.is(":hidden"))
+              $sub.hide();
+          });
+          var i = 0;
+          $table.find("tbody tr.parent-row").each(function () {
+            var $row = $(this);
+            if ($row.is(":visible")) {
+              var bg =
+                i % 2 === 1
+                  ? "box-shadow:none;background-color:rgba(0,0,0,.05)"
+                  : "box-shadow:none";
+              $row.find("td").attr("style", bg);
+              i++;
+            }
+          });
+        }
+
+        // Init Tablesorter - child rows follow parent sorting via tablesorter-childRow
+        $table.tablesorter({
+          theme: "bootstrap",
+          sortList: [[7, 0]],
+          headers: { 0: { sorter: false } },
+          initialized: function (table) {
+            $(table).on("sortEnd", function () {
+              syncSubrowVisibility();
+              restripeParents();
+            });
+          },
+        });
+
+        // Init TableFilter
         var tip = 'Quotes (") match phrases...';
         $table.tableFilter({
           columnFilters: [
-            { columnName: 'MessageTypeName', inputType: 'text', toolTipMessage: tip },
-            { columnName: 'InstanceName', inputType: 'text', toolTipMessage: tip },
-            { columnName: 'MessageSubTypeName', inputType: 'text', toolTipMessage: tip },
-            { columnName: 'SICardNumber', inputType: 'text', toolTipMessage: tip },
-            { columnName: 'SportIdent', inputType: 'text', toolTipMessage: tip },
-            { columnName: 'SIStationNumber', inputType: 'text', toolTipMessage: tip },
-            { columnName: 'SICardNumber2', inputType: 'text', toolTipMessage: tip },
-            { columnName: 'SportIdent2', inputType: 'text', toolTipMessage: tip },
-            { columnName: 'SIStationNumber2', inputType: 'text', toolTipMessage: tip },
-            { columnName: 'SentDate', inputType: 'text', toolTipMessage: tip },
-            { columnName: 'Ack/SendFailed', inputType: 'text', toolTipMessage: tip },
-            { columnName: 'NoOfSendTries', inputType: 'text', toolTipMessage: tip },
-            { columnName: 'SubscriberTypeName', inputType: 'ddl', toolTipMessage: tip },
-            { columnName: 'TransformName', inputType: 'ddl', toolTipMessage: tip },
-            { columnName: 'Recv ChecksumOK', inputType: 'text', toolTipMessage: tip },
-            { columnName: 'Recv CreatedDate', inputType: 'text', toolTipMessage: tip }
+            { columnName: "", inputType: "None" },
+            {
+              columnName: "MessageTypeName",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "InstanceName",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "MessageSubTypeName",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "SICardNumber",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "SportIdent",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "SIStationNumber",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            { columnName: "SentDate", inputType: "text", toolTipMessage: tip },
+            {
+              columnName: "Ack/SendFailed",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "NoOfSendTries",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "SubscriberTypeName",
+              inputType: "ddl",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "TransformName",
+              inputType: "ddl",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "Recv SentDate",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "Recv Ack/SendFailed",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "Recv NoOfSendTries",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "Recv SubscriberTypeName",
+              inputType: "ddl",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "Recv TransformName",
+              inputType: "ddl",
+              toolTipMessage: tip,
+            },
           ],
-          enableCookies: false
+          enableCookies: false,
+          filteredRows: function () {
+            syncSubrowVisibility();
+            restripeParents();
+          },
         });
 
-        $('#resultsSection').show();
+        $("#resultsSection").show();
+
+        $table.find("thead input:text").first().val("SRR or SI");
+        $table.tableFilter("applyFilter");
       }
 
       $(function () {
-        $('#nav-placeholder').load('navigation.html', function () {
+        // Init dual scrollbars (top + bottom) for wide tables
+        var $topBar = $("#topScrollBar");
+        var $wrapper = $("#tableScrollWrapper");
+        $topBar.on("scroll", function () {
+          $wrapper.scrollLeft($topBar.scrollLeft());
+        });
+        $wrapper.on("scroll", function () {
+          $topBar.scrollLeft($wrapper.scrollLeft());
+        });
+        var $phantom = $topBar.find("div");
+        var observer = new ResizeObserver(function () {
+          var w = $wrapper[0].scrollWidth;
+          $phantom.width(w);
+          $topBar.toggle(w > $wrapper.width());
+        });
+        observer.observe($wrapper[0]);
+
+        $("#nav-placeholder").load("navigation.html", function () {
           initNavigation();
           getIsLoggedIn(function (isLoggedIn) {
             if (isLoggedIn) {
-              $('#analyzerSection').show();
+              $("#analyzerSection").show();
               loadDevices();
             } else {
-              $('#loginRequiredAlert').removeClass('collapse');
+              $("#loginRequiredAlert").removeClass("collapse");
             }
           });
         });
 
-        $('#senderDeviceSelect').on('change', function () {
-          loadZipFiles($(this).val(), function (files) { senderZipFiles = files; updateAnalyzeButton(); }, $('#senderZipSelect'));
+        $("#senderDeviceSelect").on("change", function () {
+          ls.set('senderDevice', $(this).val() || '');
+          loadZipFiles(
+            $(this).val(),
+            function (files) {
+              senderZipFiles = files;
+              updateAnalyzeButton();
+            },
+            $("#senderZipSelect"),
+          );
         });
 
-        $('#receiverDeviceSelect').on('change', function () {
-          loadZipFiles($(this).val(), function (files) { receiverZipFiles = files; updateAnalyzeButton(); }, $('#receiverZipSelect'));
+        $("#receiverDeviceSelect").on("change", function () {
+          ls.set('receiverDevice', $(this).val() || '');
+          loadZipFiles(
+            $(this).val(),
+            function (files) {
+              receiverZipFiles = files;
+              updateAnalyzeButton();
+            },
+            $("#receiverZipSelect"),
+          );
         });
 
-        $('#senderZipSelect, #receiverZipSelect').on('change', updateAnalyzeButton);
+        $("#senderZipSelect, #receiverZipSelect").on("change", function () {
+          ls.set('senderZip', $('#senderZipSelect').val() || '');
+          ls.set('receiverZip', $('#receiverZipSelect').val() || '');
+          updateAnalyzeButton();
+        });
 
-        $('#btnAnalyze').on('click', function () {
-          var senderZip = $('#senderZipSelect').val();
-          var receiverZip = $('#receiverZipSelect').val();
+        // Initialize Tempus Dominus date/time pickers
+        var tdFrom = new tempusDominus.TempusDominus(document.getElementById('pickerFrom'), {
+          display: { components: { clock: true, hours: 'numeric', minutes: 'numeric', seconds: false }, icons: { time: 'fa fa-clock', date: 'fa fa-calendar', up: 'fa fa-arrow-up', down: 'fa fa-arrow-down', previous: 'fa fa-chevron-left', next: 'fa fa-chevron-right', today: 'fa fa-calendar-check', clear: 'fa fa-trash', close: 'fa fa-xmark' } },
+          localization: { format: 'yyyy-MM-dd HH:mm' }
+        });
+        var tdTo = new tempusDominus.TempusDominus(document.getElementById('pickerTo'), {
+          display: { components: { clock: true, hours: 'numeric', minutes: 'numeric', seconds: false }, icons: { time: 'fa fa-clock', date: 'fa fa-calendar', up: 'fa fa-arrow-up', down: 'fa fa-arrow-down', previous: 'fa fa-chevron-left', next: 'fa fa-chevron-right', today: 'fa fa-calendar-check', clear: 'fa fa-trash', close: 'fa fa-xmark' } },
+          localization: { format: 'yyyy-MM-dd HH:mm' }
+        });
+
+        $('#filterFrom, #filterTo').on('change', function () {
+          ls.set('filterFrom', $('#filterFrom').val() || '');
+          ls.set('filterTo', $('#filterTo').val() || '');
+        });
+
+        $("#btnAnalyze").on("click", function () {
+          var senderZip = $("#senderZipSelect").val();
+          var receiverZip = $("#receiverZipSelect").val();
           if (!senderZip) return;
 
-          $('#analyzeError').addClass('collapse');
-          $('#btnAnalyzeSpinner').show();
-          $('#btnAnalyze').prop('disabled', true);
-          $('#analyzeLoading').show();
-          $('#resultsSection').hide();
+          $("#analyzeError").addClass("collapse");
+          $("#btnAnalyzeSpinner").show();
+          $("#btnAnalyze").prop("disabled", true);
+          $("#analyzeLoading").show();
+          $("#resultsSection").hide();
 
-          var url = '/api/v1/LogArchives/Analyze?senderZip=' + encodeURIComponent(senderZip);
-          if (receiverZip) url += '&receiverZip=' + encodeURIComponent(receiverZip);
+          var url =
+            "/api/v1/LogArchives/Analyze?senderZip=" +
+            encodeURIComponent(senderZip);
+          if (receiverZip)
+            url += "&receiverZip=" + encodeURIComponent(receiverZip);
+          var fromDate = $('#filterFrom').val();
+          var toDate = $('#filterTo').val();
+          if (fromDate) url += "&fromDate=" + encodeURIComponent(fromDate);
+          if (toDate) url += "&toDate=" + encodeURIComponent(toDate);
 
-          $.ajax({ url: url, dataType: 'json' })
+          $.ajax({ url: url, dataType: "json" })
             .then(function (data) {
-              $('#btnAnalyzeSpinner').hide();
-              $('#btnAnalyze').prop('disabled', false);
-              $('#analyzeLoading').hide();
+              $("#btnAnalyzeSpinner").hide();
+              $("#btnAnalyze").prop("disabled", false);
+              $("#analyzeLoading").hide();
 
               if (data.code) {
-                $('#analyzeError').text(data.message || 'Unknown error').removeClass('collapse');
+                $("#analyzeError")
+                  .text(data.message || "Unknown error")
+                  .removeClass("collapse");
                 return;
               }
 
-              var messages = Array.isArray(data) ? data : (data.messages || []);
-              console.log('Messages returned:', messages.length);
+              var messages = Array.isArray(data) ? data : data.messages || [];
+              console.log("Messages returned:", messages.length);
 
               hasReceiverData = !!receiverZip;
-              $('.receiver-col').toggle(hasReceiverData);
+              $(".recv-group").toggle(hasReceiverData);
 
               buildTable(messages);
             })
             .fail(function (jqXHR) {
-              $('#btnAnalyzeSpinner').hide();
-              $('#btnAnalyze').prop('disabled', false);
-              $('#analyzeLoading').hide();
-              var msg = 'Analysis failed';
-              try { var resp = JSON.parse(jqXHR.responseText); if (resp.message) msg = resp.message; } catch (e) {}
-              $('#analyzeError').text(msg).removeClass('collapse');
+              $("#btnAnalyzeSpinner").hide();
+              $("#btnAnalyze").prop("disabled", false);
+              $("#analyzeLoading").hide();
+              var msg = "Analysis failed";
+              try {
+                var resp = JSON.parse(jqXHR.responseText);
+                if (resp.message) msg = resp.message;
+              } catch (e) {}
+              $("#analyzeError").text(msg).removeClass("collapse");
             });
         });
       });

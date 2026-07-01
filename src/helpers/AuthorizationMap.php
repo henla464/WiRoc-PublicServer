@@ -38,7 +38,9 @@ class AuthorizationMap {
             'postPasswordRecovery',
             'postSetNewPassword',
             'getLogArchivesDevices',
-            'getLogArchivesFiles');
+            'getLogArchivesFiles',
+            'getLogArchivesLogFiles',
+            'getLogArchivesLogContent');
 
         
         

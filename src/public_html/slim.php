@@ -5047,5 +5047,126 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
     return $response->withHeader('Content-Type', 'application/json');
 })->setName("getLogArchivesAnalyze");
 
+/**
+ * @SWG\Get(
+ *     path="/api/v1/LogArchives/LogFiles",
+ *     description="List log files inside a zip archive",
+ *     operationId="getLogArchivesLogFiles",
+ *     produces={"application/json"},
+ *     @SWG\Parameter(name="zip", in="query", required=true, type="string"),
+ *     @SWG\Response(response=200, description="JSON array of log filenames")
+ * )
+ */
+$app->get('/api/v1/LogArchives/LogFiles', function (Request $request, Response $response) {
+    $zipName = $request->getQueryParams()['zip'] ?? '';
+    if (empty($zipName)) {
+        $response->getBody()->write(json_encode([]));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+    $logArchiveDir = __DIR__ . '/LogArchives/';
+    $zipPath = $logArchiveDir . basename($zipName);
+    if (!file_exists($zipPath)) {
+        $response->getBody()->write(json_encode([]));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+    $zip = new ZipArchive();
+    if ($zip->open($zipPath) !== true) {
+        $response->getBody()->write(json_encode(['error' => 'Cannot open zip']));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+    }
+    $files = [];
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $name = $zip->getNameIndex($i);
+        $stat = $zip->statIndex($i);
+        // Only log files
+        if (strpos(basename($name), 'WiRoc.log') === 0 || strpos(basename($name), 'WiRoc.log') !== false) {
+            $files[] = ['filename' => basename($name), 'size' => $stat['size'], 'fullpath' => $name];
+        }
+    }
+    $zip->close();
+    usort($files, function ($a, $b) { return strcmp($a['filename'], $b['filename']); });
+    $response->getBody()->write(json_encode($files));
+    return $response->withHeader('Content-Type', 'application/json');
+})->setName("getLogArchivesLogFiles");
+
+/**
+ * @SWG\Get(
+ *     path="/api/v1/LogArchives/LogContent",
+ *     description="Return the content of a specific log file from a zip archive",
+ *     operationId="getLogArchivesLogContent",
+ *     produces={"application/json"},
+ *     @SWG\Parameter(name="zip", in="query", required=true, type="string"),
+ *     @SWG\Parameter(name="logfile", in="query", required=true, type="string"),
+ *     @SWG\Response(response=200, description="JSON array of log lines")
+ * )
+ */
+$app->get('/api/v1/LogArchives/LogContent', function (Request $request, Response $response) {
+    $zipName = $request->getQueryParams()['zip'] ?? '';
+    $logFileName = $request->getQueryParams()['logfile'] ?? '';
+    if (empty($zipName) || empty($logFileName)) {
+        $response->getBody()->write(json_encode([]));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+    $logArchiveDir = __DIR__ . '/LogArchives/';
+    $zipPath = $logArchiveDir . basename($zipName);
+    if (!file_exists($zipPath)) {
+        $response->getBody()->write(json_encode([]));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+    $zip = new ZipArchive();
+    if ($zip->open($zipPath) !== true) {
+        $response->getBody()->write(json_encode(['error' => 'Cannot open zip']));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+    }
+    // Find the matching log file inside the zip
+    $content = '';
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $name = $zip->getNameIndex($i);
+        if (strpos($name, $logFileName) !== false) {
+            $content = $zip->getFromIndex($i);
+            break;
+        }
+    }
+    $zip->close();
+
+    if (empty($content)) {
+        $response->getBody()->write(json_encode([]));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    // Parse log lines: "2026-06-06 18:05:52,086 WiRoc        INFO     HardwareAbstraction::Init start"
+    $lines = explode("\n", $content);
+    $parsed = [];
+    foreach ($lines as $line) {
+        $line = rtrim($line);
+        if (empty($line)) continue;
+        // Regex: timestamp, source, loglevel, message
+        if (preg_match('/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})\s+(\S.*?)\s{2,}(INFO|DEBUG|WARN(?:ING)?|ERROR|CRITICAL)\s+(.*)$/', $line, $m)) {
+            $parsed[] = [
+                'LogTime' => $m[1],
+                'Source' => trim($m[2]),
+                'LogLevel' => $m[3],
+                'Message' => $m[4]
+            ];
+        } else if (preg_match('/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})\s+(.*)$/', $line, $m)) {
+            $parsed[] = [
+                'LogTime' => $m[1],
+                'Source' => '',
+                'LogLevel' => '',
+                'Message' => $m[2]
+            ];
+        } else {
+            $parsed[] = [
+                'LogTime' => '',
+                'Source' => '',
+                'LogLevel' => '',
+                'Message' => $line
+            ];
+        }
+    }
+    $response->getBody()->write(json_encode($parsed));
+    return $response->withHeader('Content-Type', 'application/json');
+})->setName("getLogArchivesLogContent");
+
 $app->run();
 

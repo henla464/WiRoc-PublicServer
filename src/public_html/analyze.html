@@ -215,6 +215,9 @@
             <div class="col-auto">
               <button type="button" id="btnLoadSenderLogs" class="btn btn-outline-secondary btn-sm">Load logs</button>
             </div>
+            <div class="col-auto">
+              <button type="button" id="btnClearSenderLogs" class="btn btn-outline-secondary btn-sm">Clear</button>
+            </div>
           </div>
           <div id="senderLogTableContainer"></div>
         </div>
@@ -230,6 +233,9 @@
             </div>
             <div class="col-auto">
               <button type="button" id="btnLoadReceiverLogs" class="btn btn-outline-secondary btn-sm">Load logs</button>
+            </div>
+            <div class="col-auto">
+              <button type="button" id="btnClearReceiverLogs" class="btn btn-outline-secondary btn-sm">Clear</button>
             </div>
           </div>
           <div id="receiverLogTableContainer"></div>
@@ -452,6 +458,11 @@
       }
 
       // --- Log file loading ---
+      function clearLogSide(side) {
+        $('#' + side + 'LogFileSelect').empty().append('<option value="">-- Select a zip file --</option>');
+        $('#' + side + 'LogTableContainer').empty();
+      }
+
       function loadLogFileList(zipName, side) {
         $.ajax({
           url:
@@ -1517,7 +1528,9 @@
           var sz = $("#senderZipSelect").val();
           var rz = $("#receiverZipSelect").val();
           if (sz) { loadLogFileList(sz, "sender"); }
+          else { clearLogSide("sender"); }
           if (rz) { loadLogFileList(rz, "receiver"); }
+          else { clearLogSide("receiver"); }
         });
 
         // Initialize Tempus Dominus date/time pickers
@@ -1577,16 +1590,22 @@
           ls.set("filterTo", $("#filterTo").val() || "");
         });
 
-        // Log viewer: Load logs button handlers
+        // Log viewer: Load/Clear logs button handlers
         $("#btnLoadSenderLogs").on("click", function () {
           var logFile = $("#senderLogFileSelect").val();
           if (logFile)
             buildLogTable("sender", $("#senderZipSelect").val(), logFile);
         });
+        $("#btnClearSenderLogs").on("click", function () {
+          $("#senderLogTableContainer").empty();
+        });
         $("#btnLoadReceiverLogs").on("click", function () {
           var logFile = $("#receiverLogFileSelect").val();
           if (logFile)
             buildLogTable("receiver", $("#receiverZipSelect").val(), logFile);
+        });
+        $("#btnClearReceiverLogs").on("click", function () {
+          $("#receiverLogTableContainer").empty();
         });
 
         $("#btnAnalyze").on("click", function () {

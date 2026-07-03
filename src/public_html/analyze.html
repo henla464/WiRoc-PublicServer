@@ -176,6 +176,30 @@
               Analyze
             </button>
           </div>
+          <div class="col-auto">
+            <div class="form-check form-check-inline mt-2">
+              <input class="form-check-input" type="checkbox" id="chkMT_SI" checked>
+              <label class="form-check-label small" for="chkMT_SI">SI</label>
+            </div>
+            <div class="form-check form-check-inline mt-2">
+              <input class="form-check-input" type="checkbox" id="chkMT_SRR" checked>
+              <label class="form-check-label small" for="chkMT_SRR">SRR</label>
+            </div>
+            <div class="form-check form-check-inline mt-2">
+              <input class="form-check-input" type="checkbox" id="chkMT_LORA">
+              <label class="form-check-label small" for="chkMT_LORA">LORA</label>
+            </div>
+            <div class="form-check form-check-inline mt-2">
+              <input class="form-check-input" type="checkbox" id="chkMT_REPEATER">
+              <label class="form-check-label small" for="chkMT_REPEATER">REPEATER</label>
+            </div>
+          </div>
+          <div class="col-auto">
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" id="chkShowStatus">
+              <label class="form-check-label small" for="chkShowStatus">Show STATUS</label>
+            </div>
+          </div>
         </div>
 
         <div
@@ -396,6 +420,17 @@
               $("#filterTo").val(saved.filterTo);
               if (tdTo && saved.filterTo)
                 tdTo.dates.setFromInput(saved.filterTo);
+            }
+            // Restore MessageType checkboxes (SI/SRR default checked, others unchecked)
+            $('#chkMT_SI').prop('checked', ls.get('chkMT_SI') !== '0');
+            $('#chkMT_SRR').prop('checked', ls.get('chkMT_SRR') !== '0');
+            $('#chkMT_LORA').prop('checked', ls.get('chkMT_LORA') === '1');
+            $('#chkMT_REPEATER').prop('checked', ls.get('chkMT_REPEATER') === '1');
+            // Restore STATUS checkbox (default unchecked)
+            if (ls.get('showStatus') === '1') {
+              $('#chkShowStatus').prop('checked', true);
+            } else {
+              $('#chkShowStatus').prop('checked', false);
             }
           },
         );
@@ -653,17 +688,27 @@
         );
 
         // Per-cell inline style to kill Bootstrap's inset box-shadow and apply our own background
+        var isDuplicate = (row._rowKind === 'duplicate');
         var cellBg = "";
         if (isChild) {
           cellBg = "box-shadow:none;background-color:#faf3d1";
+        } else if (isDuplicate) {
+          // Duplicates share their original's stripe: inherit the same bg
+          // The stripeIdx was copied from the original so use the same logic
+          cellBg = (row._stripeIdx !== undefined && row._stripeIdx % 2 === 1)
+            ? "box-shadow:none;background-color:rgba(0,0,0,.05)"
+            : "box-shadow:none";
         } else if (row._stripeIdx !== undefined && row._stripeIdx % 2 === 1) {
           cellBg = "box-shadow:none;background-color:rgba(0,0,0,.05)";
         } else {
           cellBg = "box-shadow:none";
         }
 
-        // For child rows, Ack/SendFailed cell keeps its status color, not the sand background
-        var ackCellBg = isChild
+        // Muted italic for duplicate sender fields
+        var senderCellBg = isDuplicate ? cellBg + ";color:#999;font-style:italic" : cellBg;
+
+        // For child rows & duplicates, Ack/SendFailed cell keeps its status color, not the muted style
+        var ackCellBg = (isChild || isDuplicate)
           ? "box-shadow:none" // let CSS classes .ack-cell/.sendfailed-cell handle the color
           : cellBg;
 
@@ -795,17 +840,19 @@
             '<td class="subrow-toggle-cell" style="' +
             expandStyle +
             '"><span class="subrow-toggle closed">+</span></td>';
+        } else if (isDuplicate) {
+          expandCell = '<td class="dup-expand" style="' + cellBg + ';color:#aaa;font-size:11px;text-align:center" title="Additional receiver match — sender data is a copy">↳</td>';
         } else {
           expandCell = '<td style="' + cellBg + '"></td>';
         }
 
         var rowCls = isChild
           ? ' class="tablesorter-childRow subrow" style="display:none"'
-          : ' class="parent-row' + (hasChildren ? " has-children" : "") + '"';
+          : ' class="parent-row' + (hasChildren ? " has-children" : "") + (isDuplicate ? " dup-row" : "") + '"';
 
-        function td(val) {
+        function senderTd(val) {
           return (
-            '<td style="' + cellBg + '">' + (val == null ? "" : val) + "</td>"
+            '<td style="' + senderCellBg + '">' + (val == null ? "" : val) + "</td>"
           );
         }
 
@@ -814,24 +861,55 @@
           rowCls +
           ">" +
           expandCell +
-          td(row.MessageTypeName) +
-          td(row.InstanceName) +
-          td(row.MessageSubTypeName) +
-          td(row.SICardNumber) +
-          td(sportIdent) +
-          td(row.SIStationNumber) +
-          td(row.SentDate) +
+          senderTd(row.MessageTypeName) +
+          senderTd(row.InstanceName) +
+          senderTd(row.MessageSubTypeName) +
+          senderTd(row.SICardNumber) +
+          senderTd(sportIdent) +
+          senderTd(row.SIStationNumber) +
+          senderTd(row.SentDate) +
           ackCell +
-          td(timeToAck) +
-          td(row.NoOfSendTries) +
-          td(row.SubscriberTypeName) +
-          td(row.TransformName) +
+          senderTd(timeToAck) +
+          senderTd(row.NoOfSendTries) +
+          senderTd(row.SubscriberTypeName) +
+          senderTd(row.TransformName) +
           receiverCols +
           "</tr>"
         );
       }
 
-      function buildTable(data) {
+      function buildTable(data, recvExtra) {
+        recvExtra = recvExtra || {};
+
+        // Client-side row expansion for additional receiver matches
+        if (hasReceiverData && Object.keys(recvExtra).length > 0) {
+          var expanded = [];
+          var extraUsed = {}; // track which recvExtra keys have already been expanded
+          $.each(data, function () {
+            var key = (this.SICardNumber || '') + '|' +
+              String(this.SportIdentHour || '0').padStart(2, '0') + '|' +
+              String(this.SportIdentMinute || '0').padStart(2, '0') + '|' +
+              String(this.SportIdentSecond || '0').padStart(2, '0') + '|' +
+              (this.SIStationNumber || '');
+            this._rowKind = 'original';
+            expanded.push(this);
+            // Skip expansion for STATUS messages and resubmit children
+            if (this.MessageTypeName === 'STATUS' || this.InstanceName === 'resubmit1') return;
+            // Only expand once per key (first match gets extras, subsequent rows with same key share them)
+            if (extraUsed[key]) return;
+            extraUsed[key] = true;
+            var extras = recvExtra[key];
+            if (extras) {
+              for (var m = 0; m < extras.length; m++) {
+                var dup = $.extend({}, this, extras[m], { _rowKind: 'duplicate' });
+                expanded.push(dup);
+              }
+            }
+          });
+          data = expanded;
+          console.log('After receiver expansion:', data.length, 'rows');
+        }
+
         var $container = $("#analyzeTableContainer");
         $container.empty();
 
@@ -857,51 +935,31 @@
           );
         }
 
-        // Two passes: first find parents and children, then output
-        var parents = []; // {key, row, rendered:false}
+        // Pass 1: find children by key and mark parent rows
         var childrenByKey = {}; // key -> [child rows]
         var parentRowsByKey = {};
-        var standalone = []; // rows with no parent/child relationship
+        var childKeys = {}; // which keys are children (to skip them in output)
 
-        // Pass 1: collect candidate parents (LORA messages that have SendFailedDate)
         $.each(data, function () {
           if (this.SubscriberTypeName === "LORA" && this.SendFailedDate) {
             var key = rowKey(this);
             if (!parentRowsByKey[key]) {
               parentRowsByKey[key] = this;
-              parents.push({ key: key, row: this });
             }
           }
         });
 
-        // Pass 2: match children
         $.each(data, function () {
           if (this.InstanceName === "resubmit1") {
             var key = rowKey(this);
             if (parentRowsByKey[key]) {
               if (!childrenByKey[key]) childrenByKey[key] = [];
               childrenByKey[key].push(this);
+              childKeys[key] = true;
               return;
             }
           }
-          // Skip rows already claimed as parents
-          for (var p = 0; p < parents.length; p++) {
-            if (parents[p].row === this) return;
-          }
-          standalone.push(this);
         });
-
-        // Sort parents and standalone rows by SentDate ASC so DOM order is correct
-        // even after parent-child grouping
-        var sortBySentDate = function (a, b) {
-          var da = a.SentDate || "",
-            db = b.SentDate || "";
-          return da < db ? -1 : da > db ? 1 : 0;
-        };
-        parents.sort(function (a, b) {
-          return sortBySentDate(a.row, b.row);
-        });
-        standalone.sort(sortBySentDate);
 
         // --- Compute summary stats per MessageTypeName ---
         var summaryStats = {}; // key: MessageTypeName -> { total, ackedIncl, ackedExcl, tryCounts: [0,0,0,0,0,0] }
@@ -914,38 +972,23 @@
               tryCounts: [0, 0, 0, 0, 0, 0],
             };
         }
-        $.each(parents, function () {
-          var mt = this.row.MessageTypeName || "(empty)";
-          ensureStats(mt);
-          var st = summaryStats[mt];
-          st.total++;
-          var hasKids = !!(
-            childrenByKey[this.key] && childrenByKey[this.key].length > 0
-          );
-          var childAcked =
-            hasKids &&
-            childrenByKey[this.key].some(function (c) {
-              return !!c.AckReceivedDate;
-            });
-          if (this.row.AckReceivedDate) {
-            st.ackedIncl++;
-            st.ackedExcl++;
-            var tries = parseInt(this.row.NoOfSendTries) || 0;
-            if (tries >= 1 && tries <= 5) st.tryCounts[tries - 1]++;
-          } else if (childAcked) {
-            st.ackedIncl++;
-          }
-        });
-        $.each(standalone, function () {
+        // Summary stats: iterate data in original order, skip children and duplicates
+        $.each(data, function () {
+          if (this.InstanceName === 'resubmit1') return; // skip children
+          if (this._rowKind === 'duplicate') return; // skip duplicate receiver rows
           var mt = this.MessageTypeName || "(empty)";
           ensureStats(mt);
           var st = summaryStats[mt];
           st.total++;
+          var key = rowKey(this);
+          var childAcked = childrenByKey[key] && childrenByKey[key].some(function (c) { return !!c.AckReceivedDate; });
           if (this.AckReceivedDate) {
             st.ackedIncl++;
             st.ackedExcl++;
             var tries = parseInt(this.NoOfSendTries) || 0;
             if (tries >= 1 && tries <= 5) st.tryCounts[tries - 1]++;
+          } else if (childAcked) {
+            st.ackedIncl++;
           }
         });
 
@@ -1256,41 +1299,40 @@
           $summaryContainer.css({ columns: "2", columnGap: "1rem" });
         $("#summarySection").show();
 
-        // Output: each parent + its children, then standalone rows
+        // Output rows in original order: parents with children, standalone as-is, children skipped
         var parentIdx = 0;
-        $.each(parents, function () {
-          var hasKids = !!(
-            childrenByKey[this.key] && childrenByKey[this.key].length > 0
-          );
-          var anyChildSucceeded = false;
-          var bestChildAckDate = null;
-          if (hasKids) {
-            anyChildSucceeded = childrenByKey[this.key].some(function (c) {
-              return !!c.AckReceivedDate;
-            });
-            // Find the first child ack date for time-to-ack fallback
-            $.each(childrenByKey[this.key], function () {
-              if (this.AckReceivedDate && !bestChildAckDate) {
-                bestChildAckDate = this.AckReceivedDate;
-                return false;
-              }
-            });
-          }
-          this.row._bestAckFinishedDate = bestChildAckDate || "none";
-          this.row._stripeIdx = parentIdx++;
-          $tbody.append(
-            buildRowHtml(this.row, false, hasKids, anyChildSucceeded),
-          );
-          if (hasKids) {
-            $.each(childrenByKey[this.key], function () {
-              $tbody.append(buildRowHtml(this, true, false, false));
-            });
-          }
-        });
+        var renderedParents = {}; // tracks which parent keys have already been rendered
+        $.each(data, function () {
+          var key = rowKey(this);
+          // Is this a child row? Skip (already rendered under its parent)
+          if (this.InstanceName === 'resubmit1' && parentRowsByKey[key]) return;
 
-        $.each(standalone, function () {
-          this._stripeIdx = parentIdx++;
-          $tbody.append(buildRowHtml(this, false, false, false));
+          // Is this a parent row that hasn't been rendered yet?
+          var isParent = (parentRowsByKey[key] === this && this.SubscriberTypeName === "LORA" && this.SendFailedDate);
+          if (isParent) {
+            renderedParents[key] = true;
+            var hasKids = !!(childrenByKey[key] && childrenByKey[key].length > 0);
+            var anyChildSucceeded = false;
+            var bestChildAckDate = null;
+            if (hasKids) {
+              anyChildSucceeded = childrenByKey[key].some(function (c) { return !!c.AckReceivedDate; });
+              childrenByKey[key].forEach(function (c) {
+                if (c.AckReceivedDate && !bestChildAckDate) bestChildAckDate = c.AckReceivedDate;
+              });
+            }
+            this._bestAckFinishedDate = bestChildAckDate || "none";
+            this._stripeIdx = parentIdx++;
+            $tbody.append(buildRowHtml(this, false, hasKids, anyChildSucceeded));
+            if (hasKids) {
+              $.each(childrenByKey[key], function () {
+                $tbody.append(buildRowHtml(this, true, false, false));
+              });
+            }
+          } else {
+            // Standalone row (or duplicate parent already rendered)
+            this._stripeIdx = parentIdx++;
+            $tbody.append(buildRowHtml(this, false, false, false));
+          }
         });
 
         $table.append($tbody);
@@ -1338,29 +1380,42 @@
           var i = 0;
           $table.find("tbody tr.parent-row").each(function () {
             var $row = $(this);
+            var isDup = $row.hasClass("dup-row");
             if ($row.is(":visible")) {
-              var bg =
-                i % 2 === 1
-                  ? "box-shadow:none;background-color:rgba(0,0,0,.05)"
-                  : "box-shadow:none";
+              var bg = "box-shadow:none";
+              if (isDup) {
+                // Match the previous non-dup parent row's background
+                var $prev = $row.prevAll(".parent-row:not(.dup-row)").first();
+                if ($prev.length) {
+                  bg = $prev.find("td").first().attr("style") || bg;
+                  if (bg.indexOf("rgba") === -1) bg = "box-shadow:none";
+                }
+              } else if (i % 2 === 1) {
+                bg += ";background-color:rgba(0,0,0,.05)";
+              }
               $row.find("td").attr("style", bg);
-              i++;
+              // Re-apply muted color/italic for duplicate sender cells (expand col + sender cols)
+              if (isDup) {
+                $row.find("td").slice(0, 14).css({color: '#999', fontStyle: 'italic'});
+                $row.find("td").eq(0).css({color: '#aaa', fontSize: '11px', textAlign: 'center'});
+              }
+              if (!isDup) i++;
             }
           });
         }
 
         // Init Tablesorter - child rows follow parent sorting via tablesorter-childRow
-        $table.tablesorter({
-          theme: "bootstrap",
-          sortList: [[7, 0]],
-          headers: { 0: { sorter: false } },
-          initialized: function (table) {
-            $(table).on("sortEnd", function () {
-              syncSubrowVisibility();
-              restripeParents();
-            });
-          },
-        });
+        //$table.tablesorter({
+        //  theme: "bootstrap",
+        //  sortList: [[7, 0]],
+        //  headers: { 0: { sorter: false } },
+        //  initialized: function (table) {
+        //    $(table).on("sortEnd", function () {
+        //      syncSubrowVisibility();
+        //      restripeParents();
+        //    });
+        //  },
+        //});
 
         // Init TableFilter
         var tip = 'Quotes (") match phrases...';
@@ -1590,6 +1645,16 @@
           ls.set("filterTo", $("#filterTo").val() || "");
         });
 
+        // Show STATUS checkbox
+        // Save MessageType checkboxes to localStorage
+        $('#chkMT_SI, #chkMT_SRR, #chkMT_LORA, #chkMT_REPEATER, #chkShowStatus').on('change', function () {
+          ls.set('chkMT_SI', $('#chkMT_SI').prop('checked') ? '1' : '0');
+          ls.set('chkMT_SRR', $('#chkMT_SRR').prop('checked') ? '1' : '0');
+          ls.set('chkMT_LORA', $('#chkMT_LORA').prop('checked') ? '1' : '0');
+          ls.set('chkMT_REPEATER', $('#chkMT_REPEATER').prop('checked') ? '1' : '0');
+          ls.set('showStatus', $('#chkShowStatus').prop('checked') ? '1' : '0');
+        });
+
         // Log viewer: Load/Clear logs button handlers
         $("#btnLoadSenderLogs").on("click", function () {
           var logFile = $("#senderLogFileSelect").val();
@@ -1628,8 +1693,15 @@
           var toDate = $("#filterTo").val();
           if (fromDate) url += "&fromDate=" + encodeURIComponent(fromDate);
           if (toDate) url += "&toDate=" + encodeURIComponent(toDate);
+          // Collect checked MessageTypeNames
+          var msgTypes = [];
+          $.each(['SI','SRR','LORA','REPEATER'], function (_, mt) {
+            if ($('#chkMT_' + mt).prop('checked')) msgTypes.push(mt);
+          });
+          if (msgTypes.length > 0) url += "&msgTypes=" + encodeURIComponent(msgTypes.join(','));
+          url += "&showStatus=" + ($('#chkShowStatus').prop('checked') ? '1' : '0');
 
-          $.ajax({ url: url, dataType: "json" })
+          $.ajax({ url: url, dataType: "json", timeout: 60000 })
             .then(function (data) {
               $("#btnAnalyzeSpinner").hide();
               $("#btnAnalyze").prop("disabled", false);
@@ -1643,12 +1715,13 @@
               }
 
               var messages = Array.isArray(data) ? data : data.messages || [];
-              console.log("Messages returned:", messages.length);
+              var recvExtra = (data && data.recvExtra) || {};
+              console.log("Messages returned:", messages.length, "recvExtra keys:", Object.keys(recvExtra).length);
 
               hasReceiverData = !!receiverZip;
               $(".recv-group").toggle(hasReceiverData);
 
-              buildTable(messages);
+              buildTable(messages, recvExtra);
             })
             .fail(function (jqXHR) {
               $("#btnAnalyzeSpinner").hide();
@@ -1658,7 +1731,9 @@
               try {
                 var resp = JSON.parse(jqXHR.responseText);
                 if (resp.message) msg = resp.message;
+                if (resp.debug && resp.debug.mergeError) msg = resp.debug.mergeError;
               } catch (e) {}
+              console.error("Analyze failed:", jqXHR.status, jqXHR.responseText);
               $("#analyzeError").text(msg).removeClass("collapse");
             });
         });

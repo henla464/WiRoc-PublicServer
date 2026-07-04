@@ -5075,7 +5075,6 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                 $msg['recv_OrigId'] = $matches[0]['OrigId'] ?? null;
                 $msg['recv_CreatedDate'] = $matches[0]['CreatedDate'] ?? null;
                 $msg['recv_MessageData'] = $matches[0]['MessageData'] ?? null;
-                // Additional matches: store only extras in recvExtra
                 if (count($matches) > 1) {
                     $extras = [];
                     for ($i = 1; $i < count($matches); $i++) {

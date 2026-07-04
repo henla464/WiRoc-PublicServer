@@ -969,11 +969,19 @@
             info._expanded = true;
             if (this.MessageTypeName === 'STATUS' || this.InstanceName === 'resubmit1') { expanded.push(this); return; }
 
-            // Build all combinations: all receiv extras × all repeater extras
-            var recvList = info.recvExtras.length ? info.recvExtras : [null];
-            var repList = info.repExtras.length ? info.repExtras : [null];
+            // Build all combinations: all receiver extras × all repeater extras
+            var recvList = info.recvExtras.length ? info.recvExtras.slice() : [null];
+            var repList = info.repExtras.length ? info.repExtras.slice() : [null];
 
-            // Sort repeater extras by sentDate then TransformName
+            // Sort receiver extras by SentDate
+            recvList.sort(function (a, b) {
+              if (!a || !b) return 0;
+              if (a.recv_SentDate < b.recv_SentDate) return -1;
+              if (a.recv_SentDate > b.recv_SentDate) return 1;
+              return 0;
+            });
+
+            // Sort repeater extras by SentDate then TransformName
             var tnOrder = {
               'RepeaterSIMessageToLoraTransform': 0,
               'RepeaterSIMessageDoubleToLoraTransform': 1,
@@ -989,33 +997,41 @@
               return oa - ob;
             });
 
+            // Build dup rows: the original carries first recv + first rep (from server).
+            // recvList/repList are extras arrays (no null sentinel). Create un-mixed dup rows
+            // for each extra, plus cross-product if both sides have extras.
             var combos = [];
+            // Recv extras: each pairs with the original's first rep match
             for (var ri = 0; ri < recvList.length; ri++) {
-              for (var pi = 0; pi < repList.length; pi++) {
-                if (ri === 0 && pi === 0) continue; // skip original combo
-                var dup = $.extend({}, this);
-                var src = '';
-                if (recvList[ri]) { $.extend(dup, recvList[ri]); src = 'recv'; }
-                if (repList[pi]) { $.extend(dup, repList[pi]); src = src ? (src + '+rep') : 'rep'; }
-                dup._rowKind = 'duplicate';
-                dup._dupSource = src;
-                combos.push(dup);
-              }
+              if (!recvList[ri]) continue;
+              var dup = $.extend({}, this, recvList[ri], { _rowKind: 'duplicate', _dupSource: 'recv' });
+              combos.push(dup);
             }
-            // Sort combos by rep_SentDate then recv_SentDate
-            combos.sort(function (a, b) {
-              if (a.rep_SentDate && b.rep_SentDate) {
-                if (a.rep_SentDate < b.rep_SentDate) return -1;
-                if (a.rep_SentDate > b.rep_SentDate) return 1;
-              }
-              if (a.recv_SentDate && b.recv_SentDate) {
-                if (a.recv_SentDate < b.recv_SentDate) return -1;
-                if (a.recv_SentDate > b.recv_SentDate) return 1;
-              }
+            // Rep extras: each pairs with the original's first recv match
+            for (var pi = 0; pi < repList.length; pi++) {
+              if (!repList[pi]) continue;
+              var dup = $.extend({}, this, repList[pi], { _rowKind: 'duplicate', _dupSource: 'rep' });
+              combos.push(dup);
+            }
+            // Sort combos by best available SentDate (repeater first, receiver fallback)
+            // Save original copy for sorting. If there are receiver extras, the original
+            // carries the first (earliest) match from server, which is the first recv extra.
+            // For sorting, pick the best SentDate value from rep > recv > sender
+            function bestSentDate(row) {
+              return row.rep_SentDate || row.recv_SentDate || row.SentDate || '';
+            }
+            var allRows = [this].concat(combos);
+            allRows.sort(function (a, b) {
+              var sa = bestSentDate(a);
+              var sb = bestSentDate(b);
+              if (sa < sb) return -1;
+              if (sa > sb) return 1;
+              // original before duplicates when same time
+              if (a._rowKind === 'original' && b._rowKind === 'duplicate') return -1;
+              if (a._rowKind === 'duplicate' && b._rowKind === 'original') return 1;
               return 0;
             });
-            expanded.push(this); // original first
-            for (var c = 0; c < combos.length; c++) expanded.push(combos[c]);
+            for (var c = 0; c < allRows.length; c++) expanded.push(allRows[c]);
           });
           data = expanded;
           console.log('After expansion:', data.length, 'rows');

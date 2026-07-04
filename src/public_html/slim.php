@@ -5148,6 +5148,11 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                 'RepeaterSIMessageDoubleToLoraAckTransform' => 3
             ];
             usort($matches, function ($a, $b) use ($tnOrder) {
+                // Sort by SentDate first, then by TransformName priority
+                $sa = $a['SentDate'] ?? '';
+                $sb = $b['SentDate'] ?? '';
+                $cmp = strcmp($sa, $sb);
+                if ($cmp !== 0) return $cmp;
                 $oa = $tnOrder[$a['TransformName'] ?? ''] ?? 999;
                 $ob = $tnOrder[$b['TransformName'] ?? ''] ?? 999;
                 return $oa - $ob;

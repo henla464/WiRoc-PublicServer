@@ -232,6 +232,10 @@ tr.subrow td.sendfailed-cell {
 #analyzeLoading {
   display: none;
 }
+#analyzeResultsTable thead th.group-first,
+#analyzeResultsTable tbody td.group-first {
+  border-left: 3px solid #999 !important;
+}
 .analyze-selector {
   max-width: 400px;
 }

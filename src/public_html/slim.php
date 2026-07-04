@@ -4773,6 +4773,7 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
     set_time_limit(120);
     $senderZip = $request->getQueryParams()['senderZip'] ?? '';
     $receiverZip = $request->getQueryParams()['receiverZip'] ?? '';
+    $repeaterZip = $request->getQueryParams()['repeaterZip'] ?? '';
     $fromDate = $request->getQueryParams()['fromDate'] ?? '';
     $toDate = $request->getQueryParams()['toDate'] ?? '';
 
@@ -4843,6 +4844,18 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
             $res = new CommandResponse();
             $res->code = 4;
             $res->message = "Receiver zip file not found";
+            $response->getBody()->write(json_encode($res));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
+        }
+    }
+
+    $repeaterPath = null;
+    if (!empty($repeaterZip)) {
+        $repeaterPath = $logArchiveDir . basename($repeaterZip);
+        if (!file_exists($repeaterPath) || !is_file($repeaterPath)) {
+            $res = new CommandResponse();
+            $res->code = 7;
+            $res->message = "Repeater zip file not found";
             $response->getBody()->write(json_encode($res));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
         }
@@ -5005,18 +5018,19 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                     'AckReceivedDate' => $rm['AckReceivedDate'] ?? null,
                     'NoOfSendTries' => $rm['NoOfSendTries'] ?? null,
                     'SubscriberTypeName' => $rm['SubscriberTypeName'] ?? null,
-                    'TransformName' => $rm['TransformName'] ?? null
+                    'TransformName' => $rm['TransformName'] ?? null,
+                    'OrigId' => $rm['orig_id'] ?? null,
+                    'CreatedDate' => $rm['CreatedDate'] ?? null,
+                    'MessageData' => $rm['MessageData'] ?? null
                 ];
                 foreach ($keys as $k) {
                     if ($k) {
-                        // Cap at 1000 matches per key to prevent memory explosion
                         if (!isset($receiverLookup[$k]) || count($receiverLookup[$k]) < 1000) {
                             $receiverLookup[$k][] = $slim;
                         }
                     }
                 }
             }
-            // Free full receiver messages and zip to save memory
             unset($recvMessages);
             $deleteDir($recvExtracted['tmpDir']);
             $recvExtracted = null;
@@ -5024,7 +5038,6 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
             $debug['recvTotalRows'] = array_sum(array_map('count', $receiverLookup));
             $debug['recvSampleKeys'] = array_slice(array_keys($receiverLookup), 0, 10);
 
-            // Sample sender keys
             $senderSamples = [];
             foreach ($messages as $msg) {
                 $key = $siMatchKey($msg['SICardNumber'] ?? '', $msg['SportIdentHour'] ?? '', $msg['SportIdentMinute'] ?? '', $msg['SportIdentSecond'] ?? '', $msg['SIStationNumber'] ?? '');
@@ -5049,15 +5062,19 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                 $msg['recv_SentDate'] = null; $msg['recv_SendFailedDate'] = null;
                 $msg['recv_AckReceivedDate'] = null; $msg['recv_NoOfSendTries'] = null;
                 $msg['recv_SubscriberTypeName'] = null; $msg['recv_TransformName'] = null;
+                $msg['recv_OrigId'] = null; $msg['recv_CreatedDate'] = null;
+                $msg['recv_MessageData'] = null;
             } else {
                 $matchCount++;
-                // First match: merge directly
                 $msg['recv_SentDate'] = $matches[0]['SentDate'] ?? null;
                 $msg['recv_SendFailedDate'] = $matches[0]['SendFailedDate'] ?? null;
                 $msg['recv_AckReceivedDate'] = $matches[0]['AckReceivedDate'] ?? null;
                 $msg['recv_NoOfSendTries'] = $matches[0]['NoOfSendTries'] ?? null;
                 $msg['recv_SubscriberTypeName'] = $matches[0]['SubscriberTypeName'] ?? null;
                 $msg['recv_TransformName'] = $matches[0]['TransformName'] ?? null;
+                $msg['recv_OrigId'] = $matches[0]['OrigId'] ?? null;
+                $msg['recv_CreatedDate'] = $matches[0]['CreatedDate'] ?? null;
+                $msg['recv_MessageData'] = $matches[0]['MessageData'] ?? null;
                 // Additional matches: store only extras in recvExtra
                 if (count($matches) > 1) {
                     $extras = [];
@@ -5068,7 +5085,10 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                             'recv_AckReceivedDate' => $matches[$i]['AckReceivedDate'] ?? null,
                             'recv_NoOfSendTries' => $matches[$i]['NoOfSendTries'] ?? null,
                             'recv_SubscriberTypeName' => $matches[$i]['SubscriberTypeName'] ?? null,
-                            'recv_TransformName' => $matches[$i]['TransformName'] ?? null
+                            'recv_TransformName' => $matches[$i]['TransformName'] ?? null,
+                            'recv_OrigId' => $matches[$i]['OrigId'] ?? null,
+                            'recv_CreatedDate' => $matches[$i]['CreatedDate'] ?? null,
+                            'recv_MessageData' => $matches[$i]['MessageData'] ?? null
                         ];
                     }
                     $recvExtra[$key] = $extras;
@@ -5080,16 +5100,107 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
         $debug['matchCount'] = $matchCount;
     }
 
+    // Build repeater lookup (same key structure as receiver)
+    $repeaterLookup = null;
+    if ($repeaterPath) {
+        $repExtracted = $extractDbFromZip($repeaterPath);
+        if ($repExtracted) {
+            $repMessages = $queryMessagesFromDb($repExtracted['dbPath'], 'repeater', '');
+            $repeaterLookup = [];
+            foreach ($repMessages as $rm) {
+                $keys = $receiverKeys($rm); // same key logic
+                $slim = [
+                    'SentDate' => $rm['SentDate'] ?? null,
+                    'SendFailedDate' => $rm['SendFailedDate'] ?? null,
+                    'AckReceivedDate' => $rm['AckReceivedDate'] ?? null,
+                    'NoOfSendTries' => $rm['NoOfSendTries'] ?? null,
+                    'SubscriberTypeName' => $rm['SubscriberTypeName'] ?? null,
+                    'TransformName' => $rm['TransformName'] ?? null,
+                    'MessageData' => $rm['MessageData'] ?? null,
+                    'OrigId' => $rm['orig_id'] ?? null,
+                    'CreatedDate' => $rm['CreatedDate'] ?? null
+                ];
+                foreach ($keys as $k) {
+                    if ($k && (!isset($repeaterLookup[$k]) || count($repeaterLookup[$k]) < 1000)) {
+                        $repeaterLookup[$k][] = $slim;
+                    }
+                }
+            }
+            unset($repMessages);
+            $deleteDir($repExtracted['tmpDir']);
+        }
+    }
+
+    // Merge repeater data: same key matching as receiver
+    $repExtra = [];
+    if ($repeaterLookup !== null) {
+        foreach ($messages as &$msg) {
+            if (($msg['InstanceName'] ?? '') === 'resubmit1') continue;
+            if (($msg['MessageTypeName'] ?? '') === 'STATUS') continue;
+            $key = $siMatchKey($msg['SICardNumber'] ?? '', $msg['SportIdentHour'] ?? '', $msg['SportIdentMinute'] ?? '', $msg['SportIdentSecond'] ?? '', $msg['SIStationNumber'] ?? '');
+            $matches = $repeaterLookup[$key] ?? [];
+
+            // Sort repeater matches by TransformName order
+            $tnOrder = [
+                'RepeaterSIMessageToLoraTransform' => 0,
+                'RepeaterSIMessageDoubleToLoraTransform' => 1,
+                'RepeaterSIMessageToLoraAckTransform' => 2,
+                'RepeaterSIMessageDoubleToLoraAckTransform' => 3
+            ];
+            usort($matches, function ($a, $b) use ($tnOrder) {
+                $oa = $tnOrder[$a['TransformName'] ?? ''] ?? 999;
+                $ob = $tnOrder[$b['TransformName'] ?? ''] ?? 999;
+                return $oa - $ob;
+            });
+
+            if (count($matches) === 0) {
+                $msg['rep_SentDate'] = null; $msg['rep_SendFailedDate'] = null;
+                $msg['rep_AckReceivedDate'] = null; $msg['rep_NoOfSendTries'] = null;
+                $msg['rep_SubscriberTypeName'] = null; $msg['rep_TransformName'] = null;
+                $msg['rep_MessageData'] = null;
+                $msg['rep_OrigId'] = null; $msg['rep_CreatedDate'] = null;
+            } else {
+                $msg['rep_SentDate'] = $matches[0]['SentDate'] ?? null;
+                $msg['rep_SendFailedDate'] = $matches[0]['SendFailedDate'] ?? null;
+                $msg['rep_AckReceivedDate'] = $matches[0]['AckReceivedDate'] ?? null;
+                $msg['rep_NoOfSendTries'] = $matches[0]['NoOfSendTries'] ?? null;
+                $msg['rep_SubscriberTypeName'] = $matches[0]['SubscriberTypeName'] ?? null;
+                $msg['rep_TransformName'] = $matches[0]['TransformName'] ?? null;
+                $msg['rep_MessageData'] = $matches[0]['MessageData'] ?? null;
+                $msg['rep_OrigId'] = $matches[0]['OrigId'] ?? null;
+                $msg['rep_CreatedDate'] = $matches[0]['CreatedDate'] ?? null;
+                if (count($matches) > 1) {
+                    $extras = [];
+                    for ($i = 1; $i < count($matches); $i++) {
+                        $extras[] = [
+                            'rep_SentDate' => $matches[$i]['SentDate'] ?? null,
+                            'rep_SendFailedDate' => $matches[$i]['SendFailedDate'] ?? null,
+                            'rep_AckReceivedDate' => $matches[$i]['AckReceivedDate'] ?? null,
+                            'rep_NoOfSendTries' => $matches[$i]['NoOfSendTries'] ?? null,
+                            'rep_SubscriberTypeName' => $matches[$i]['SubscriberTypeName'] ?? null,
+                            'rep_TransformName' => $matches[$i]['TransformName'] ?? null,
+                            'rep_MessageData' => $matches[$i]['MessageData'] ?? null,
+                            'rep_OrigId' => $matches[$i]['OrigId'] ?? null,
+                            'rep_CreatedDate' => $matches[$i]['CreatedDate'] ?? null
+                        ];
+                    }
+                    $repExtra[$key] = $extras;
+                }
+            }
+        }
+        unset($msg);
+    }
+
     $deleteDir($senderExtracted['tmpDir']);
 
     $debug['messageCount'] = count($messages);
-
     $debug['endTime'] = date('H:i:s');
 
     $result = [
         'debug' => $debug,
         'messages' => $messages,
-        'recvExtra' => $recvExtra
+        'recvExtra' => $recvExtra,
+        'repExtra' => $repExtra
     ];
 
     $response->getBody()->write(json_encode($result));

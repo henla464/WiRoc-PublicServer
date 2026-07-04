@@ -38,32 +38,21 @@
 
       <div id="analyzerSection" style="display: none">
         <div class="row mb-3">
-          <div class="col-md-6">
+          <div class="col-md-4">
             <div class="card">
               <div class="card-header">
                 <strong>Sender WiRoc Device</strong>
               </div>
               <div class="card-body">
                 <div class="mb-2">
-                  <label for="senderDeviceSelect" class="form-label"
-                    >Device</label
-                  >
-                  <select
-                    id="senderDeviceSelect"
-                    class="form-select analyze-selector"
-                  >
+                  <label for="senderDeviceSelect" class="form-label">Device</label>
+                  <select id="senderDeviceSelect" class="form-select analyze-selector">
                     <option value="">-- Select a sender device --</option>
                   </select>
                 </div>
                 <div class="mb-2">
-                  <label for="senderZipSelect" class="form-label"
-                    >Zip File</label
-                  >
-                  <select
-                    id="senderZipSelect"
-                    class="form-select analyze-selector"
-                    disabled
-                  >
+                  <label for="senderZipSelect" class="form-label">Zip File</label>
+                  <select id="senderZipSelect" class="form-select analyze-selector" disabled>
                     <option value="">-- First select a device --</option>
                   </select>
                 </div>
@@ -71,7 +60,30 @@
             </div>
           </div>
 
-          <div class="col-md-6">
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-header">
+                <strong>Repeater WiRoc Device</strong>
+                <small class="text-muted">(optional)</small>
+              </div>
+              <div class="card-body">
+                <div class="mb-2">
+                  <label for="repeaterDeviceSelect" class="form-label">Device</label>
+                  <select id="repeaterDeviceSelect" class="form-select analyze-selector">
+                    <option value="">-- Optional: select repeater --</option>
+                  </select>
+                </div>
+                <div class="mb-2">
+                  <label for="repeaterZipSelect" class="form-label">Zip File</label>
+                  <select id="repeaterZipSelect" class="form-select analyze-selector" disabled>
+                    <option value="">-- First select a device --</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4">
             <div class="card">
               <div class="card-header">
                 <strong>Receiver WiRoc Device</strong>
@@ -79,25 +91,14 @@
               </div>
               <div class="card-body">
                 <div class="mb-2">
-                  <label for="receiverDeviceSelect" class="form-label"
-                    >Device</label
-                  >
-                  <select
-                    id="receiverDeviceSelect"
-                    class="form-select analyze-selector"
-                  >
+                  <label for="receiverDeviceSelect" class="form-label">Device</label>
+                  <select id="receiverDeviceSelect" class="form-select analyze-selector">
                     <option value="">-- Optional: select receiver --</option>
                   </select>
                 </div>
                 <div class="mb-2">
-                  <label for="receiverZipSelect" class="form-label"
-                    >Zip File</label
-                  >
-                  <select
-                    id="receiverZipSelect"
-                    class="form-select analyze-selector"
-                    disabled
-                  >
+                  <label for="receiverZipSelect" class="form-label">Zip File</label>
+                  <select id="receiverZipSelect" class="form-select analyze-selector" disabled>
                     <option value="">-- First select a device --</option>
                   </select>
                 </div>
@@ -106,99 +107,51 @@
           </div>
         </div>
 
-        <div class="row mb-3 align-items-end">
+        <div class="row mb-2 align-items-end">
           <div class="col-auto">
             <label class="form-label small mb-1">From</label>
-            <div
-              class="input-group input-group-sm"
-              id="pickerFrom"
-              data-td-target-input="nearest"
-              data-td-target-toggle="nearest"
-            >
-              <input
-                id="filterFrom"
-                type="text"
-                class="form-control"
-                data-td-target="#pickerFrom"
-                style="width: 170px"
-                placeholder="yyyy-MM-dd HH:mm"
-                autocomplete="off"
-              />
-              <span
-                class="input-group-text"
-                data-td-target="#pickerFrom"
-                data-td-toggle="datetimepicker"
-                style="cursor: pointer"
-                ><i class="fa fa-calendar"></i
-              ></span>
+            <div class="input-group input-group-sm" id="pickerFrom" data-td-target-input="nearest" data-td-target-toggle="nearest">
+              <input id="filterFrom" type="text" class="form-control" data-td-target="#pickerFrom" style="width:170px" placeholder="yyyy-MM-dd HH:mm" autocomplete="off">
+              <span class="input-group-text" data-td-target="#pickerFrom" data-td-toggle="datetimepicker" style="cursor:pointer"><i class="fa fa-calendar"></i></span>
             </div>
           </div>
           <div class="col-auto">
             <label class="form-label small mb-1">To</label>
-            <div
-              class="input-group input-group-sm"
-              id="pickerTo"
-              data-td-target-input="nearest"
-              data-td-target-toggle="nearest"
-            >
-              <input
-                id="filterTo"
-                type="text"
-                class="form-control"
-                data-td-target="#pickerTo"
-                style="width: 170px"
-                placeholder="yyyy-MM-dd HH:mm"
-                autocomplete="off"
-              />
-              <span
-                class="input-group-text"
-                data-td-target="#pickerTo"
-                data-td-toggle="datetimepicker"
-                style="cursor: pointer"
-                ><i class="fa fa-calendar"></i
-              ></span>
+            <div class="input-group input-group-sm" id="pickerTo" data-td-target-input="nearest" data-td-target-toggle="nearest">
+              <input id="filterTo" type="text" class="form-control" data-td-target="#pickerTo" style="width:170px" placeholder="yyyy-MM-dd HH:mm" autocomplete="off">
+              <span class="input-group-text" data-td-target="#pickerTo" data-td-toggle="datetimepicker" style="cursor:pointer"><i class="fa fa-calendar"></i></span>
             </div>
           </div>
-          <div class="col-auto">
-            <button
-              type="button"
-              id="btnAnalyze"
-              class="btn btn-primary"
-              disabled
-            >
-              <span
-                id="btnAnalyzeSpinner"
-                class="spinner-border spinner-border-sm"
-                style="display: none"
-                role="status"
-                aria-hidden="true"
-              ></span>
+          <div class="col-auto align-self-end">
+            <div class="mb-1 small text-muted">Sender Message Types to include</div>
+            <div class="d-flex align-items-end">
+              <div class="form-check form-check-inline mb-0">
+                <input class="form-check-input" type="checkbox" id="chkMT_SI" checked>
+                <label class="form-check-label small" for="chkMT_SI">SI</label>
+              </div>
+              <div class="form-check form-check-inline mb-0">
+                <input class="form-check-input" type="checkbox" id="chkMT_SRR" checked>
+                <label class="form-check-label small" for="chkMT_SRR">SRR</label>
+              </div>
+              <div class="form-check form-check-inline mb-0">
+                <input class="form-check-input" type="checkbox" id="chkMT_LORA">
+                <label class="form-check-label small" for="chkMT_LORA">LORA</label>
+              </div>
+              <div class="form-check form-check-inline mb-0">
+                <input class="form-check-input" type="checkbox" id="chkMT_REPEATER">
+                <label class="form-check-label small" for="chkMT_REPEATER">REPEATER</label>
+              </div>
+              <div class="form-check form-check-inline mb-0">
+                <input class="form-check-input" type="checkbox" id="chkShowStatus">
+                <label class="form-check-label small" for="chkShowStatus">STATUS</label>
+              </div>
+            </div>
+          </div>
+          <div class="col-auto align-self-end">
+            <button type="button" id="btnAnalyze" class="btn btn-primary" disabled>
+              <span id="btnAnalyzeSpinner" class="spinner-border spinner-border-sm" style="display:none" role="status" aria-hidden="true"></span>
               Analyze
             </button>
-          </div>
-          <div class="col-auto">
-            <div class="form-check form-check-inline mt-2">
-              <input class="form-check-input" type="checkbox" id="chkMT_SI" checked>
-              <label class="form-check-label small" for="chkMT_SI">SI</label>
-            </div>
-            <div class="form-check form-check-inline mt-2">
-              <input class="form-check-input" type="checkbox" id="chkMT_SRR" checked>
-              <label class="form-check-label small" for="chkMT_SRR">SRR</label>
-            </div>
-            <div class="form-check form-check-inline mt-2">
-              <input class="form-check-input" type="checkbox" id="chkMT_LORA">
-              <label class="form-check-label small" for="chkMT_LORA">LORA</label>
-            </div>
-            <div class="form-check form-check-inline mt-2">
-              <input class="form-check-input" type="checkbox" id="chkMT_REPEATER">
-              <label class="form-check-label small" for="chkMT_REPEATER">REPEATER</label>
-            </div>
-          </div>
-          <div class="col-auto">
-            <div class="form-check mt-2">
-              <input class="form-check-input" type="checkbox" id="chkShowStatus">
-              <label class="form-check-label small" for="chkShowStatus">Show STATUS</label>
-            </div>
           </div>
         </div>
 
@@ -246,6 +199,25 @@
           <div id="senderLogTableContainer"></div>
         </div>
 
+        <!-- Repeater Log Viewer -->
+        <div id="repeaterLogSection" style="margin-top: 20px">
+          <h5>Repeater Logs</h5>
+          <div class="row mb-2 align-items-end">
+            <div class="col-auto">
+              <select id="repeaterLogFileSelect" class="form-select form-select-sm" style="width:280px">
+                <option value="">-- Click Load Logs --</option>
+              </select>
+            </div>
+            <div class="col-auto">
+              <button type="button" id="btnLoadRepeaterLogs" class="btn btn-outline-secondary btn-sm">Load logs</button>
+            </div>
+            <div class="col-auto">
+              <button type="button" id="btnClearRepeaterLogs" class="btn btn-outline-secondary btn-sm">Clear</button>
+            </div>
+          </div>
+          <div id="repeaterLogTableContainer"></div>
+        </div>
+
         <!-- Receiver Log Viewer -->
         <div id="receiverLogSection" style="margin-top: 20px">
           <h5>Receiver Logs</h5>
@@ -285,6 +257,7 @@
       var senderZipFiles = [];
       var receiverZipFiles = [];
       var hasReceiverData = false;
+      var hasRepeaterData = false;
       var tdFrom = null,
         tdTo = null;
 
@@ -310,6 +283,8 @@
             receiverZip: ls.get("receiverZip") || "",
             filterFrom: ls.get("filterFrom") || "",
             filterTo: ls.get("filterTo") || "",
+            repeaterDevice: ls.get("repeaterDevice") || "",
+            repeaterZip: ls.get("repeaterZip") || "",
           };
         },
         saveSel: function () {
@@ -317,6 +292,8 @@
           ls.set("senderZip", $("#senderZipSelect").val() || "");
           ls.set("receiverDevice", $("#receiverDeviceSelect").val() || "");
           ls.set("receiverZip", $("#receiverZipSelect").val() || "");
+          ls.set("repeaterDevice", $("#repeaterDeviceSelect").val() || "");
+          ls.set("repeaterZip", $("#repeaterZipSelect").val() || "");
           ls.set("filterFrom", $("#filterFrom").val() || "");
           ls.set("filterTo", $("#filterTo").val() || "");
         },
@@ -324,10 +301,12 @@
 
       var theadHtml =
         "<thead><tr>" +
-        '<th scope="col" colspan="13" class="sorter-false filter-false">Sender</th>' +
-        '<th scope="col" colspan="6" class="sorter-false filter-false recv-group">Receiver</th>' +
+        '<th scope="col" colspan="14" class="sorter-false filter-false">Sender</th>' +
+        '<th scope="col" colspan="7" class="sorter-false filter-false rep-group">Repeater</th>' +
+        '<th scope="col" colspan="8" class="sorter-false filter-false recv-group">Receiver</th>' +
         "</tr><tr>" +
         '<th scope="col" style="width:24px" class="sorter-false filter-false"></th>' +
+        '<th scope="col" style="width:24px" class="sorter-false filter-false">&#9432;</th>' +
         '<th scope="col">MessageTypeName</th>' +
         '<th scope="col">InstanceName</th>' +
         '<th scope="col">MessageSubTypeName</th>' +
@@ -340,6 +319,15 @@
         '<th scope="col">NoOfSendTries</th>' +
         '<th scope="col">SubscriberTypeName</th>' +
         '<th scope="col">TransformName</th>' +
+        '<th scope="col" class="rep-group group-first">Repeater requested</th>' +
+        '<th scope="col" class="rep-group filter-false">&#9432;</th>' +
+        '<th scope="col" class="rep-group">Rep SentDate</th>' +
+        '<th scope="col" class="rep-group">Rep Ack/SendFailed</th>' +
+        '<th scope="col" class="rep-group">Rep NoOfSendTries</th>' +
+        '<th scope="col" class="rep-group">Rep SubscriberTypeName</th>' +
+        '<th scope="col" class="rep-group">Rep TransformName</th>' +
+        '<th scope="col" class="recv-group group-first">Recv Repeater requested</th>' +
+        '<th scope="col" class="recv-group filter-false">&#9432;</th>' +
         '<th scope="col" class="recv-group">Recv SentDate</th>' +
         '<th scope="col" class="recv-group">Recv Ack/SendFailed</th>' +
         '<th scope="col" class="recv-group">Recv NoOfSendTries</th>' +
@@ -365,8 +353,10 @@
             var devices = Array.isArray(data) ? data : data.devices || [];
             var senderSelect = $("#senderDeviceSelect");
             var receiverSelect = $("#receiverDeviceSelect");
+            var repeaterSelect = $("#repeaterDeviceSelect");
             senderSelect.find("option:not(:first)").remove();
             receiverSelect.find("option:not(:first)").remove();
+            repeaterSelect.find("option:not(:first)").remove();
             $.each(devices, function () {
               var name = this.name || this.BTAddress;
               var opt =
@@ -379,6 +369,7 @@
                 ")</option>";
               senderSelect.append(opt);
               receiverSelect.append(opt);
+              repeaterSelect.append(opt);
             });
 
             // Restore saved selections
@@ -409,6 +400,19 @@
                   if (saved.receiverZip) { loadLogFileList(saved.receiverZip, "receiver"); }
                 },
                 $("#receiverZipSelect"),
+              );
+            }
+            if (saved.repeaterDevice) {
+              repeaterSelect.val(saved.repeaterDevice);
+              loadZipFiles(
+                saved.repeaterDevice,
+                function (files) {
+                  if (saved.repeaterZip)
+                    $("#repeaterZipSelect").val(saved.repeaterZip);
+                  updateAnalyzeButton();
+                  if (saved.repeaterZip) { loadLogFileList(saved.repeaterZip, "repeater"); }
+                },
+                $("#repeaterZipSelect"),
               );
             }
             if (saved.filterFrom) {
@@ -777,7 +781,65 @@
           }
         }
 
-        var receiverCols = "";
+        // Info tooltip helper
+        function infoCell(bg, title) {
+          if (!title) return '<td style="' + bg + '"></td>';
+          return '<td style="' + bg + ';font-size:13px;cursor:help;text-align:center" title="' + title + '">&#9432;</td>';
+        }
+        function emptyTd(bg) { return '<td style="' + bg + '"></td>'; }
+        function emptyTds(n, bg) { var s = ''; for (var i = 0; i < n; i++) s += emptyTd(bg); return s; }
+
+        // Compute info tooltips for all groups
+        var senderInfoTitle = '';
+        if (row.orig_id) senderInfoTitle += 'orig_id: ' + row.orig_id;
+        if (row.CreatedDate) senderInfoTitle += (senderInfoTitle ? '\n' : '') + 'CreatedDate: ' + row.CreatedDate;
+
+        var repInfoTitle = '';
+        if (row.rep_OrigId) repInfoTitle += 'orig_id: ' + row.rep_OrigId;
+        if (row.rep_CreatedDate) repInfoTitle += (repInfoTitle ? '\n' : '') + 'CreatedDate: ' + row.rep_CreatedDate;
+
+        var recvInfoTitle = '';
+        if (row.recv_SentDate) recvInfoTitle += 'SentDate: ' + row.recv_SentDate;
+        if (row.recv_OrigId) recvInfoTitle += (recvInfoTitle ? '\n' : '') + 'orig_id: ' + row.recv_OrigId;
+        if (row.recv_CreatedDate) recvInfoTitle += (recvInfoTitle ? '\n' : '') + 'CreatedDate: ' + row.recv_CreatedDate;
+
+        // Repeater columns (between sender and receiver)
+        var REP_COLS = 7, RECV_COLS = 8;
+        var repeaterCols = emptyTds(REP_COLS, cellBg);
+        if (hasRepeaterData) {
+          var repAckBg = isChild ? ackCellBg : cellBg;
+          var repReqCell = '<td style="' + cellBg + '" class="group-first"></td>';
+          // "Repeater requested" indicator from bit 5 of MessageData first byte
+          if (row.rep_MessageData) {
+            var firstByte = parseInt(row.rep_MessageData.substring(0, 2), 16);
+            if (firstByte & 0x20) { // bit 5 set
+              var repTransform = row.rep_TransformName || '';
+              if (repTransform === 'RepeaterSIMessageToLoraAckTransform' || repTransform === 'RepeaterSIMessageDoubleToLoraAckTransform') {
+                repReqCell = '<td style="' + cellBg + ';text-align:center" class="group-first" title=""></td>';
+              } else {
+                repReqCell = '<td style="' + cellBg + ';text-align:center" class="group-first" title="Repeater requested">&lt;—&gt;</td>';
+              }
+            }
+          }
+          var repAckCell = "";
+          if (row.rep_AckReceivedDate) {
+            repAckCell = '<td style="' + repAckBg + '" class="ack-cell">' + row.rep_AckReceivedDate + "</td>";
+          } else if (row.rep_SendFailedDate) {
+            repAckCell = '<td style="' + repAckBg + '" class="sendfailed-cell">' + row.rep_SendFailedDate + "</td>";
+          } else {
+            repAckCell = '<td style="' + repAckBg + '"></td>';
+          }
+          repeaterCols =
+            repReqCell +
+            infoCell(cellBg, repInfoTitle) +
+            '<td style="' + cellBg + '">' + (row.rep_SentDate || "") + "</td>" +
+            repAckCell +
+            '<td style="' + cellBg + '">' + (row.rep_NoOfSendTries != null ? row.rep_NoOfSendTries : "") + "</td>" +
+            '<td style="' + cellBg + '">' + (row.rep_SubscriberTypeName || "") + "</td>" +
+            '<td style="' + cellBg + '">' + (row.rep_TransformName || "") + "</td>";
+        }
+
+        var receiverCols = emptyTds(RECV_COLS, cellBg);
         if (hasReceiverData) {
           var recvAckBg = isChild ? ackCellBg : cellBg;
           var recvAckCell = "";
@@ -798,7 +860,22 @@
           } else {
             recvAckCell = '<td style="' + recvAckBg + '"></td>';
           }
+          // Recv Repeater requested: same logic as sender's repeater but using recv_MessageData
+          var recvReqCell = '<td style="' + cellBg + '" class="group-first"></td>';
+          if (row.recv_MessageData) {
+            var recvFirstByte = parseInt(row.recv_MessageData.substring(0, 2), 16);
+            if (recvFirstByte & 0x20) {
+              var recvTransform = row.recv_TransformName || '';
+              if (recvTransform === 'RepeaterSIMessageToLoraAckTransform' || recvTransform === 'RepeaterSIMessageDoubleToLoraAckTransform') {
+                recvReqCell = '<td style="' + cellBg + ';text-align:center" class="group-first" title="Receiver acked">&#10003;</td>';
+              } else {
+                recvReqCell = '<td style="' + cellBg + ';text-align:center" class="group-first" title="Repeater relayed">&lt;—&gt;</td>';
+              }
+            }
+          }
           receiverCols =
+            recvReqCell +
+            infoCell(cellBg, recvInfoTitle) +
             '<td style="' +
             cellBg +
             '">' +
@@ -861,6 +938,7 @@
           rowCls +
           ">" +
           expandCell +
+          infoCell(senderCellBg, senderInfoTitle) +
           senderTd(row.MessageTypeName) +
           senderTd(row.InstanceName) +
           senderTd(row.MessageSubTypeName) +
@@ -873,18 +951,20 @@
           senderTd(row.NoOfSendTries) +
           senderTd(row.SubscriberTypeName) +
           senderTd(row.TransformName) +
+          repeaterCols +
           receiverCols +
           "</tr>"
         );
       }
 
-      function buildTable(data, recvExtra) {
+      function buildTable(data, recvExtra, repExtra) {
         recvExtra = recvExtra || {};
+        repExtra = repExtra || {};
 
         // Client-side row expansion for additional receiver matches
         if (hasReceiverData && Object.keys(recvExtra).length > 0) {
           var expanded = [];
-          var extraUsed = {}; // track which recvExtra keys have already been expanded
+          var extraUsed = {};
           $.each(data, function () {
             var key = (this.SICardNumber || '') + '|' +
               String(this.SportIdentHour || '0').padStart(2, '0') + '|' +
@@ -893,9 +973,7 @@
               (this.SIStationNumber || '');
             this._rowKind = 'original';
             expanded.push(this);
-            // Skip expansion for STATUS messages and resubmit children
             if (this.MessageTypeName === 'STATUS' || this.InstanceName === 'resubmit1') return;
-            // Only expand once per key (first match gets extras, subsequent rows with same key share them)
             if (extraUsed[key]) return;
             extraUsed[key] = true;
             var extras = recvExtra[key];
@@ -908,6 +986,45 @@
           });
           data = expanded;
           console.log('After receiver expansion:', data.length, 'rows');
+        }
+
+        // Client-side row expansion for additional repeater matches
+        if (hasRepeaterData && Object.keys(repExtra).length > 0) {
+          var expanded2 = [];
+          var extraUsed2 = {};
+          $.each(data, function () {
+            var key = (this.SICardNumber || '') + '|' +
+              String(this.SportIdentHour || '0').padStart(2, '0') + '|' +
+              String(this.SportIdentMinute || '0').padStart(2, '0') + '|' +
+              String(this.SportIdentSecond || '0').padStart(2, '0') + '|' +
+              (this.SIStationNumber || '');
+            this._rowKind = 'original';
+            expanded2.push(this);
+            if (this.MessageTypeName === 'STATUS' || this.InstanceName === 'resubmit1') return;
+            if (extraUsed2[key]) return;
+            extraUsed2[key] = true;
+            var extras = repExtra[key];
+            if (extras) {
+              // Sort repeater extras by TransformName: LoraTransform, DoubleToLoraTransform, LoraAckTransform, DoubleToLoraAckTransform
+              var tnOrder = {
+                'RepeaterSIMessageToLoraTransform': 0,
+                'RepeaterSIMessageDoubleToLoraTransform': 1,
+                'RepeaterSIMessageToLoraAckTransform': 2,
+                'RepeaterSIMessageDoubleToLoraAckTransform': 3
+              };
+              extras.sort(function (a, b) {
+                var oa = tnOrder[a.rep_TransformName] !== undefined ? tnOrder[a.rep_TransformName] : 999;
+                var ob = tnOrder[b.rep_TransformName] !== undefined ? tnOrder[b.rep_TransformName] : 999;
+                return oa - ob;
+              });
+              for (var m = 0; m < extras.length; m++) {
+                var dup = $.extend({}, this, extras[m], { _rowKind: 'duplicate' });
+                expanded2.push(dup);
+              }
+            }
+          });
+          data = expanded2;
+          console.log('After repeater expansion:', data.length, 'rows');
         }
 
         var $container = $("#analyzeTableContainer");
@@ -1422,6 +1539,7 @@
         $table.tableFilter({
           columnFilters: [
             { columnName: "", inputType: "None" },
+            { columnName: "&#9432;", inputType: "None" },
             {
               columnName: "MessageTypeName",
               inputType: "text",
@@ -1470,14 +1588,51 @@
             },
             {
               columnName: "SubscriberTypeName",
-              inputType: "ddl",
+              inputType: "text",
               toolTipMessage: tip,
             },
             {
               columnName: "TransformName",
-              inputType: "ddl",
+              inputType: "text",
               toolTipMessage: tip,
             },
+            {
+              columnName: "Repeater requested",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            { columnName: "&#9432;", inputType: "None" },
+            {
+              columnName: "Rep SentDate",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "Rep Ack/SendFailed",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "Rep NoOfSendTries",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "Rep SubscriberTypeName",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "Rep TransformName",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            {
+              columnName: "Recv Repeater requested",
+              inputType: "text",
+              toolTipMessage: tip,
+            },
+            { columnName: "&#9432;", inputType: "None" },
             {
               columnName: "Recv SentDate",
               inputType: "text",
@@ -1495,12 +1650,12 @@
             },
             {
               columnName: "Recv SubscriberTypeName",
-              inputType: "ddl",
+              inputType: "text",
               toolTipMessage: tip,
             },
             {
               columnName: "Recv TransformName",
-              inputType: "ddl",
+              inputType: "text",
               toolTipMessage: tip,
             },
             {
@@ -1518,7 +1673,6 @@
 
         $("#resultsSection").show();
 
-        $table.find("thead input:text").first().val("SRR or SI");
         $table.tableFilter("applyFilter");
       }
 
@@ -1576,16 +1730,31 @@
           );
         });
 
-        $("#senderZipSelect, #receiverZipSelect").on("change", function () {
+        $("#repeaterDeviceSelect").on("change", function () {
+          ls.set("repeaterDevice", $(this).val() || "");
+          loadZipFiles(
+            $(this).val(),
+            function (files) {
+              updateAnalyzeButton();
+            },
+            $("#repeaterZipSelect"),
+          );
+        });
+
+        $("#senderZipSelect, #receiverZipSelect, #repeaterZipSelect").on("change", function () {
           ls.set("senderZip", $("#senderZipSelect").val() || "");
           ls.set("receiverZip", $("#receiverZipSelect").val() || "");
+          ls.set("repeaterZip", $("#repeaterZipSelect").val() || "");
           updateAnalyzeButton();
           var sz = $("#senderZipSelect").val();
           var rz = $("#receiverZipSelect").val();
+          var pz = $("#repeaterZipSelect").val();
           if (sz) { loadLogFileList(sz, "sender"); }
           else { clearLogSide("sender"); }
           if (rz) { loadLogFileList(rz, "receiver"); }
           else { clearLogSide("receiver"); }
+          if (pz) { loadLogFileList(pz, "repeater"); }
+          else { clearLogSide("repeater"); }
         });
 
         // Initialize Tempus Dominus date/time pickers
@@ -1672,6 +1841,14 @@
         $("#btnClearReceiverLogs").on("click", function () {
           $("#receiverLogTableContainer").empty();
         });
+        $("#btnLoadRepeaterLogs").on("click", function () {
+          var logFile = $("#repeaterLogFileSelect").val();
+          if (logFile)
+            buildLogTable("repeater", $("#repeaterZipSelect").val(), logFile);
+        });
+        $("#btnClearRepeaterLogs").on("click", function () {
+          $("#repeaterLogTableContainer").empty();
+        });
 
         $("#btnAnalyze").on("click", function () {
           var senderZip = $("#senderZipSelect").val();
@@ -1684,11 +1861,14 @@
           $("#analyzeLoading").show();
           $("#resultsSection").hide();
 
+          var repeaterZip = $("#repeaterZipSelect").val();
           var url =
             "/api/v1/LogArchives/Analyze?senderZip=" +
             encodeURIComponent(senderZip);
           if (receiverZip)
             url += "&receiverZip=" + encodeURIComponent(receiverZip);
+          if (repeaterZip)
+            url += "&repeaterZip=" + encodeURIComponent(repeaterZip);
           var fromDate = $("#filterFrom").val();
           var toDate = $("#filterTo").val();
           if (fromDate) url += "&fromDate=" + encodeURIComponent(fromDate);
@@ -1716,12 +1896,15 @@
 
               var messages = Array.isArray(data) ? data : data.messages || [];
               var recvExtra = (data && data.recvExtra) || {};
-              console.log("Messages returned:", messages.length, "recvExtra keys:", Object.keys(recvExtra).length);
+              var repExtra = (data && data.repExtra) || {};
+              console.log("Messages returned:", messages.length);
 
               hasReceiverData = !!receiverZip;
+              hasRepeaterData = !!$("#repeaterZipSelect").val();
               $(".recv-group").toggle(hasReceiverData);
+              $(".rep-group").toggle(hasRepeaterData);
 
-              buildTable(messages, recvExtra);
+              buildTable(messages, recvExtra, repExtra);
             })
             .fail(function (jqXHR) {
               $("#btnAnalyzeSpinner").hide();

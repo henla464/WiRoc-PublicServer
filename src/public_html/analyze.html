@@ -800,11 +800,22 @@
         if (row.CreatedDate) senderInfoTitle += (senderInfoTitle ? '\n' : '') + 'CreatedDate: ' + row.CreatedDate;
 
         var repInfoTitle = '';
-        if (row.rep_OrigId) repInfoTitle += 'orig_id: ' + row.rep_OrigId;
+        if (row.rep_SICardNumber) repInfoTitle += 'SICardNumber: ' + row.rep_SICardNumber;
+        if (row.rep_SportIdentHour != null) repInfoTitle += (repInfoTitle ? '\n' : '') + 'Punch time: ' + formatSportIdentTime(row.rep_SportIdentHour, row.rep_SportIdentMinute, row.rep_SportIdentSecond);
+        if (row.rep_SIStationNumber) repInfoTitle += (repInfoTitle ? '\n' : '') + 'SIStationNumber: ' + row.rep_SIStationNumber;
+        if (row.rep_SICardNumber2) repInfoTitle += (repInfoTitle ? '\n' : '') + 'SICardNumber2: ' + row.rep_SICardNumber2;
+        if (row.rep_SportIdentHour2 != null) repInfoTitle += (repInfoTitle ? '\n' : '') + 'Punch time2: ' + formatSportIdentTime(row.rep_SportIdentHour2, row.rep_SportIdentMinute2, row.rep_SportIdentSecond2);
+        if (row.rep_SIStationNumber2) repInfoTitle += (repInfoTitle ? '\n' : '') + 'SIStationNumber2: ' + row.rep_SIStationNumber2;
+        if (row.rep_OrigId) repInfoTitle += (repInfoTitle ? '\n' : '') + 'orig_id: ' + row.rep_OrigId;
         if (row.rep_CreatedDate) repInfoTitle += (repInfoTitle ? '\n' : '') + 'CreatedDate: ' + row.rep_CreatedDate;
 
         var recvInfoTitle = '';
-        if (row.recv_SentDate) recvInfoTitle += 'SentDate: ' + row.recv_SentDate;
+        if (row.recv_SICardNumber) recvInfoTitle += 'SICardNumber: ' + row.recv_SICardNumber;
+        if (row.recv_SportIdentHour != null) recvInfoTitle += (recvInfoTitle ? '\n' : '') + 'Punch time: ' + formatSportIdentTime(row.recv_SportIdentHour, row.recv_SportIdentMinute, row.recv_SportIdentSecond);
+        if (row.recv_SIStationNumber) recvInfoTitle += (recvInfoTitle ? '\n' : '') + 'SIStationNumber: ' + row.recv_SIStationNumber;
+        if (row.recv_SICardNumber2) recvInfoTitle += (recvInfoTitle ? '\n' : '') + 'SICardNumber2: ' + row.recv_SICardNumber2;
+        if (row.recv_SportIdentHour2 != null) recvInfoTitle += (recvInfoTitle ? '\n' : '') + 'Punch time2: ' + formatSportIdentTime(row.recv_SportIdentHour2, row.recv_SportIdentMinute2, row.recv_SportIdentSecond2);
+        if (row.recv_SIStationNumber2) recvInfoTitle += (recvInfoTitle ? '\n' : '') + 'SIStationNumber2: ' + row.recv_SIStationNumber2;
         if (row.recv_OrigId) recvInfoTitle += (recvInfoTitle ? '\n' : '') + 'orig_id: ' + row.recv_OrigId;
         if (row.recv_CreatedDate) recvInfoTitle += (recvInfoTitle ? '\n' : '') + 'CreatedDate: ' + row.recv_CreatedDate;
 

@@ -5021,7 +5021,17 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                     'TransformName' => $rm['TransformName'] ?? null,
                     'OrigId' => $rm['orig_id'] ?? null,
                     'CreatedDate' => $rm['CreatedDate'] ?? null,
-                    'MessageData' => $rm['MessageData'] ?? null
+                    'MessageData' => $rm['MessageData'] ?? null,
+                    'SICardNumber' => $rm['SICardNumber'] ?? null,
+                    'SportIdentHour' => $rm['SportIdentHour'] ?? null,
+                    'SportIdentMinute' => $rm['SportIdentMinute'] ?? null,
+                    'SportIdentSecond' => $rm['SportIdentSecond'] ?? null,
+                    'SIStationNumber' => $rm['SIStationNumber'] ?? null,
+                    'SICardNumber2' => $rm['SICardNumber2'] ?? null,
+                    'SportIdentHour2' => $rm['SportIdentHour2'] ?? null,
+                    'SportIdentMinute2' => $rm['SportIdentMinute2'] ?? null,
+                    'SportIdentSecond2' => $rm['SportIdentSecond2'] ?? null,
+                    'SIStationNumber2' => $rm['SIStationNumber2'] ?? null
                 ];
                 foreach ($keys as $k) {
                     if ($k) {
@@ -5049,6 +5059,20 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
         }
     }
 
+    // Helper: copy SI fields from match to msg (used for both receiver and repeater)
+    $copySIFields = function (&$target, $src, $prefix) {
+        $target[$prefix . 'SICardNumber'] = $src['SICardNumber'] ?? null;
+        $target[$prefix . 'SportIdentHour'] = $src['SportIdentHour'] ?? null;
+        $target[$prefix . 'SportIdentMinute'] = $src['SportIdentMinute'] ?? null;
+        $target[$prefix . 'SportIdentSecond'] = $src['SportIdentSecond'] ?? null;
+        $target[$prefix . 'SIStationNumber'] = $src['SIStationNumber'] ?? null;
+        $target[$prefix . 'SICardNumber2'] = $src['SICardNumber2'] ?? null;
+        $target[$prefix . 'SportIdentHour2'] = $src['SportIdentHour2'] ?? null;
+        $target[$prefix . 'SportIdentMinute2'] = $src['SportIdentMinute2'] ?? null;
+        $target[$prefix . 'SportIdentSecond2'] = $src['SportIdentSecond2'] ?? null;
+        $target[$prefix . 'SIStationNumber2'] = $src['SIStationNumber2'] ?? null;
+    };
+
     // Merge first receiver match into sender, keep extras in recvExtra (only for multi-match keys)
     $recvExtra = [];
     $matchCount = 0;
@@ -5064,6 +5088,7 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                 $msg['recv_SubscriberTypeName'] = null; $msg['recv_TransformName'] = null;
                 $msg['recv_OrigId'] = null; $msg['recv_CreatedDate'] = null;
                 $msg['recv_MessageData'] = null;
+                $copySIFields($msg, [], 'recv_');
             } else {
                 $matchCount++;
                 $msg['recv_SentDate'] = $matches[0]['SentDate'] ?? null;
@@ -5075,6 +5100,7 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                 $msg['recv_OrigId'] = $matches[0]['OrigId'] ?? null;
                 $msg['recv_CreatedDate'] = $matches[0]['CreatedDate'] ?? null;
                 $msg['recv_MessageData'] = $matches[0]['MessageData'] ?? null;
+                $copySIFields($msg, $matches[0], 'recv_');
                 if (count($matches) > 1) {
                     $extras = [];
                     for ($i = 1; $i < count($matches); $i++) {
@@ -5087,7 +5113,17 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                             'recv_TransformName' => $matches[$i]['TransformName'] ?? null,
                             'recv_OrigId' => $matches[$i]['OrigId'] ?? null,
                             'recv_CreatedDate' => $matches[$i]['CreatedDate'] ?? null,
-                            'recv_MessageData' => $matches[$i]['MessageData'] ?? null
+                            'recv_MessageData' => $matches[$i]['MessageData'] ?? null,
+                            'recv_SICardNumber' => $matches[$i]['SICardNumber'] ?? null,
+                            'recv_SportIdentHour' => $matches[$i]['SportIdentHour'] ?? null,
+                            'recv_SportIdentMinute' => $matches[$i]['SportIdentMinute'] ?? null,
+                            'recv_SportIdentSecond' => $matches[$i]['SportIdentSecond'] ?? null,
+                            'recv_SIStationNumber' => $matches[$i]['SIStationNumber'] ?? null,
+                            'recv_SICardNumber2' => $matches[$i]['SICardNumber2'] ?? null,
+                            'recv_SportIdentHour2' => $matches[$i]['SportIdentHour2'] ?? null,
+                            'recv_SportIdentMinute2' => $matches[$i]['SportIdentMinute2'] ?? null,
+                            'recv_SportIdentSecond2' => $matches[$i]['SportIdentSecond2'] ?? null,
+                            'recv_SIStationNumber2' => $matches[$i]['SIStationNumber2'] ?? null
                         ];
                     }
                     $recvExtra[$key] = $extras;
@@ -5117,7 +5153,17 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                     'TransformName' => $rm['TransformName'] ?? null,
                     'MessageData' => $rm['MessageData'] ?? null,
                     'OrigId' => $rm['orig_id'] ?? null,
-                    'CreatedDate' => $rm['CreatedDate'] ?? null
+                    'CreatedDate' => $rm['CreatedDate'] ?? null,
+                    'SICardNumber' => $rm['SICardNumber'] ?? null,
+                    'SportIdentHour' => $rm['SportIdentHour'] ?? null,
+                    'SportIdentMinute' => $rm['SportIdentMinute'] ?? null,
+                    'SportIdentSecond' => $rm['SportIdentSecond'] ?? null,
+                    'SIStationNumber' => $rm['SIStationNumber'] ?? null,
+                    'SICardNumber2' => $rm['SICardNumber2'] ?? null,
+                    'SportIdentHour2' => $rm['SportIdentHour2'] ?? null,
+                    'SportIdentMinute2' => $rm['SportIdentMinute2'] ?? null,
+                    'SportIdentSecond2' => $rm['SportIdentSecond2'] ?? null,
+                    'SIStationNumber2' => $rm['SIStationNumber2'] ?? null
                 ];
                 foreach ($keys as $k) {
                     if ($k && (!isset($repeaterLookup[$k]) || count($repeaterLookup[$k]) < 1000)) {
@@ -5163,6 +5209,7 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                 $msg['rep_SubscriberTypeName'] = null; $msg['rep_TransformName'] = null;
                 $msg['rep_MessageData'] = null;
                 $msg['rep_OrigId'] = null; $msg['rep_CreatedDate'] = null;
+                $copySIFields($msg, [], 'rep_');
             } else {
                 $msg['rep_SentDate'] = $matches[0]['SentDate'] ?? null;
                 $msg['rep_SendFailedDate'] = $matches[0]['SendFailedDate'] ?? null;
@@ -5173,6 +5220,7 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                 $msg['rep_MessageData'] = $matches[0]['MessageData'] ?? null;
                 $msg['rep_OrigId'] = $matches[0]['OrigId'] ?? null;
                 $msg['rep_CreatedDate'] = $matches[0]['CreatedDate'] ?? null;
+                $copySIFields($msg, $matches[0], 'rep_');
                 if (count($matches) > 1) {
                     $extras = [];
                     for ($i = 1; $i < count($matches); $i++) {
@@ -5185,7 +5233,17 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                             'rep_TransformName' => $matches[$i]['TransformName'] ?? null,
                             'rep_MessageData' => $matches[$i]['MessageData'] ?? null,
                             'rep_OrigId' => $matches[$i]['OrigId'] ?? null,
-                            'rep_CreatedDate' => $matches[$i]['CreatedDate'] ?? null
+                            'rep_CreatedDate' => $matches[$i]['CreatedDate'] ?? null,
+                            'rep_SICardNumber' => $matches[$i]['SICardNumber'] ?? null,
+                            'rep_SportIdentHour' => $matches[$i]['SportIdentHour'] ?? null,
+                            'rep_SportIdentMinute' => $matches[$i]['SportIdentMinute'] ?? null,
+                            'rep_SportIdentSecond' => $matches[$i]['SportIdentSecond'] ?? null,
+                            'rep_SIStationNumber' => $matches[$i]['SIStationNumber'] ?? null,
+                            'rep_SICardNumber2' => $matches[$i]['SICardNumber2'] ?? null,
+                            'rep_SportIdentHour2' => $matches[$i]['SportIdentHour2'] ?? null,
+                            'rep_SportIdentMinute2' => $matches[$i]['SportIdentMinute2'] ?? null,
+                            'rep_SportIdentSecond2' => $matches[$i]['SportIdentSecond2'] ?? null,
+                            'rep_SIStationNumber2' => $matches[$i]['SIStationNumber2'] ?? null
                         ];
                     }
                     $repExtra[$key] = $extras;

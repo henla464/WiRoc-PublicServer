@@ -1128,7 +1128,6 @@
           // Show mapSection when not in 3D mode
           if (type === "terrain3d") {
             $("#mapContainer").hide();
-            $("#heightProfileSection").hide();
             $("#terrain3dSection").show();
             $("#btnTab3DTerrain").addClass("active");
             setAreaSelectButton("Select Area on Map", "btn-outline-dark", "btn-dark");
@@ -2155,7 +2154,7 @@
               var hDist = 0;
               if (p1.distanceTo && p2.distanceTo) hDist = p1.distanceTo(p2);
               heightProfilePoints = { p1: p1, p2: p2, lats: lats, lngs: lngs, dist: hDist };
-              renderHeightProfile(parseFloat($("#profileHeight1").val()) || 2, parseFloat($("#profileHeight2").val()) || 2);
+              renderHeightProfile((function(v){ var f = parseFloat(v); return isNaN(f) ? 2 : f; })($("#profileHeight1").val()), (function(v){ var f = parseFloat(v); return isNaN(f) ? 2 : f; })($("#profileHeight2").val()));
             }
             elevationSampling = false;
           }, function (jqXHR) {
@@ -2183,7 +2182,7 @@
               cg.push(p1.lng + (p2.lng - p1.lng) * ct);
             }
             heightProfilePoints = { p1: p1, p2: p2, lats: cl, lngs: cg, dist: hDistCached };
-            renderHeightProfile(parseFloat($("#profileHeight1").val()) || 2, parseFloat($("#profileHeight2").val()) || 2);
+            renderHeightProfile((function(v){ var f = parseFloat(v); return isNaN(f) ? 2 : f; })($("#profileHeight1").val()), (function(v){ var f = parseFloat(v); return isNaN(f) ? 2 : f; })($("#profileHeight2").val()));
             return;
           }
           if (elevationSampling) return; // one request at a time
@@ -2223,7 +2222,7 @@
                 var hDist = 0;
                 if (p1.distanceTo && p2.distanceTo) hDist = p1.distanceTo(p2);
                 heightProfilePoints = { p1: p1, p2: p2, lats: lats, lngs: lngs, dist: hDist };
-                renderHeightProfile(parseFloat($("#profileHeight1").val()) || 2, parseFloat($("#profileHeight2").val()) || 2);
+                renderHeightProfile((function(v){ var f = parseFloat(v); return isNaN(f) ? 2 : f; })($("#profileHeight1").val()), (function(v){ var f = parseFloat(v); return isNaN(f) ? 2 : f; })($("#profileHeight2").val()));
               }
               elevationSampling = false;
             }, function (jqXHR) {
@@ -2440,8 +2439,10 @@
           var elevations = heightProfileData;
           var n = elevations.length;
           var distM = heightProfilePoints.dist || 0;
-          var h1 = parseFloat($("#profileHeight1").val()) || 2;
-          var h2 = parseFloat($("#profileHeight2").val()) || 2;
+          var h1 = parseFloat($("#profileHeight1").val());
+          if (isNaN(h1)) h1 = 2;
+          var h2 = parseFloat($("#profileHeight2").val());
+          if (isNaN(h2)) h2 = 2;
           var freq = parseFloat($("#linkFreq").val()) || 440;
           var txPower = parseFloat($("#linkTxPower").val()) || 22;
           var txGain = parseFloat($("#linkTxGain").val()) || 0;
@@ -3524,7 +3525,7 @@
 
           console.log("Terrain mesh: " + rows + "×" + cols + " = " + (rows*cols) + " verts, " + (indices.length/3) + " tris, w=" + w3d.toFixed(0) + " h=" + h3d.toFixed(0) + " elRange=" + elRange.toFixed(0) + " elScale=" + elScale.toFixed(1));
 
-          var material = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+          var material = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.75 });
           var mesh = new THREE.Mesh(geometry, material);
 
           var edgeGeo = new THREE.EdgesGeometry(geometry);
@@ -3554,7 +3555,6 @@
           }
 
           addTerrainToScene(mesh, edgeLines);
-          updateCamera();
 
           $("#terrain3dStatus").text(
             "Area: " + Math.round(widthM) + "m × " + Math.round(heightM) + "m | " +
@@ -3583,6 +3583,8 @@
           terrain3dScene.add(edgeLines);
           terrain3dMesh.userData.edgeLines = edgeLines;
           updateCamera();
+          // Redraw measurement line on new terrain
+          if (heightProfileData && heightProfilePoints) drawTerrainMeasLine();
         }
 
         function initTerrain3D() {
@@ -3592,6 +3594,7 @@
               addTerrainToScene(terrain3dPending.mesh, terrain3dPending.edges);
               terrain3dPending = null;
               $("#terrain3dPlaceholder").hide();
+              if (heightProfileData && heightProfilePoints) drawTerrainMeasLine();
             }
             return;
           }
@@ -3785,58 +3788,170 @@
           return new THREE.Vector3(x, y, z);
         }
 
-        // Draw the current measurement line on the 3D terrain
+        // Draw line-of-sight (straight 3D line between antenna heights) on the terrain
         function drawTerrainMeasLine() {
           if (!terrain3dScene || !terrain3dMesh || !heightProfilePoints || !terrain3dMapParams) return;
           clearTerrainMeasLine();
-          if (!heightProfilePoints.lats || !heightProfilePoints.lngs) return;
 
-          var points = [];
           var p = terrain3dMapParams;
-          for (var i = 0; i < heightProfilePoints.lats.length; i++) {
-            var lat = heightProfilePoints.lats[i];
-            var lng = heightProfilePoints.lngs[i];
-            var tLng = (lng - p.lngMin) / (p.lngMax - p.lngMin);
-            var tLat = (lat - p.latMin) / (p.latMax - p.latMin);
-            var x = -(tLng * p.w3d - p.w3d / 2);
-            var z = tLat * p.h3d - p.h3d / 2;
-            var y = (heightProfileData[i] - p.elMin) * p.elScale + 2; // slightly above terrain
-            points.push(new THREE.Vector3(x, y, z));
+          var h1 = parseFloat($("#profileHeight1").val());
+          if (isNaN(h1)) h1 = 2;
+          var h2 = parseFloat($("#profileHeight2").val());
+          if (isNaN(h2)) h2 = 2;
+          // Scale antenna heights same as terrain elevations
+          var h1s = h1 * p.elScale;
+          var h2s = h2 * p.elScale;
+
+          // P1
+          var lat1 = heightProfilePoints.lats[0];
+          var lng1 = heightProfilePoints.lngs[0];
+          var gnd1 = heightProfileData[0];
+          var tLng1 = (lng1 - p.lngMin) / (p.lngMax - p.lngMin);
+          var tLat1 = (lat1 - p.latMin) / (p.latMax - p.latMin);
+          var x1 = -(tLng1 * p.w3d - p.w3d / 2);
+          var z1 = tLat1 * p.h3d - p.h3d / 2;
+          var y1 = (gnd1 - p.elMin) * p.elScale + h1s; // ground + antenna height
+
+          // P2
+          var n = heightProfileData.length;
+          var lat2 = heightProfilePoints.lats[n - 1];
+          var lng2 = heightProfilePoints.lngs[n - 1];
+          var gnd2 = heightProfileData[n - 1];
+          var tLng2 = (lng2 - p.lngMin) / (p.lngMax - p.lngMin);
+          var tLat2 = (lat2 - p.latMin) / (p.latMax - p.latMin);
+          var x2 = -(tLng2 * p.w3d - p.w3d / 2);
+          var z2 = tLat2 * p.h3d - p.h3d / 2;
+          var y2 = (gnd2 - p.elMin) * p.elScale + h2s; // ground + antenna height
+
+          var p1v = new THREE.Vector3(x1, y1, z1);
+          var p2v = new THREE.Vector3(x2, y2, z2);
+
+          // Materials for LOS segments
+          var aboveMat = new THREE.LineBasicMaterial({ color: 0xff6600, linewidth: 2, depthTest: true }); // orange = above ground
+          var belowMat = new THREE.LineBasicMaterial({ color: 0xcc0000, linewidth: 2, depthTest: true }); // red = below ground
+
+          // Initialize terrain3dMeasLine as a dummy group for cleanup tracking
+          var dummyGeo = new THREE.BufferGeometry().setFromPoints([p1v, p1v]);
+          terrain3dMeasLine = new THREE.Line(dummyGeo, aboveMat);
+          terrain3dMeasLine.userData = { markers: [], posts: [], lines: [] };
+
+          // Sample LOS at many points, check against terrain, split into visible/underground segments
+          var nLos = 200;
+          var abovePts = [];
+          var belowPts = [];
+          var curState = null; // "above" or "below"
+
+          for (var k = 0; k <= nLos; k++) {
+            var t = k / nLos;
+            var x = x1 + (x2 - x1) * t;
+            var z = z1 + (z2 - z1) * t;
+            var losY = y1 + (y2 - y1) * t;
+
+            // Estimate terrain elevation at this point by interpolating the elevation profile
+            var profIdx = t * (n - 1);
+            var i0 = Math.floor(profIdx);
+            var i1 = Math.min(i0 + 1, n - 1);
+            var frac = profIdx - i0;
+            var terrainY = ((heightProfileData[i0] - p.elMin) * p.elScale) * (1 - frac) +
+                           ((heightProfileData[i1] - p.elMin) * p.elScale) * frac;
+
+            var pt = new THREE.Vector3(x, losY, z);
+            var above = losY >= terrainY;
+
+            if (curState === null) curState = (above ? "above" : "below");
+
+            if (above) {
+              if (curState === "below" && belowPts.length >= 2) {
+                // Flush underground segment
+                var bGeo = new THREE.BufferGeometry().setFromPoints(belowPts);
+                var bLine = new THREE.Line(bGeo, belowMat);
+                terrain3dScene.add(bLine);
+                terrain3dMeasLine.userData.lines.push(bLine);
+                belowPts = [];
+                curState = "above";
+              }
+              abovePts.push(pt);
+            } else {
+              if (curState === "above" && abovePts.length >= 2) {
+                // Flush above-ground segment
+                var aGeo = new THREE.BufferGeometry().setFromPoints(abovePts);
+                var aLine = new THREE.Line(aGeo, aboveMat);
+                terrain3dScene.add(aLine);
+                terrain3dMeasLine.userData.lines.push(aLine);
+                abovePts = [];
+                curState = "below";
+              }
+              belowPts.push(pt);
+            }
+          }
+          // Flush remaining segments
+          if (abovePts.length >= 2) {
+            var aGeo2 = new THREE.BufferGeometry().setFromPoints(abovePts);
+            var aLine2 = new THREE.Line(aGeo2, aboveMat);
+            terrain3dScene.add(aLine2);
+            terrain3dMeasLine.userData.lines.push(aLine2);
+          }
+          if (belowPts.length >= 2) {
+            var bGeo2 = new THREE.BufferGeometry().setFromPoints(belowPts);
+            var bLine2 = new THREE.Line(bGeo2, belowMat);
+            terrain3dScene.add(bLine2);
+            terrain3dMeasLine.userData.lines.push(bLine2);
           }
 
-          if (points.length < 2) return;
-          var lineGeo = new THREE.BufferGeometry().setFromPoints(points);
-          var lineMat = new THREE.LineBasicMaterial({ color: 0xff6600, linewidth: 2, depthTest: true });
-          terrain3dMeasLine = new THREE.Line(lineGeo, lineMat);
-          terrain3dScene.add(terrain3dMeasLine);
+          // Vertical posts from ground to antenna
+          var postMat = new THREE.LineBasicMaterial({ color: 0x0066cc, linewidth: 1, depthTest: true });
+          var post1 = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x1, (gnd1 - p.elMin) * p.elScale, z1), p1v]),
+            postMat
+          );
+          terrain3dScene.add(post1);
 
-          // Endpoint markers
-          var m1Geo = new THREE.SphereGeometry(3, 8, 8);
-          var m1Mat = new THREE.MeshBasicMaterial({ color: 0x0066cc });
-          var m1 = new THREE.Mesh(m1Geo, m1Mat);
-          m1.position.copy(points[0]);
-          m1.name = "measMarker";
+          var postMat2 = new THREE.LineBasicMaterial({ color: 0xcc0000, linewidth: 1, depthTest: true });
+          var post2 = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x2, (gnd2 - p.elMin) * p.elScale, z2), p2v]),
+            postMat2
+          );
+          terrain3dScene.add(post2);
+
+          // Endpoint spheres at antenna heights
+          var sphereGeo = new THREE.SphereGeometry(2, 8, 8);
+          var m1 = new THREE.Mesh(sphereGeo, new THREE.MeshBasicMaterial({ color: 0x0066cc }));
+          m1.position.copy(p1v);
           terrain3dScene.add(m1);
+          terrain3dMeasLine.userData.markers.push(m1);
 
-          var m2Geo = new THREE.SphereGeometry(3, 8, 8);
-          var m2Mat = new THREE.MeshBasicMaterial({ color: 0xcc0000 });
-          var m2 = new THREE.Mesh(m2Geo, m2Mat);
-          m2.position.copy(points[points.length - 1]);
-          m2.name = "measMarker";
+          var m2 = new THREE.Mesh(sphereGeo, new THREE.MeshBasicMaterial({ color: 0xcc0000 }));
+          m2.position.copy(p2v);
           terrain3dScene.add(m2);
+          terrain3dMeasLine.userData.markers.push(m2);
 
-          // Store markers for cleanup (line + two spheres)
-          terrain3dMeasLine.userData = { markers: [m1, m2] };
+          terrain3dMeasLine.userData.posts.push(post1, post2);
         }
 
         function clearTerrainMeasLine() {
           if (!terrain3dScene || !terrain3dMeasLine) return;
-          // Remove markers
-          if (terrain3dMeasLine.userData && terrain3dMeasLine.userData.markers) {
-            for (var i = 0; i < terrain3dMeasLine.userData.markers.length; i++) {
-              terrain3dScene.remove(terrain3dMeasLine.userData.markers[i]);
-              terrain3dMeasLine.userData.markers[i].geometry.dispose();
-              terrain3dMeasLine.userData.markers[i].material.dispose();
+          var ud = terrain3dMeasLine.userData;
+          if (ud) {
+            if (ud.lines) {
+              for (var i = 0; i < ud.lines.length; i++) {
+                terrain3dScene.remove(ud.lines[i]);
+                ud.lines[i].geometry.dispose();
+                ud.lines[i].material.dispose();
+              }
+            }
+            if (ud.markers) {
+              for (var i = 0; i < ud.markers.length; i++) {
+                terrain3dScene.remove(ud.markers[i]);
+                ud.markers[i].geometry.dispose();
+                ud.markers[i].material.dispose();
+              }
+            }
+            if (ud.posts) {
+              for (var i = 0; i < ud.posts.length; i++) {
+                terrain3dScene.remove(ud.posts[i]);
+                ud.posts[i].geometry.dispose();
+                ud.posts[i].material.dispose();
+              }
             }
           }
           terrain3dScene.remove(terrain3dMeasLine);
@@ -3942,7 +4057,7 @@
 
             $("#profileHeight1, #profileHeight2").on("input", function () {
               if (heightProfileData) {
-                renderHeightProfile(parseFloat($("#profileHeight1").val()) || 2, parseFloat($("#profileHeight2").val()) || 2);
+                renderHeightProfile((function(v){ var f = parseFloat(v); return isNaN(f) ? 2 : f; })($("#profileHeight1").val()), (function(v){ var f = parseFloat(v); return isNaN(f) ? 2 : f; })($("#profileHeight2").val()));
               }
             });
 

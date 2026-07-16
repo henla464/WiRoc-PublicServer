@@ -3428,6 +3428,17 @@ $app->get('/api/v1/Competitions/{competitionId}/Map', function (Request $request
     $res->georefP2Y = $map->georefP2Y;
     $res->georefP2Lat = $map->georefP2Lat;
     $res->georefP2Lng = $map->georefP2Lng;
+    $res->terrain3dP1Lat = $map->terrain3dP1Lat;
+    $res->terrain3dP1Lng = $map->terrain3dP1Lng;
+    $res->terrain3dP2Lat = $map->terrain3dP2Lat;
+    $res->terrain3dP2Lng = $map->terrain3dP2Lng;
+    $res->terrain3dGridSize = $map->terrain3dGridSize;
+    $res->terrain3dOrbitTheta = $map->terrain3dOrbitTheta;
+    $res->terrain3dOrbitPhi = $map->terrain3dOrbitPhi;
+    $res->terrain3dOrbitDist = $map->terrain3dOrbitDist;
+    $res->terrain3dOrbitTargetX = $map->terrain3dOrbitTargetX;
+    $res->terrain3dOrbitTargetY = $map->terrain3dOrbitTargetY;
+    $res->terrain3dOrbitTargetZ = $map->terrain3dOrbitTargetZ;
     $response->getBody()->write(json_encode($res));
     return $response;
 })->setName("getCompetitionMap");
@@ -3613,6 +3624,17 @@ $app->patch('/api/v1/Competitions/{competitionId}/Map', function (Request $reque
     if (isset($objectArray['georefP2Y'])) $updateData['georefP2Y'] = $objectArray['georefP2Y'];
     if (isset($objectArray['georefP2Lat'])) $updateData['georefP2Lat'] = $objectArray['georefP2Lat'];
     if (isset($objectArray['georefP2Lng'])) $updateData['georefP2Lng'] = $objectArray['georefP2Lng'];
+    if (isset($objectArray['terrain3dP1Lat'])) $updateData['terrain3dP1Lat'] = $objectArray['terrain3dP1Lat'];
+    if (isset($objectArray['terrain3dP1Lng'])) $updateData['terrain3dP1Lng'] = $objectArray['terrain3dP1Lng'];
+    if (isset($objectArray['terrain3dP2Lat'])) $updateData['terrain3dP2Lat'] = $objectArray['terrain3dP2Lat'];
+    if (isset($objectArray['terrain3dP2Lng'])) $updateData['terrain3dP2Lng'] = $objectArray['terrain3dP2Lng'];
+    if (isset($objectArray['terrain3dGridSize'])) $updateData['terrain3dGridSize'] = $objectArray['terrain3dGridSize'];
+    if (isset($objectArray['terrain3dOrbitTheta'])) $updateData['terrain3dOrbitTheta'] = $objectArray['terrain3dOrbitTheta'];
+    if (isset($objectArray['terrain3dOrbitPhi'])) $updateData['terrain3dOrbitPhi'] = $objectArray['terrain3dOrbitPhi'];
+    if (isset($objectArray['terrain3dOrbitDist'])) $updateData['terrain3dOrbitDist'] = $objectArray['terrain3dOrbitDist'];
+    if (isset($objectArray['terrain3dOrbitTargetX'])) $updateData['terrain3dOrbitTargetX'] = $objectArray['terrain3dOrbitTargetX'];
+    if (isset($objectArray['terrain3dOrbitTargetY'])) $updateData['terrain3dOrbitTargetY'] = $objectArray['terrain3dOrbitTargetY'];
+    if (isset($objectArray['terrain3dOrbitTargetZ'])) $updateData['terrain3dOrbitTargetZ'] = $objectArray['terrain3dOrbitTargetZ'];
     $this->get('helper')->Update($mapCls, $updateData, $mapCls::$tableName, $map->id);
 
     $res = new CommandResponse();
@@ -5405,7 +5427,22 @@ $app->get('/api/v1/LogArchives/LogContent', function (Request $request, Response
  *     description="Proxy elevation requests to OpenElevation API",
  *     operationId="postElevation",
  *     produces={"application/json"},
- *     @SWG\Parameter(name="body", in="body", required=true, @SWG\Schema(ref="#/definitions/ElevationRequest"))
+ *     @SWG\Parameter(
+ *         name="body",
+ *         in="body",
+ *         required=true,
+ *         @SWG\Schema(
+ *             type="object",
+ *             required={"locations"},
+ *             @SWG\Property(property="locations", type="array",
+ *                 @SWG\Items(type="object",
+ *                     @SWG\Property(property="latitude", type="number"),
+ *                     @SWG\Property(property="longitude", type="number")
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @SWG\Response(response=200, description="Elevation data from OpenElevation API")
  * )
  */
 $app->post('/api/v1/elevation', function (Request $request, Response $response) {

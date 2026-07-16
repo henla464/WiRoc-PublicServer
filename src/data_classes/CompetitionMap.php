@@ -95,6 +95,62 @@ class CompetitionMap
      */
     public $georefP2Lng;
 
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $terrain3dP1Lat;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $terrain3dP1Lng;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $terrain3dP2Lat;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $terrain3dP2Lng;
+    /**
+     * @SWG\Property()
+     * @var int
+     */
+    public $terrain3dGridSize;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $terrain3dOrbitTheta;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $terrain3dOrbitPhi;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $terrain3dOrbitDist;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $terrain3dOrbitTargetX;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $terrain3dOrbitTargetY;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $terrain3dOrbitTargetZ;
+
     public $updateTime;
     public $createdTime;
 }

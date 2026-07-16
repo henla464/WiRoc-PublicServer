@@ -184,7 +184,7 @@ class Helper
 		//$sql = 'DROP TABLE Users';
 		//$stmt = $this->db->query($sql);
 		
-		$sql = 'ALTER TABLE Devices ADD COLUMN releaseStatusKeyName varchar(50)';
+		$sql = 'ALTER TABLE Devices ADD COLUMN IF NOT EXISTS releaseStatusKeyName varchar(50)';
 		$stmt = $this->db->query($sql);
 
 		$sql = 'CREATE TABLE IF NOT EXISTS Competitions (id int NOT NULL AUTO_INCREMENT, name varchar(50), createdTime datetime, updateTime datetime, PRIMARY KEY (id))';
@@ -294,6 +294,28 @@ class Helper
 			$stmt = $this->db->query($sql);
 			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP2Lng double";
 			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dP1Lat double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dP1Lng double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dP2Lat double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dP2Lng double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dGridSize int";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dOrbitTheta double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dOrbitPhi double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dOrbitDist double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dOrbitTargetX double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dOrbitTargetY double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dOrbitTargetZ double";
+			$stmt = $this->db->query($sql);
 			$sql = 'CREATE TABLE IF NOT EXISTS CompetitionMaps (id int NOT NULL AUTO_INCREMENT, competitionId int NOT NULL,
 					originalFileName varchar(255), storedFileName varchar(255), fileType varchar(10),
 					defaultZoom int, defaultCenterX double, defaultCenterY double,
@@ -385,6 +407,28 @@ class Helper
         $stmt = $this->db->query($sql);
         $sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS georefP2Lng double";
         $stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dP1Lat double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dP1Lng double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dP2Lat double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dP2Lng double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dGridSize int";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dOrbitTheta double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dOrbitPhi double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dOrbitDist double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dOrbitTargetX double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dOrbitTargetY double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dOrbitTargetZ double";
+			$stmt = $this->db->query($sql);
 
         $res = new CommandResponse();
         $res->code = 0;

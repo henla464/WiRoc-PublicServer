@@ -45,47 +45,113 @@
       <!-- Map section -->
       <div id="mapSection" class="mb-3" style="display: none">
         <div class="d-flex align-items-center mb-2">
-          <ul id="mapTabs" class="nav nav-tabs me-auto" style="display:none">
+          <ul id="mapTabs" class="nav nav-tabs me-auto" style="display: none">
             <li class="nav-item">
-              <button type="button" id="btnTabOrienteering" class="nav-link active" data-maptype="orienteering">Orienteering Map</button>
+              <button
+                type="button"
+                id="btnTabOrienteering"
+                class="nav-link active"
+                data-maptype="orienteering"
+              >
+                Orienteering Map
+              </button>
             </li>
             <li class="nav-item">
-              <button type="button" id="btnTabSatellite" class="nav-link" data-maptype="satellite">Satellite/Street Map</button>
+              <button
+                type="button"
+                id="btnTabSatellite"
+                class="nav-link"
+                data-maptype="satellite"
+              >
+                Satellite/Street Map
+              </button>
             </li>
-            <li class="nav-item" id="tab3dItem" style="display:none">
-              <button type="button" id="btnTab3DTerrain" class="nav-link" data-maptype="terrain3d">3D Terrain</button>
+            <li class="nav-item" id="tab3dItem" style="display: none">
+              <button
+                type="button"
+                id="btnTab3DTerrain"
+                class="nav-link"
+                data-maptype="terrain3d"
+              >
+                3D Terrain
+              </button>
             </li>
           </ul>
-          <div id="mapOrienteeringButtons" class="me-1" style="display:none">
-            <button type="button" id="btnUploadMap" class="btn btn-outline-dark btn me-1"><i class="fa fa-upload"></i> Upload Map</button>
-            <button type="button" id="btnDeleteMap" class="btn btn-outline-dark btn"><i class="fa fa-trash"></i> Delete Map</button>
-            <input type="file" id="mapFileInput" accept="image/png" style="display:none"/>
+          <div id="mapOrienteeringButtons" class="me-1" style="display: none">
+            <button
+              type="button"
+              id="btnUploadMap"
+              class="btn btn-outline-dark btn me-1"
+            >
+              <i class="fa fa-upload"></i> Upload Map
+            </button>
+            <button
+              type="button"
+              id="btnDeleteMap"
+              class="btn btn-outline-dark btn"
+            >
+              <i class="fa fa-trash"></i> Delete Map
+            </button>
+            <input
+              type="file"
+              id="mapFileInput"
+              accept="image/png"
+              style="display: none"
+            />
           </div>
-          <div id="mapEditButtons" style="display:none">
-            <button type="button" id="btnSaveMapView" class="btn btn-outline-dark btn me-1"><i class="fa fa-save"></i> Save current view</button>
-            <button type="button" id="btnGeorefMap" class="btn btn-outline-dark btn me-1"><i class="fa fa-globe"></i> Georeference Map</button>
-            <button type="button" id="btnLockControls" class="btn btn-outline-dark btn me-1"><i class="fa fa-lock"></i> Unlock controls</button>
+          <div id="mapEditButtons" style="display: none">
+            <button
+              type="button"
+              id="btnSaveMapView"
+              class="btn btn-outline-dark btn me-1"
+            >
+              <i class="fa fa-save"></i> Save current view
+            </button>
+            <button
+              type="button"
+              id="btnGeorefMap"
+              class="btn btn-outline-dark btn me-1"
+            >
+              <i class="fa fa-globe"></i> Georeference Map
+            </button>
+            <button
+              type="button"
+              id="btnLockControls"
+              class="btn btn-outline-dark btn me-1"
+            >
+              <i class="fa fa-lock"></i> Unlock controls
+            </button>
           </div>
-          <div id="mapMeasureArea" style="display:none">
-            <button type="button" id="btnMeasure" class="btn btn-outline-dark btn me-1"><i class="fa fa-arrows-h"></i> Measure distance</button>
-            <button type="button" id="btnToggleGatewayLines" class="btn btn-outline-dark btn me-1"><i class="fa fa-exchange"></i> Hide gateway lines</button>
-            <button type="button" id="btnSelectArea" class="btn btn-outline-dark btn me-1" style="display:none"><i class="fa fa-crop"></i> Select Area for 3D</button>
-            <span id="measureResult" style="font-size:13px; color:#333; display:none"></span>
+          <div id="mapMeasureArea" style="display: none">
+            <button
+              type="button"
+              id="btnMeasure"
+              class="btn btn-outline-dark btn me-1"
+            >
+              <i class="fa fa-arrows-h"></i> Measure distance
+            </button>
+            <button
+              type="button"
+              id="btnToggleGatewayLines"
+              class="btn btn-outline-dark btn me-1"
+            >
+              <i class="fa fa-exchange"></i> Hide gateway lines
+            </button>
+            <button
+              type="button"
+              id="btnSelectArea"
+              class="btn btn-outline-dark btn me-1"
+              style="display: none"
+            >
+              <i class="fa fa-crop"></i> Select Area for 3D
+            </button>
+            <span
+              id="measureResult"
+              style="font-size: 13px; color: #333; display: none"
+            ></span>
           </div>
         </div>
-        <div
-          id="mapUpdatedAlert"
-          class="alert alert-success alert-dismissible collapse"
-          style="margin-bottom: 0"
-          role="alert"
-        >
-          <strong>Map saved!</strong>
-          <button
-            type="button"
-            class="btn-close close"
-            aria-label="Close"
-          ></button>
-        </div>
+        <div id="mapUpdatedAlert" style="display:none; margin-left:10px; font-size:12px; color:#28a745; font-weight:bold; white-space:nowrap;">&#10003; Map saved!</div>
         <div
           id="calibInstructions"
           class="alert alert-info collapse"
@@ -113,7 +179,11 @@
                   border-radius: 4px;
                 "
               ></div>
-              <div id="mapResizeHandle" class="map-resize-handle" title="Drag to resize map"></div>
+              <div
+                id="mapResizeHandle"
+                class="map-resize-handle"
+                title="Drag to resize map"
+              ></div>
               <div
                 id="scaleBar"
                 style="
@@ -160,7 +230,11 @@
               class="map-resizable"
               style="height: 450px; border: 1px solid #ccc; border-radius: 4px"
             ></div>
-            <div id="satelliteMapResizeHandle" class="map-resize-handle" title="Drag to resize map"></div>
+            <div
+              id="satelliteMapResizeHandle"
+              class="map-resize-handle"
+              title="Drag to resize map"
+            ></div>
             <div
               id="satelliteMapNoGeo"
               class="text-muted text-center p-5"
@@ -191,85 +265,310 @@
       </div>
 
       <!-- 3D Terrain -->
-      <div id="terrain3dSection" style="display:none;" class="mb-3">
+      <div id="terrain3dSection" style="display: none" class="mb-3">
         <div class="d-flex align-items-center mb-2">
           <h5 class="mb-0 me-auto">3D Terrain Model</h5>
-          <button type="button" id="btnSelectArea3d" class="btn btn-outline-dark btn me-1"><i class="fa fa-crop"></i> Select Area on Map</button>
-          <button type="button" id="btnClear3d" class="btn btn-outline-dark btn me-1" disabled><i class="fa fa-trash"></i> Clear</button>
-          <button type="button" id="btnRefine3d" class="btn btn-outline-dark btn me-1"><i class="fa fa-plus"></i> Refine</button>
-          <span id="terrain3dStatus" style="font-size:12px; color:#666; display:none"></span>
+          <button
+            type="button"
+            id="btnSelectArea3d"
+            class="btn btn-outline-dark btn me-1"
+          >
+            <i class="fa fa-crop"></i> Select Area on Map
+          </button>
+          <button
+            type="button"
+            id="btnClear3d"
+            class="btn btn-outline-dark btn me-1"
+            disabled
+          >
+            <i class="fa fa-trash"></i> Clear
+          </button>
+          <button
+            type="button"
+            id="btnRefine3d"
+            class="btn btn-outline-dark btn me-1"
+          >
+            <i class="fa fa-plus"></i> Refine
+          </button>
+          <span
+            id="terrain3dStatus"
+            style="font-size: 12px; color: #666; display: none"
+          ></span>
         </div>
-        <div id="terrain3dCanvas" style="width:100%; height:450px; border:1px solid #ccc; border-radius:4px; background:#1a1a2e; position:relative; overflow:hidden; cursor:grab;">
-          <div id="terrain3dPlaceholder" class="text-muted text-center p-5" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#888;">
-            Use the map to select a rectangular area, then click "Select Area on Map".
+        <div
+          id="terrain3dCanvas"
+          style="
+            width: 100%;
+            height: 450px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #1a1a2e;
+            position: relative;
+            overflow: hidden;
+            cursor: grab;
+          "
+        >
+          <div
+            id="terrain3dPlaceholder"
+            class="text-muted text-center p-5"
+            style="
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              color: #888;
+            "
+          >
+            Use the map to select a rectangular area, then click "Select Area on
+            Map".
           </div>
         </div>
       </div>
 
-      <div id="heightProfileSection" style="display:none; margin-top:8px; margin-bottom:12px; position:relative;">
+      <div
+        id="heightProfileSection"
+        style="
+          display: none;
+          margin-top: 8px;
+          margin-bottom: 12px;
+          position: relative;
+        "
+      >
         <div class="d-flex align-items-center mb-1">
           <h5 class="mb-0 me-auto">Height Profile</h5>
           <div class="d-flex align-items-center">
-            <label for="profileHeight1" class="me-1" style="font-size:12px;color:#0066CC;font-weight:bold;">Sender antenna height (m)</label>
-            <input type="number" id="profileHeight1" class="form-control form-control-sm" value="2" min="0" max="100" step="0.5" style="width:70px; height:28px;">
-            <label for="profileHeight2" class="ms-3 me-1" style="font-size:12px;color:#CC0000;font-weight:bold;">Receiver antenna height (m)</label>
-            <input type="number" id="profileHeight2" class="form-control form-control-sm" value="2" min="0" max="100" step="0.5" style="width:70px; height:28px;">
+            <label
+              for="profileHeight1"
+              class="me-1"
+              style="font-size: 12px; color: #0066cc; font-weight: bold"
+              >Sender antenna height (m)</label
+            >
+            <input
+              type="number"
+              id="profileHeight1"
+              class="form-control form-control-sm"
+              value="2"
+              min="0"
+              max="100"
+              step="0.5"
+              style="width: 70px; height: 28px"
+            />
+            <label
+              for="profileHeight2"
+              class="ms-3 me-1"
+              style="font-size: 12px; color: #cc0000; font-weight: bold"
+              >Receiver antenna height (m)</label
+            >
+            <input
+              type="number"
+              id="profileHeight2"
+              class="form-control form-control-sm"
+              value="2"
+              min="0"
+              max="100"
+              step="0.5"
+              style="width: 70px; height: 28px"
+            />
           </div>
         </div>
-        <div id="linkBudgetBreakdown" style="display:none; position:absolute; bottom:30px; left:10px; z-index:1000; background:#fff; border:1px solid #999; border-radius:4px; padding:8px 12px; box-shadow:0 2px 8px rgba(0,0,0,0.2); max-width:420px;"></div>
-        <canvas id="profileCanvas" style="width:100%; height:200px; border:1px solid #ccc; border-radius:4px;"></canvas>
-        <div id="linkBudgetSection" style="margin-top:4px; display:none;" class="p-2 border rounded bg-light">
-          <div class="d-flex flex-nowrap align-items-center gap-1 overflow-auto" style="flex-shrink:0;">
+        <div
+          id="linkBudgetBreakdown"
+          style="
+            display: none;
+            position: absolute;
+            bottom: 30px;
+            left: 10px;
+            z-index: 1000;
+            background: #fff;
+            border: 1px solid #999;
+            border-radius: 4px;
+            padding: 8px 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            max-width: 420px;
+          "
+        ></div>
+        <canvas
+          id="profileCanvas"
+          style="
+            width: 100%;
+            height: 200px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+          "
+        ></canvas>
+        <div
+          id="linkBudgetSection"
+          style="margin-top: 4px; display: none"
+          class="p-2 border rounded bg-light"
+        >
+          <div
+            class="d-flex flex-nowrap align-items-center gap-1 overflow-auto"
+            style="flex-shrink: 0"
+          >
             <div class="d-flex align-items-center">
-              <label for="linkFreq" class="me-1" style="font-size:12px;">Freq (MHz)</label>
-              <input type="number" id="linkFreq" class="form-control form-control-sm" value="440" min="30" max="10000" step="1" style="width:75px; height:28px;">
+              <label for="linkFreq" class="me-1" style="font-size: 12px"
+                >Freq (MHz)</label
+              >
+              <input
+                type="number"
+                id="linkFreq"
+                class="form-control form-control-sm"
+                value="440"
+                min="30"
+                max="10000"
+                step="1"
+                style="width: 75px; height: 28px"
+              />
             </div>
             <div class="d-flex align-items-center">
-              <label for="linkTxPower" class="me-1" style="font-size:12px;">TX Power (dBm)</label>
-              <input type="number" id="linkTxPower" class="form-control form-control-sm" value="22" min="-20" max="60" step="1" style="width:75px; height:28px;">
+              <label for="linkTxPower" class="me-1" style="font-size: 12px"
+                >TX Power (dBm)</label
+              >
+              <input
+                type="number"
+                id="linkTxPower"
+                class="form-control form-control-sm"
+                value="22"
+                min="-20"
+                max="60"
+                step="1"
+                style="width: 75px; height: 28px"
+              />
             </div>
             <div class="d-flex align-items-center">
-              <label for="linkTxGain" class="me-1" style="font-size:12px;">TX Gain (dBi)</label>
-              <input type="number" id="linkTxGain" class="form-control form-control-sm" value="0" min="-10" max="30" step="0.5" style="width:75px; height:28px;">
+              <label for="linkTxGain" class="me-1" style="font-size: 12px"
+                >TX Gain (dBi)</label
+              >
+              <input
+                type="number"
+                id="linkTxGain"
+                class="form-control form-control-sm"
+                value="0"
+                min="-10"
+                max="30"
+                step="0.5"
+                style="width: 75px; height: 28px"
+              />
             </div>
             <div class="d-flex align-items-center">
-              <label for="linkRxGain" class="me-1" style="font-size:12px;">RX Gain (dBi)</label>
-              <input type="number" id="linkRxGain" class="form-control form-control-sm" value="0" min="-10" max="30" step="0.5" style="width:75px; height:28px;">
+              <label for="linkRxGain" class="me-1" style="font-size: 12px"
+                >RX Gain (dBi)</label
+              >
+              <input
+                type="number"
+                id="linkRxGain"
+                class="form-control form-control-sm"
+                value="0"
+                min="-10"
+                max="30"
+                step="0.5"
+                style="width: 75px; height: 28px"
+              />
             </div>
             <div class="d-flex align-items-center">
-              <label for="linkRxSens" class="me-1" style="font-size:12px;">RX Sens (dBm)</label>
-              <select id="linkRxSens" class="form-select form-select-sm" style="width:220px; height:28px; font-size:11px; padding:2px 4px;">
+              <label for="linkRxSens" class="me-1" style="font-size: 12px"
+                >RX Sens (dBm)</label
+              >
+              <select
+                id="linkRxSens"
+                class="form-select form-select-sm"
+                style="
+                  width: 220px;
+                  height: 28px;
+                  font-size: 11px;
+                  padding: 2px 4px;
+                "
+              >
                 <option value="-142">-142 UL-2 (SF10/BW10 81)</option>
                 <option value="-139">-139 XL-2 (SF9/BW10 146)</option>
-                <option value="-137">-137 L-2  (SF8/BW10 260)</option>
+                <option value="-137">-137 L-2 (SF8/BW10 260)</option>
                 <option value="-134">-134 ML-2 (SF7/BW10 455)</option>
                 <option value="-132">-132 MF-2 (SF6/BW10 781)</option>
-                <option value="-129">-129 F-2  (SF5/BW10 1302)</option>
+                <option value="-129">-129 F-2 (SF5/BW10 1302)</option>
                 <option value="-142">-142 UL (SF12/BW31 73)</option>
                 <option value="-139">-140 XL (SF11/BW31 134)</option>
-                <option value="-137">-137 L  (SF10/BW31 244)</option>
+                <option value="-137">-137 L (SF10/BW31 244)</option>
                 <option value="-134">-135 ML (SF9/BW31 439)</option>
                 <option value="-132">-132 MF (SF8/BW31 781)</option>
-                <option value="-129" selected>-130 F  (SF7/BW31 1367)</option>
+                <option value="-129" selected>-130 F (SF7/BW31 1367)</option>
                 <option value="-127">-127 XF (SF6/BW31 2343)</option>
                 <option value="-125">-125 UF (SF5/BW31 3906)</option>
                 <option value="0">Custom</option>
               </select>
-              <input type="number" id="linkRxSensCustom" class="form-control form-control-sm" value="-110" min="-150" max="0" step="1" style="width:80px; height:28px; margin-left:4px; display:none;">
+              <input
+                type="number"
+                id="linkRxSensCustom"
+                class="form-control form-control-sm"
+                value="-110"
+                min="-150"
+                max="0"
+                step="1"
+                style="
+                  width: 80px;
+                  height: 28px;
+                  margin-left: 4px;
+                  display: none;
+                "
+              />
             </div>
-            <div class="d-flex align-items-center me-2" style="white-space:nowrap;">
-              <input class="form-check-input me-1" type="checkbox" id="linkForestSender" checked style="margin:0;">
-              <label class="form-check-label me-1" for="linkForestSender" style="font-size:11px;">Sender in</label>
-              <select id="linkVegDensSender" class="form-select form-select-sm" style="width:72px; height:24px; font-size:10px; padding:1px 3px;">
+            <div
+              class="d-flex align-items-center me-2"
+              style="white-space: nowrap"
+            >
+              <input
+                class="form-check-input me-1"
+                type="checkbox"
+                id="linkForestSender"
+                checked
+                style="margin: 0"
+              />
+              <label
+                class="form-check-label me-1"
+                for="linkForestSender"
+                style="font-size: 11px"
+                >Sender in</label
+              >
+              <select
+                id="linkVegDensSender"
+                class="form-select form-select-sm"
+                style="
+                  width: 72px;
+                  height: 24px;
+                  font-size: 10px;
+                  padding: 1px 3px;
+                "
+              >
                 <option value="light">Light</option>
                 <option value="medium" selected>Medium</option>
                 <option value="dense">Dense</option>
               </select>
             </div>
-            <div class="d-flex align-items-center me-2" style="white-space:nowrap;">
-              <input class="form-check-input me-1" type="checkbox" id="linkForestReceiver" style="margin:0;">
-              <label class="form-check-label me-1" for="linkForestReceiver" style="font-size:11px;">Receiver in</label>
-              <select id="linkVegDensReceiver" class="form-select form-select-sm" style="width:72px; height:24px; font-size:10px; padding:1px 3px;">
+            <div
+              class="d-flex align-items-center me-2"
+              style="white-space: nowrap"
+            >
+              <input
+                class="form-check-input me-1"
+                type="checkbox"
+                id="linkForestReceiver"
+                style="margin: 0"
+              />
+              <label
+                class="form-check-label me-1"
+                for="linkForestReceiver"
+                style="font-size: 11px"
+                >Receiver in</label
+              >
+              <select
+                id="linkVegDensReceiver"
+                class="form-select form-select-sm"
+                style="
+                  width: 72px;
+                  height: 24px;
+                  font-size: 10px;
+                  padding: 1px 3px;
+                "
+              >
                 <option value="light">Light</option>
                 <option value="medium" selected>Medium</option>
                 <option value="dense">Dense</option>
@@ -277,7 +576,22 @@
             </div>
           </div>
           <div class="mt-2">
-            <span id="linkBudgetResult" style="font-size:12px; font-weight:bold;"></span>
+            <span
+              id="linkBudgetResult"
+              style="font-size: 12px; font-weight: bold"
+            ></span>
+          </div>
+          <div
+            id="elevationAttribution"
+            style="display: none; font-size: 11px; color: #888; margin-top: 2px"
+          >
+            Elevation data &copy;
+            <a
+              href="https://www.lantmateriet.se/"
+              target="_blank"
+              style="color: #888"
+              >Lantmäteriet</a
+            >, CC BY 4.0
           </div>
         </div>
       </div>
@@ -340,8 +654,9 @@
           <strong>The control was saved!</strong>
           <button
             type="button"
-            class="btn-close close"
+            class="btn-close"
             aria-label="Close"
+            data-bs-dismiss="alert"
           ></button>
         </div>
         <div class="table-responsive">
@@ -445,47 +760,49 @@
               $.ajax({
                 url: "/api/v1/Competitions/" + competitionId + "/access",
                 dataType: "json",
-              }).then(function (access) {
-                isLoggedIn = access.isLoggedIn;
-                hasViewAccess = access.hasViewAccess;
-                hasEditAccess = access.hasEditAccess;
+              })
+                .then(function (access) {
+                  isLoggedIn = access.isLoggedIn;
+                  hasViewAccess = access.hasViewAccess;
+                  hasEditAccess = access.hasEditAccess;
 
-                loadMap();
+                  loadMap();
 
-                if (isLoggedIn) {
-                  $("#btnTabOrienteering").show();
-                  $("#mapTabs").show();
-                }
-
-                if (hasViewAccess) {
-                  loadControlsTable(competitionId, function () {
-                    loadDeviceTable();
-                    if (mapInstance && mapImgWidth > 0) {
-                      placeControlsOnMap(mapImgWidth, mapImgHeight);
-                    }
-                  });
-                  $("#controlsSection").show();
-                } else {
-                  loadDeviceTable();
-                }
-
-                if (hasEditAccess) {
-                  $("#btnOpenAddControl").show();
-                  $(".control-editcol, .control-deletecol").show();
-                  showMapEditButtons(true);
-                  if (access.isCreator) {
-                    $("#btnOpenAccess").show();
+                  if (isLoggedIn) {
+                    $("#btnTabOrienteering").show();
+                    $("#mapTabs").show();
                   }
-                  initCompetitionAccess();
-                }
-              }).fail(function () {
-                // Fallback for public users: if access endpoint fails, show public content
-                isLoggedIn = false;
-                hasViewAccess = false;
-                hasEditAccess = false;
-                loadMap();
-                loadDeviceTable();
-              });
+
+                  if (hasViewAccess) {
+                    loadControlsTable(competitionId, function () {
+                      loadDeviceTable();
+                      if (mapInstance && mapImgWidth > 0) {
+                        placeControlsOnMap(mapImgWidth, mapImgHeight);
+                      }
+                    });
+                    $("#controlsSection").show();
+                  } else {
+                    loadDeviceTable();
+                  }
+
+                  if (hasEditAccess) {
+                    $("#btnOpenAddControl").show();
+                    $(".control-editcol, .control-deletecol").show();
+                    showMapEditButtons(true);
+                    if (access.isCreator) {
+                      $("#btnOpenAccess").show();
+                    }
+                    initCompetitionAccess();
+                  }
+                })
+                .fail(function () {
+                  // Fallback for public users: if access endpoint fails, show public content
+                  isLoggedIn = false;
+                  hasViewAccess = false;
+                  hasEditAccess = false;
+                  loadMap();
+                  loadDeviceTable();
+                });
             },
             function (fail) {
               // If competition fetch fails, still try to load map and devices
@@ -634,12 +951,12 @@
             // Build allControls from device data if not loaded yet (for anonymous users)
             if (allControls.length === 0) {
               var ctrlMap = {};
-              $.each(devices, function() {
+              $.each(devices, function () {
                 if (this.controlId && !ctrlMap[this.controlId]) {
                   ctrlMap[this.controlId] = {
                     id: this.controlId,
                     controlNumber: this.controlNumber,
-                    controlType: this.controlType || 'Control'
+                    controlType: this.controlType || "Control",
                   };
                 }
               });
@@ -651,7 +968,12 @@
               if (hasEditAccess) {
                 ctrlCell = buildControlSelect(this.controlId, this.BTAddress);
               } else {
-                ctrlCell = (this.controlNumber != null) ? (this.controlType && this.controlType != 'Control' ? this.controlType + ' ' : '') + this.controlNumber : '-';
+                ctrlCell =
+                  this.controlNumber != null
+                    ? (this.controlType && this.controlType != "Control"
+                        ? this.controlType + " "
+                        : "") + this.controlNumber
+                    : "-";
               }
               $("#WiRocDevices tbody").append(
                 "<tr><td>" +
@@ -673,7 +995,8 @@
                   this.name +
                   "</a></td><td>" +
                   (this.description != null ? this.description : "") +
-                  "</td><td>" + ctrlCell +
+                  "</td><td>" +
+                  ctrlCell +
                   "</td><td>" +
                   this.BTAddress +
                   "</td><td>" +
@@ -775,32 +1098,35 @@
         var measP1World = null; // L.latLng — real-world coords of P1
         var measP2World = null; // L.latLng — real-world coords of P2
         var profileMapMarker = null; // marker on map showing canvas hover position
+        var profile3dMarker = null; // marker on 3D terrain showing canvas hover position
 
         // 3D Terrain state
         var areaSelectMode = false;
-        var areaSelectRect = null;   // Leaflet rectangle on map
-        var areaSelectMarkers = [];  // corner markers
-        var areaSelectP1 = null;     // L.latLng
+        var areaSelectRect = null; // Leaflet rectangle on map
+        var areaSelectMarkers = []; // corner markers
+        var areaSelectP1 = null; // L.latLng
         var areaSelectP2 = null;
-        var areaSelectMap = null;    // "orienteering" or "satellite"
-        var terrain3dGridSize = 50;  // current grid points per side
+        var areaSelectMap = null; // "orienteering" or "satellite"
+        var terrain3dGridSize = 50; // current grid points per side
         var terrain3dInitialized = false;
+        var terrain3dInitInProgress = false;
         var terrain3dScene = null;
         var terrain3dRenderer = null;
         var terrain3dCamera = null;
         var terrain3dMesh = null;
         var terrain3dMapParams = null; // {latMin,latMax,lngMin,lngMax,w3d,h3d,elScale,elMin}
-        var terrain3dMeasLine = null;  // 3D line showing current measurement
+        var terrain3dMeasLine = null; // 3D line showing current measurement
         var terrain3dAnimId = null;
         var terrain3dPending = null; // stored mesh + edge data waiting for scene init
 
         // 3D orbit controls state
         var orbitActive = false;
         var orbitPanning = false;
-        var orbitStartX = 0, orbitStartY = 0;
-        var orbitTheta = Math.PI / 4;  // horizontal angle
-        var orbitPhi = Math.PI / 3;    // vertical angle
-        var orbitDist = 500;           // camera distance
+        var orbitStartX = 0,
+          orbitStartY = 0;
+        var orbitTheta = Math.PI / 4; // horizontal angle
+        var orbitPhi = Math.PI / 3; // vertical angle
+        var orbitDist = 500; // camera distance
         var orbitTarget = new THREE.Vector3(0, 0, 0);
 
         // ============================================================
@@ -815,22 +1141,42 @@
 
         function getControlDisplayLabel(controlType, controlNumber) {
           if (controlType && controlType != "Control")
-            return (controlType == "Repeater" ? "Rep " : "Rec ") + controlNumber;
+            return (
+              (controlType == "Repeater" ? "Rep " : "Rec ") + controlNumber
+            );
           return "" + controlNumber;
         }
 
-        function buildControlPopup(controlType, controlNumber, controlName, description, devices) {
+        function buildControlPopup(
+          controlType,
+          controlNumber,
+          controlName,
+          description,
+          devices,
+        ) {
           var typeLabel = controlType || "Control";
-          var html = "<div><b>" + typeLabel + " " + controlNumber + ": " + (controlName || "") + "</b><br/>";
+          var html =
+            "<div><b>" +
+            typeLabel +
+            " " +
+            controlNumber +
+            ": " +
+            (controlName || "") +
+            "</b><br/>";
           if (description) html += "Description: " + description + "<br/>";
           html += "<br/>";
           if (devices && devices.length > 0) {
             $.each(devices, function () {
-              html += '<b>WiRoc Device:</b> <a href="device.html?devicebt=' +
-                (this.deviceBTAddress || "") + '">' + this.deviceName + "</a><br/>";
+              html +=
+                '<b>WiRoc Device:</b> <a href="device.html?devicebt=' +
+                (this.deviceBTAddress || "") +
+                '">' +
+                this.deviceName +
+                "</a><br/>";
               html += "BT Address: " + (this.deviceBTAddress || "") + "<br/>";
               html += "Battery: " + this.batteryLevel + "%";
-              if (this.batteryIsLow == 1) html += ' <span style="color:red">(LOW)</span>';
+              if (this.batteryIsLow == 1)
+                html += ' <span style="color:red">(LOW)</span>';
               html += "<br/>";
             });
           } else {
@@ -841,50 +1187,66 @@
         }
 
         function joinDeviceNames(devices) {
-          return $.map(devices || [], function (d) { return d.deviceName; }).join(" | ");
+          return $.map(devices || [], function (d) {
+            return d.deviceName;
+          }).join(" | ");
         }
 
         function createSatelliteTileLayers(satMap) {
           var satLayer = L.tileLayer(
             "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-            { attribution: "Esri", maxZoom: 19 }
+            { attribution: "Esri", maxZoom: 19 },
           );
           var streetLayer = L.tileLayer(
             "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-            { attribution: "© OpenStreetMap contributors", maxZoom: 19 }
+            { attribution: "© OpenStreetMap contributors", maxZoom: 19 },
           );
           satLayer.addTo(satMap);
-          L.control.layers({ "Satellite": satLayer, "Street Map": streetLayer }, null,
-            { position: "topright", collapsed: false }).addTo(satMap);
+          L.control
+            .layers({ Satellite: satLayer, "Street Map": streetLayer }, null, {
+              position: "topright",
+              collapsed: false,
+            })
+            .addTo(satMap);
 
           var brightnessLevels = [1.0, 1.3, 1.5, 1.8];
           function setBrightness(val) {
             var pane = satMap.getPane("tilePane");
             if (pane) pane.style.filter = "brightness(" + val + ")";
             $(".brightness-btn").removeClass("active");
-            $(".brightness-btn[data-brightness='" + val + "']").addClass("active");
+            $(".brightness-btn[data-brightness='" + val + "']").addClass(
+              "active",
+            );
           }
 
           var BrightnessControl = L.Control.extend({
             options: { position: "topright" },
             onAdd: function () {
               var div = L.DomUtil.create("div", "leaflet-bar leaflet-control");
-              div.style.cssText = "background:#fff; padding:3px 5px; font-size:12px; white-space:nowrap;";
-              var h = '<span style="color:#333;font-weight:bold;margin-right:4px;">Brightness</span>';
+              div.style.cssText =
+                "background:#fff; padding:3px 5px; font-size:12px; white-space:nowrap;";
+              var h =
+                '<span style="color:#333;font-weight:bold;margin-right:4px;">Brightness</span>';
               $.each(brightnessLevels, function (i, b) {
-                h += '<button class="brightness-btn" data-brightness="' + b +
+                h +=
+                  '<button class="brightness-btn" data-brightness="' +
+                  b +
                   '" style="border:1px solid #ccc; background:#fff; padding:1px 5px; cursor:pointer; font-size:11px; border-radius:2px; margin:0 1px;">' +
-                  Math.round(b * 100) + '%</button>';
+                  Math.round(b * 100) +
+                  "%</button>";
               });
               div.innerHTML = h;
               L.DomEvent.disableClickPropagation(div);
               L.DomEvent.disableScrollPropagation(div);
               div.addEventListener("click", function (e) {
                 var btn = e.target.closest(".brightness-btn");
-                if (btn) setBrightness(parseFloat(btn.getAttribute("data-brightness")));
+                if (btn)
+                  setBrightness(
+                    parseFloat(btn.getAttribute("data-brightness")),
+                  );
               });
               return div;
-            }
+            },
           });
           new BrightnessControl().addTo(satMap);
           return satLayer;
@@ -893,62 +1255,91 @@
         // Access is checked via loadHeader() which calls the access API endpoint
 
         function initCompetitionAccess() {
-          $("#competitionaccess-modal-placeholder").load("competitionaccessmodal.html", function() {
-            $("#btnOpenAccess").click(function() {
-              $("#modalTitle").text("Manage Access");
-              loadAccessTable(competitionId);
-              var accessModalElement = document.querySelector('#competitionaccess');
-              var accessModal = bootstrap.Modal.getOrCreateInstance(accessModalElement);
-              accessModal.show();
-            });
-
-            $("#buttonGrantAccess").click(function() {
-              var userEmail = $("#userEmailInput").val();
-              var role = $("#accessRoleInput").val() || "view";
-              if (!userEmail) return;
-              $.ajax({
-                url: "/api/v1/CompetitionAccess/grant",
-                method: "POST",
-                data: JSON.stringify({ competitionId: competitionId, UserEmail: userEmail, accessRole: role }),
-                dataType: "json"
-              }).then(function(res) {
-                $("#grantErrorAlert").addClass("collapse");
-                $("#grantSuccessAlert").removeClass("collapse");
-                $("#userEmailInput").val("");
+          $("#competitionaccess-modal-placeholder").load(
+            "competitionaccessmodal.html",
+            function () {
+              $("#btnOpenAccess").click(function () {
+                $("#modalTitle").text("Manage Access");
                 loadAccessTable(competitionId);
-              }, function(fail) {
-                var msg = "Failed to grant access";
-                if (fail.responseJSON && fail.responseJSON.message) msg = fail.responseJSON.message;
-                $("#grantErrorAlert").text(msg).removeClass("collapse");
-                $("#grantSuccessAlert").addClass("collapse");
+                var accessModalElement =
+                  document.querySelector("#competitionaccess");
+                var accessModal =
+                  bootstrap.Modal.getOrCreateInstance(accessModalElement);
+                accessModal.show();
               });
-            });
 
-            $(document).on("click", ".revokeaccess", function() {
-              var userId = $(this).data('userid');
-              $.ajax({
-                url: "/api/v1/CompetitionAccess/revoke",
-                method: "POST",
-                data: JSON.stringify({ competitionId: competitionId, UserId: userId }),
-                dataType: "json"
-              }).then(function(res) {
-                loadAccessTable(competitionId);
-              }, function(fail) {});
-            });
-          });
+              $("#buttonGrantAccess").click(function () {
+                var userEmail = $("#userEmailInput").val();
+                var role = $("#accessRoleInput").val() || "view";
+                if (!userEmail) return;
+                $.ajax({
+                  url: "/api/v1/CompetitionAccess/grant",
+                  method: "POST",
+                  data: JSON.stringify({
+                    competitionId: competitionId,
+                    UserEmail: userEmail,
+                    accessRole: role,
+                  }),
+                  dataType: "json",
+                }).then(
+                  function (res) {
+                    $("#grantErrorAlert").addClass("collapse");
+                    $("#grantSuccessAlert").removeClass("collapse");
+                    $("#userEmailInput").val("");
+                    loadAccessTable(competitionId);
+                  },
+                  function (fail) {
+                    var msg = "Failed to grant access";
+                    if (fail.responseJSON && fail.responseJSON.message)
+                      msg = fail.responseJSON.message;
+                    $("#grantErrorAlert").text(msg).removeClass("collapse");
+                    $("#grantSuccessAlert").addClass("collapse");
+                  },
+                );
+              });
+
+              $(document).on("click", ".revokeaccess", function () {
+                var userId = $(this).data("userid");
+                $.ajax({
+                  url: "/api/v1/CompetitionAccess/revoke",
+                  method: "POST",
+                  data: JSON.stringify({
+                    competitionId: competitionId,
+                    UserId: userId,
+                  }),
+                  dataType: "json",
+                }).then(
+                  function (res) {
+                    loadAccessTable(competitionId);
+                  },
+                  function (fail) {},
+                );
+              });
+            },
+          );
         }
 
         function loadAccessTable(compId) {
           $.ajax({
             url: "/api/v1/CompetitionAccess",
-            dataType: "json"
-          }).then(function(entries) {
+            dataType: "json",
+          }).then(function (entries) {
             $("#CompetitionAccesses tbody").empty();
             if (entries) {
-              $.each(entries, function() {
+              $.each(entries, function () {
                 if (this.competitionId == compId) {
-                  var roleStr = this.accessRole || 'edit';
-                  $("#CompetitionAccesses tbody").append('<tr><td>' + this.UserEmail + '</td><td>' + roleStr + '</td><td>' + this.GrantedAt + '</td><td><button class="btn btn-sm btn-danger revokeaccess" data-userid="' + this.UserId + '">Revoke</button></td></tr>');
+                  var roleStr = this.accessRole || "edit";
+                  $("#CompetitionAccesses tbody").append(
+                    "<tr><td>" +
+                      this.UserEmail +
+                      "</td><td>" +
+                      roleStr +
+                      "</td><td>" +
+                      this.GrantedAt +
+                      '</td><td><button class="btn btn-sm btn-danger revokeaccess" data-userid="' +
+                      this.UserId +
+                      '">Revoke</button></td></tr>',
+                  );
                 }
               });
             }
@@ -1035,8 +1426,55 @@
               }
 
               // Show 3D Terrain tab if map coordinates are in Sweden or UK
-              if (hasGeo && georefPoints.p1Lat && isInSwedenOrUK(georefPoints.p1Lat, georefPoints.p1Lng)) {
+              if (
+                hasGeo &&
+                georefPoints.p1Lat &&
+                isInSwedenOrUK(georefPoints.p1Lat, georefPoints.p1Lng)
+              ) {
                 $("#tab3dItem").show();
+                // Auto-load saved 3D terrain state
+                if (meta.terrain3dP1Lat && meta.terrain3dP2Lat) {
+                  areaSelectP1 = L.latLng(
+                    meta.terrain3dP1Lat,
+                    meta.terrain3dP1Lng,
+                  );
+                  areaSelectP2 = L.latLng(
+                    meta.terrain3dP2Lat,
+                    meta.terrain3dP2Lng,
+                  );
+                  terrain3dGridSize = meta.terrain3dGridSize || 50;
+                  if (meta.terrain3dOrbitTheta !== undefined)
+                    orbitTheta = meta.terrain3dOrbitTheta;
+                  if (meta.terrain3dOrbitPhi !== undefined)
+                    orbitPhi = meta.terrain3dOrbitPhi;
+                  if (meta.terrain3dOrbitDist !== undefined)
+                    orbitDist = meta.terrain3dOrbitDist;
+                  if (meta.terrain3dOrbitTargetX !== undefined) {
+                    orbitTarget.set(
+                      meta.terrain3dOrbitTargetX,
+                      meta.terrain3dOrbitTargetY,
+                      meta.terrain3dOrbitTargetZ
+                    );
+                  }
+                  // Delay: wait for maps to init, then auto-load
+                  var saved = {
+                    p1lat: meta.terrain3dP1Lat,
+                    p1lng: meta.terrain3dP1Lng,
+                    p2lat: meta.terrain3dP2Lat,
+                    p2lng: meta.terrain3dP2Lng,
+                    gridsize: meta.terrain3dGridSize || 50,
+                    theta: meta.terrain3dOrbitTheta,
+                    phi: meta.terrain3dOrbitPhi,
+                    dist: meta.terrain3dOrbitDist,
+                    targetX: meta.terrain3dOrbitTargetX,
+                    targetY: meta.terrain3dOrbitTargetY,
+                    targetZ: meta.terrain3dOrbitTargetZ,
+                  };
+                  // Will be triggered after maps are initialized
+                  if (typeof _savedTerrain3dHolder === "undefined")
+                    window._savedTerrain3dHolder = [];
+                  _savedTerrain3dHolder.push(saved);
+                }
               } else {
                 $("#tab3dItem").hide();
                 if (activeMapType === "terrain3d") setActiveMap("satellite");
@@ -1050,7 +1488,13 @@
                 $("#mapMeasureArea").show();
                 $("#orienteeringMapContainer").show();
                 $("#map").hide();
-                $("#mapNoFile").show().text(isLoggedIn ? "You don't have access to view the orienteering map." : "Log in to view the orienteering map.");
+                $("#mapNoFile")
+                  .show()
+                  .text(
+                    isLoggedIn
+                      ? "You don't have access to view the orienteering map."
+                      : "Log in to view the orienteering map.",
+                  );
                 $("#mapOrienteeringButtons").hide();
                 $("#mapEditButtons").hide();
                 $("#mapTabs").show();
@@ -1089,6 +1533,23 @@
                   controlLayers = [];
                 }
                 initMap(meta);
+                // Auto-load 3D terrain if saved state exists
+                if (
+                  window._savedTerrain3dHolder &&
+                  window._savedTerrain3dHolder.length > 0
+                ) {
+                  var saved3d = window._savedTerrain3dHolder.pop();
+                  window._savedTerrain3dHolder = [];
+                  areaSelectP1 = L.latLng(saved3d.p1lat, saved3d.p1lng);
+                  areaSelectP2 = L.latLng(saved3d.p2lat, saved3d.p2lng);
+                  terrain3dGridSize = saved3d.gridsize;
+                  if (saved3d.theta !== undefined) orbitTheta = saved3d.theta;
+                  if (saved3d.phi !== undefined) orbitPhi = saved3d.phi;
+                  if (saved3d.dist !== undefined) orbitDist = saved3d.dist;
+                  if (saved3d.targetX !== undefined) orbitTarget.set(
+                    saved3d.targetX, saved3d.targetY, saved3d.targetZ);
+                  window._restoring3dView = true;
+                }
               } else {
                 $("#map").hide();
                 $("#mapMeasureArea").hide();
@@ -1129,12 +1590,39 @@
           if (type === "terrain3d") {
             $("#mapContainer").hide();
             $("#terrain3dSection").show();
+            if (hasEditAccess) $("#mapEditButtons").show();
             $("#btnTab3DTerrain").addClass("active");
-            setAreaSelectButton("Select Area on Map", "btn-outline-dark", "btn-dark");
+            setAreaSelectButton(
+              "Select Area on Map",
+              "btn-outline-dark",
+              "btn-dark",
+            );
             initTerrain3D();
+            // Auto-load saved 3D terrain if we have area but no mesh
+            if (
+              areaSelectP1 &&
+              areaSelectP2 &&
+              !terrain3dMesh &&
+              !terrain3dPending
+            ) {
+              var waitAndLoad = function () {
+                if (!terrain3dScene) {
+                  setTimeout(waitAndLoad, 100);
+                  return;
+                }
+                loadTerrain3D();
+                if (window._restoring3dView)
+                  setTimeout(function () {
+                    window._restoring3dView = false;
+                  }, 3000);
+              };
+              setTimeout(waitAndLoad, 200);
+            }
             // Restore measurement line if there's active measurement data
             if (heightProfileData && heightProfilePoints) {
-              setTimeout(function() { drawTerrainMeasLine(); }, 100);
+              setTimeout(function () {
+                drawTerrainMeasLine();
+              }, 100);
             }
             return;
           }
@@ -1159,18 +1647,24 @@
                 var ll = pixelToLatLng(oCenter.lng, oCenter.lat);
                 if (ll) {
                   var oZoom = orienteeringMap.getZoom();
-                  var mapMeters = mapImgHeight / (mapMeta.mapScale * Math.pow(2, oZoom));
-                  var cosLat = Math.cos(ll.lat * Math.PI / 180);
+                  var mapMeters =
+                    mapImgHeight / (mapMeta.mapScale * Math.pow(2, oZoom));
+                  var cosLat = Math.cos((ll.lat * Math.PI) / 180);
                   var metersPerPx = mapMeters / 450; // 450px map div height
-                  var sZoom = Math.round(Math.log2(156543 * cosLat / metersPerPx));
-                  satelliteMap.setView([ll.lat, ll.lng], sZoom, { animate: false });
+                  var sZoom = Math.round(
+                    Math.log2((156543 * cosLat) / metersPerPx),
+                  );
+                  satelliteMap.setView([ll.lat, ll.lng], sZoom, {
+                    animate: false,
+                  });
                 }
               }
             }
             $("#btnTabSatellite").addClass("active");
             // Container is now visible — recalculate control sizes with real dimensions
             satelliteMap.invalidateSize();
-            if (satelliteControlLayers.length > 0) adjustSatelliteControlSizes();
+            if (satelliteControlLayers.length > 0)
+              adjustSatelliteControlSizes();
             if (hasViewAccess) $("#mapMeasureArea").show();
           }
           if (mapInstance) {
@@ -1185,10 +1679,10 @@
           var dpy = georefPoints.p2Y - georefPoints.p1Y;
           var dlng = georefPoints.p2Lng - georefPoints.p1Lng;
           var dlat = georefPoints.p2Lat - georefPoints.p1Lat;
-          var cosLat = Math.cos(georefPoints.p1Lat * Math.PI / 180);
+          var cosLat = Math.cos((georefPoints.p1Lat * Math.PI) / 180);
           // Meters between P1 and P2 in world space
           var mE = dlng * 111320 * cosLat; // meters east
-          var mN = dlat * 111320;           // meters north
+          var mN = dlat * 111320; // meters north
           var dPixel = Math.sqrt(dpx * dpx + dpy * dpy);
           var dM = Math.sqrt(mE * mE + mN * mN);
           if (dPixel === 0 || dM === 0) return null;
@@ -1203,7 +1697,7 @@
           var ry = py - georefPoints.p1Y;
           var cosR = Math.cos(rot);
           var sinR = Math.sin(rot);
-          var east  = (rx * cosR - ry * sinR) * mPerPx; // meters east
+          var east = (rx * cosR - ry * sinR) * mPerPx; // meters east
           var north = (rx * sinR + ry * cosR) * mPerPx; // meters north
           var lng = georefPoints.p1Lng + east / (111320 * cosLat);
           var lat = georefPoints.p1Lat + north / 111320;
@@ -1216,7 +1710,7 @@
           var dpy = georefPoints.p2Y - georefPoints.p1Y;
           var dlng = georefPoints.p2Lng - georefPoints.p1Lng;
           var dlat = georefPoints.p2Lat - georefPoints.p1Lat;
-          var cosLat = Math.cos(georefPoints.p1Lat * Math.PI / 180);
+          var cosLat = Math.cos((georefPoints.p1Lat * Math.PI) / 180);
           var mE = dlng * 111320 * cosLat;
           var mN = dlat * 111320;
           var dPixel = Math.sqrt(dpx * dpx + dpy * dpy);
@@ -1226,8 +1720,9 @@
           var pixelAngle = Math.atan2(dpy, dpx);
           var worldAngle = Math.atan2(mN, mE);
           var rot = worldAngle - pixelAngle; // same rotation as forward transform
-          var cosR = Math.cos(rot), sinR = Math.sin(rot);
-          var east  = (lng - georefPoints.p1Lng) * 111320 * cosLat;
+          var cosR = Math.cos(rot),
+            sinR = Math.sin(rot);
+          var east = (lng - georefPoints.p1Lng) * 111320 * cosLat;
           var north = (lat - georefPoints.p1Lat) * 111320;
           // Inverse rotation: R^T * [east; north] / mPerPx
           var rx = (cosR * east + sinR * north) / mPerPx;
@@ -1367,7 +1862,10 @@
               if (controlGroup && orienteeringMap) {
                 orienteeringMap.removeLayer(controlGroup);
               }
-              if (!orienteeringMap) { placingControls = false; return; }
+              if (!orienteeringMap) {
+                placingControls = false;
+                return;
+              }
               controlGroup = L.layerGroup().addTo(orienteeringMap);
               controlLayers = [];
 
@@ -1390,8 +1888,10 @@
                 }
                 if (this.deviceName && this.deviceName !== "undefined") {
                   controlMap[this.id].devices.push(this);
-                  controlMap[this.id]._deviceBTMap = controlMap[this.id]._deviceBTMap || {};
-                  controlMap[this.id]._deviceBTMap[this.deviceBTAddress] = this.deviceHeadBTAddress || '';
+                  controlMap[this.id]._deviceBTMap =
+                    controlMap[this.id]._deviceBTMap || {};
+                  controlMap[this.id]._deviceBTMap[this.deviceBTAddress] =
+                    this.deviceHeadBTAddress || "";
                 }
               });
               var groupedControls = Object.values(controlMap);
@@ -1420,13 +1920,27 @@
                 var controlId = this.id;
 
                 // Popup and control symbol
-                var popupHtml = buildControlPopup(this.controlType, this.controlNumber, this.controlName, this.description, devices);
+                var popupHtml = buildControlPopup(
+                  this.controlType,
+                  this.controlNumber,
+                  this.controlName,
+                  this.description,
+                  devices,
+                );
                 var symbolColor = getControlColor(this.controlType);
                 var circle = null;
                 var symbolMarker = null;
-                if (this.controlType == "Repeater" || this.controlType == "Receiver") {
+                if (
+                  this.controlType == "Repeater" ||
+                  this.controlType == "Receiver"
+                ) {
                   symbolMarker = L.marker([cy, cx], {
-                    icon: L.divIcon({ className: "role-symbol", html: "", iconSize: [0, 0], iconAnchor: [0, 0] }),
+                    icon: L.divIcon({
+                      className: "role-symbol",
+                      html: "",
+                      iconSize: [0, 0],
+                      iconAnchor: [0, 0],
+                    }),
                     interactive: false,
                   }).addTo(controlGroup);
                 } else {
@@ -1439,7 +1953,10 @@
                   }).addTo(controlGroup);
                 }
 
-                var displayLabel = getControlDisplayLabel(this.controlType, this.controlNumber);
+                var displayLabel = getControlDisplayLabel(
+                  this.controlType,
+                  this.controlNumber,
+                );
                 var ctrlLabel = L.marker([cy, cx], {
                   icon: L.divIcon({
                     className: "control-label-icon",
@@ -1528,7 +2045,10 @@
                       });
                       if (georefPoints.p1Lat) {
                         setTimeout(function () {
-                          placeControlsOnSatelliteMap(mapImgWidth, mapImgHeight);
+                          placeControlsOnSatelliteMap(
+                            mapImgWidth,
+                            mapImgHeight,
+                          );
                         }, 300);
                       }
                     });
@@ -1563,110 +2083,160 @@
 
           // Build map: BTAddress -> controlLayer
           var btToLayer = {};
-          $.each(controlLayers, function() {
-            $.each(this.deviceBTMap, function(btAddr, headBT) {
-              btToLayer[btAddr] = this;
-            }.bind(this));
+          $.each(controlLayers, function () {
+            $.each(
+              this.deviceBTMap,
+              function (btAddr, headBT) {
+                btToLayer[btAddr] = this;
+              }.bind(this),
+            );
           });
 
           // For each control layer, check if any device is a gateway or remote
-          $.each(controlLayers, function() {
+          $.each(controlLayers, function () {
             var srcLayer = this;
             var devMap = this.deviceBTMap;
-            $.each(devMap, function(remoteBT, headBT) {
-              // Skip if no headBT or it's its own gateway (direct internet)
-              if (!headBT || headBT === remoteBT) return;
-              // Find gateway device's control
-              var gwLayer = btToLayer[headBT];
-              if (!gwLayer) return;
-              // Don't draw self-loops
-              if (gwLayer.controlId === srcLayer.controlId) return;
+            $.each(
+              devMap,
+              function (remoteBT, headBT) {
+                // Skip if no headBT or it's its own gateway (direct internet)
+                if (!headBT || headBT === remoteBT) return;
+                // Find gateway device's control
+                var gwLayer = btToLayer[headBT];
+                if (!gwLayer) return;
+                // Don't draw self-loops
+                if (gwLayer.controlId === srcLayer.controlId) return;
 
-              // Compute visual radius for both ends
-              var srcRadius = srcLayer.circle ? srcLayer.baseMapRadius : srcLayer.baseMapRadius * 0.75;
-              var gwRadius = gwLayer.circle ? gwLayer.baseMapRadius : gwLayer.baseMapRadius * 0.75;
+                // Compute visual radius for both ends
+                var srcRadius = srcLayer.circle
+                  ? srcLayer.baseMapRadius
+                  : srcLayer.baseMapRadius * 0.75;
+                var gwRadius = gwLayer.circle
+                  ? gwLayer.baseMapRadius
+                  : gwLayer.baseMapRadius * 0.75;
 
-              // Start at edge of source circle, end at edge of gateway circle
-              var dx = gwLayer.x - srcLayer.x;
-              var dy = gwLayer.y - srcLayer.y;
-              var dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist < 1) return;
+                // Start at edge of source circle, end at edge of gateway circle
+                var dx = gwLayer.x - srcLayer.x;
+                var dy = gwLayer.y - srcLayer.y;
+                var dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 1) return;
 
-              var ux = dx / dist;
-              var uy = dy / dist;
+                var ux = dx / dist;
+                var uy = dy / dist;
 
-              // Gap outside the circle: 30% of the radius + fixed 4px
-              var startGap = srcRadius * 0.3 + 4;
-              var endGap = gwRadius * 0.3 + 4;
-              var startX = srcLayer.x + ux * (srcRadius + startGap);
-              var startY = srcLayer.y + uy * (srcRadius + startGap);
-              var endX = gwLayer.x - ux * (gwRadius + endGap);
-              var endY = gwLayer.y - uy * (gwRadius + endGap);
+                // Gap outside the circle: 30% of the radius + fixed 4px
+                var startGap = srcRadius * 0.3 + 4;
+                var endGap = gwRadius * 0.3 + 4;
+                var startX = srcLayer.x + ux * (srcRadius + startGap);
+                var startY = srcLayer.y + uy * (srcRadius + startGap);
+                var endX = gwLayer.x - ux * (gwRadius + endGap);
+                var endY = gwLayer.y - uy * (gwRadius + endGap);
 
-              // Draw dashed line — scale with zoom (half-scale, matches device cards)
-              var zoom = orienteeringMap.getZoom();
-              var lineScale = Math.pow(2, zoom / 2);
-              var lineWeight = Math.round(5 * lineScale);
-              var dashLen = Math.round(16 * lineScale);
-              var gapLen = Math.round(12 * lineScale);
-              var line = L.polyline([[startY, startX], [endY, endX]], {
-                color: '#228B22',
-                weight: lineWeight,
-                dashArray: dashLen + ', ' + gapLen,
-                interactive: false,
-              }).addTo(gatewayLinesGroup);
+                // Draw dashed line — scale with zoom (half-scale, matches device cards)
+                var zoom = orienteeringMap.getZoom();
+                var lineScale = Math.pow(2, zoom / 2);
+                var lineWeight = Math.round(5 * lineScale);
+                var dashLen = Math.round(16 * lineScale);
+                var gapLen = Math.round(12 * lineScale);
+                var line = L.polyline(
+                  [
+                    [startY, startX],
+                    [endY, endX],
+                  ],
+                  {
+                    color: "#228B22",
+                    weight: lineWeight,
+                    dashArray: dashLen + ", " + gapLen,
+                    interactive: false,
+                  },
+                ).addTo(gatewayLinesGroup);
 
-              // Invisible hit-target line — scale proportionally
-              var hitWeight = Math.round(20 * lineScale);
-              var hitLine = L.polyline([[startY, startX], [endY, endX]], {
-                color: 'transparent',
-                weight: hitWeight,
-                opacity: 0,
-                interactive: !measuringMode,
-                bubblingMouseEvents: false,
-              }).addTo(gatewayLinesGroup);
-              if (hitLine.getElement()) hitLine.getElement().style.cursor = measuringMode ? '' : 'pointer';
+                // Invisible hit-target line — scale proportionally
+                var hitWeight = Math.round(20 * lineScale);
+                var hitLine = L.polyline(
+                  [
+                    [startY, startX],
+                    [endY, endX],
+                  ],
+                  {
+                    color: "transparent",
+                    weight: hitWeight,
+                    opacity: 0,
+                    interactive: !measuringMode,
+                    bubblingMouseEvents: false,
+                  },
+                ).addTo(gatewayLinesGroup);
+                if (hitLine.getElement())
+                  hitLine.getElement().style.cursor = measuringMode
+                    ? ""
+                    : "pointer";
 
-              // Store control center coords for height profile lookup
-              hitLine._gatewaySrc = { x: srcLayer.x, y: srcLayer.y };
-              hitLine._gatewayDst = { x: gwLayer.x, y: gwLayer.y };
-              hitLine.on("click", function(e) {
-                if (measMarkers.length > 0 || measMarkers2.length > 0) clearMeasMarkers();
-                // Draw blue/red dots on orienteering map at control centers
-                // In CRS.Simple: L.latLng(lat, lng) where lat=y (mapX), lng=x (mapY)
-                // Control layers: x=mapY(CRS lng), y=mapX(CRS lat)
-                var srcLL = L.latLng(hitLine._gatewaySrc.y, hitLine._gatewaySrc.x);
-                var dstLL = L.latLng(hitLine._gatewayDst.y, hitLine._gatewayDst.x);
-                drawMeasureDots(orienteeringMap, srcLL, dstLL);
-                if (georefPoints.p1Lat) {
-                  // pixelToLatLng(px, py): px=CRS lng (x-axis), py=CRS lat (y-axis)
-                  // layer.x = CRS lng, layer.y = CRS lat
-                  var p1 = pixelToLatLng(hitLine._gatewaySrc.x, hitLine._gatewaySrc.y);
-                  var p2 = pixelToLatLng(hitLine._gatewayDst.x, hitLine._gatewayDst.y);
-                  if (p1 && p2) sampleElevationProfile(L.latLng(p1), L.latLng(p2));
-                }
-                L.DomEvent.stopPropagation(e);
-              });
+                // Store control center coords for height profile lookup
+                hitLine._gatewaySrc = { x: srcLayer.x, y: srcLayer.y };
+                hitLine._gatewayDst = { x: gwLayer.x, y: gwLayer.y };
+                hitLine.on("click", function (e) {
+                  if (measMarkers.length > 0 || measMarkers2.length > 0)
+                    clearMeasMarkers();
+                  // Draw blue/red dots on orienteering map at control centers
+                  // In CRS.Simple: L.latLng(lat, lng) where lat=y (mapX), lng=x (mapY)
+                  // Control layers: x=mapY(CRS lng), y=mapX(CRS lat)
+                  var srcLL = L.latLng(
+                    hitLine._gatewaySrc.y,
+                    hitLine._gatewaySrc.x,
+                  );
+                  var dstLL = L.latLng(
+                    hitLine._gatewayDst.y,
+                    hitLine._gatewayDst.x,
+                  );
+                  drawMeasureDots(orienteeringMap, srcLL, dstLL);
+                  if (georefPoints.p1Lat) {
+                    // pixelToLatLng(px, py): px=CRS lng (x-axis), py=CRS lat (y-axis)
+                    // layer.x = CRS lng, layer.y = CRS lat
+                    var p1 = pixelToLatLng(
+                      hitLine._gatewaySrc.x,
+                      hitLine._gatewaySrc.y,
+                    );
+                    var p2 = pixelToLatLng(
+                      hitLine._gatewayDst.x,
+                      hitLine._gatewayDst.y,
+                    );
+                    if (p1 && p2)
+                      sampleElevationProfile(L.latLng(p1), L.latLng(p2));
+                  }
+                  L.DomEvent.stopPropagation(e);
+                });
 
-              // Arrowhead — scale with zoom (half-scale, matches device cards)
-              // CRS.Simple: y increases upward, CSS rotation is screen y-down.
-              // CSS triangle (border-left) points RIGHT at 0° rotation.
-              var arrowLen = Math.round(srcLayer.baseMapRadius * 0.5 * lineScale);
-              var arrowHalf = Math.round(arrowLen * 0.5);
-              var iconSz = Math.round(arrowLen * 1.1);
-              var anchorCtr = Math.round(iconSz / 2);
-              // Negate dy: CRS.Simple y-up → screen y-down
-              var cssAngle = Math.atan2(-dy, dx) * 180 / Math.PI;
-              L.marker([endY, endX], {
-                icon: L.divIcon({
-                  className: 'gateway-arrow',
-                  html: '<div style="width:0;height:0;border-left:' + arrowLen + 'px solid #228B22;border-top:' + arrowHalf + 'px solid transparent;border-bottom:' + arrowHalf + 'px solid transparent;transform:rotate(' + cssAngle + 'deg);"></div>',
-                  iconSize: [iconSz, iconSz],
-                  iconAnchor: [anchorCtr, anchorCtr],
-                }),
-                interactive: false,
-              }).addTo(gatewayLinesGroup);
-            }.bind(this));
+                // Arrowhead — scale with zoom (half-scale, matches device cards)
+                // CRS.Simple: y increases upward, CSS rotation is screen y-down.
+                // CSS triangle (border-left) points RIGHT at 0° rotation.
+                var arrowLen = Math.round(
+                  srcLayer.baseMapRadius * 0.5 * lineScale,
+                );
+                var arrowHalf = Math.round(arrowLen * 0.5);
+                var iconSz = Math.round(arrowLen * 1.1);
+                var anchorCtr = Math.round(iconSz / 2);
+                // Negate dy: CRS.Simple y-up → screen y-down
+                var cssAngle = (Math.atan2(-dy, dx) * 180) / Math.PI;
+                L.marker([endY, endX], {
+                  icon: L.divIcon({
+                    className: "gateway-arrow",
+                    html:
+                      '<div style="width:0;height:0;border-left:' +
+                      arrowLen +
+                      "px solid #228B22;border-top:" +
+                      arrowHalf +
+                      "px solid transparent;border-bottom:" +
+                      arrowHalf +
+                      "px solid transparent;transform:rotate(" +
+                      cssAngle +
+                      'deg);"></div>',
+                    iconSize: [iconSz, iconSz],
+                    iconAnchor: [anchorCtr, anchorCtr],
+                  }),
+                  interactive: false,
+                }).addTo(gatewayLinesGroup);
+              }.bind(this),
+            );
           });
         }
 
@@ -1679,15 +2249,18 @@
           // Orientering control covers 45/mapScale meters of ground (same regardless of oZoom).
           // Scale proportionally with satellite zoom so controls grow when zooming in.
           var satLat = georefPoints.p1Lat;
-          var cosLat = Math.cos(satLat * Math.PI / 180);
-          var satMetersPerPx = 156543 * cosLat / Math.pow(2, sZoom);
-          var targetMeters = 45 / mapMeta.mapScale * 1.25; // 1.25x compensates calibration variance
+          var cosLat = Math.cos((satLat * Math.PI) / 180);
+          var satMetersPerPx = (156543 * cosLat) / Math.pow(2, sZoom);
+          var targetMeters = (45 / mapMeta.mapScale) * 1.25; // 1.25x compensates calibration variance
           var ctrlSize = Math.round(targetMeters / satMetersPerPx);
-          var hdrSize = Math.round(20 / mapMeta.mapScale * 1.25 / satMetersPerPx);
-          var markerRadius = Math.round(24 / mapMeta.mapScale * 1.25 / satMetersPerPx);
+          var hdrSize = Math.round(
+            ((20 / mapMeta.mapScale) * 1.25) / satMetersPerPx,
+          );
+          var markerRadius = Math.round(
+            ((24 / mapMeta.mapScale) * 1.25) / satMetersPerPx,
+          );
 
           $.each(satelliteControlLayers, function () {
-
             // CircleMarker
             if (this.circleMarker) {
               this.circleMarker.setStyle({
@@ -1773,7 +2346,10 @@
               // Popup sits above the device card. The card extends upward from the marker
               // by hdrSize*1.3 (iconAnchor). Minimal offset to place popup just above.
               if (this.devLabel && this.devLabel.getPopup()) {
-                this.devLabel.getPopup().options.offset = L.point(0, -Math.round(hdrSize * 1.3));
+                this.devLabel.getPopup().options.offset = L.point(
+                  0,
+                  -Math.round(hdrSize * 1.3),
+                );
               }
             }
           });
@@ -1810,7 +2386,8 @@
               if (this.deviceName && this.deviceName !== "undefined") {
                 cm[this.id].devices.push(this);
                 cm[this.id]._deviceBTMap = cm[this.id]._deviceBTMap || {};
-                cm[this.id]._deviceBTMap[this.deviceBTAddress] = this.deviceHeadBTAddress || '';
+                cm[this.id]._deviceBTMap[this.deviceBTAddress] =
+                  this.deviceHeadBTAddress || "";
               }
             });
             var gc = Object.values(cm);
@@ -1820,11 +2397,20 @@
               var ll = pixelToLatLng(this.mapY, this.mapX);
               if (!ll) return;
 
-              var displayLabel = getControlDisplayLabel(this.controlType, this.controlNumber);
+              var displayLabel = getControlDisplayLabel(
+                this.controlType,
+                this.controlNumber,
+              );
               var color = getControlColor(this.controlType);
               var devices = this.devices;
 
-              var popupHtml = buildControlPopup(this.controlType, this.controlNumber, this.controlName, this.description, devices);
+              var popupHtml = buildControlPopup(
+                this.controlType,
+                this.controlNumber,
+                this.controlName,
+                this.description,
+                devices,
+              );
 
               var sym = null,
                 symbolMarker = null,
@@ -1851,8 +2437,6 @@
                   interactive: !measuringMode,
                 }).addTo(satelliteControlGroup);
               }
-
-
 
               var ctrlLabel = L.marker([ll.lat, ll.lng], {
                 icon: L.divIcon({
@@ -1940,7 +2524,10 @@
                     $.ajax({
                       url: "/api/v1/Controls/" + ctrlId + "/MapPosition",
                       method: "PATCH",
-                      data: JSON.stringify({ mapX: pixel.mapX, mapY: pixel.mapY }),
+                      data: JSON.stringify({
+                        mapX: pixel.mapX,
+                        mapY: pixel.mapY,
+                      }),
                       dataType: "json",
                     });
                     // Refresh orienteering map
@@ -1972,7 +2559,13 @@
         }
 
         function drawGatewayLinesSatellite() {
-          if (!satelliteMap || !georefPoints.p1Lat || !mapMeta || !mapMeta.mapScale) return;
+          if (
+            !satelliteMap ||
+            !georefPoints.p1Lat ||
+            !mapMeta ||
+            !mapMeta.mapScale
+          )
+            return;
           if (satelliteGatewayLinesGroup && satelliteMap) {
             satelliteMap.removeLayer(satelliteGatewayLinesGroup);
           }
@@ -1983,110 +2576,157 @@
 
           // Build map: BTAddress -> satelliteControlLayer
           var btToLayer = {};
-          $.each(satelliteControlLayers, function() {
-            $.each(this.deviceBTMap, function(btAddr, headBT) {
-              btToLayer[btAddr] = this;
-            }.bind(this));
+          $.each(satelliteControlLayers, function () {
+            $.each(
+              this.deviceBTMap,
+              function (btAddr, headBT) {
+                btToLayer[btAddr] = this;
+              }.bind(this),
+            );
           });
 
           // For each control, draw lines from remote devices to their gateway
-          $.each(satelliteControlLayers, function() {
+          $.each(satelliteControlLayers, function () {
             var srcLayer = this;
             var devMap = this.deviceBTMap;
-            $.each(devMap, function(remoteBT, headBT) {
-              if (!headBT || headBT === remoteBT) return;
-              var gwLayer = btToLayer[headBT];
-              if (!gwLayer || gwLayer.controlId === srcLayer.controlId) return;
+            $.each(
+              devMap,
+              function (remoteBT, headBT) {
+                if (!headBT || headBT === remoteBT) return;
+                var gwLayer = btToLayer[headBT];
+                if (!gwLayer || gwLayer.controlId === srcLayer.controlId)
+                  return;
 
-              // Convert lat/lng to container points for pixel math
-              var srcPoint = satelliteMap.latLngToContainerPoint(L.latLng(srcLayer.lat, srcLayer.lng));
-              var gwPoint = satelliteMap.latLngToContainerPoint(L.latLng(gwLayer.lat, gwLayer.lng));
+                // Convert lat/lng to container points for pixel math
+                var srcPoint = satelliteMap.latLngToContainerPoint(
+                  L.latLng(srcLayer.lat, srcLayer.lng),
+                );
+                var gwPoint = satelliteMap.latLngToContainerPoint(
+                  L.latLng(gwLayer.lat, gwLayer.lng),
+                );
 
-              // Estimate visual radius in pixels
-              var sZoom = satelliteMap.getZoom();
-              var cosLat = Math.cos(srcLayer.lat * Math.PI / 180);
-              var mPerPx = 156543 * cosLat / Math.pow(2, sZoom);
-              var ctrlRadius = Math.round(24 / mapMeta.mapScale * 1.25 / mPerPx);
-              if (!ctrlRadius || ctrlRadius < 4) ctrlRadius = 4;
+                // Estimate visual radius in pixels
+                var sZoom = satelliteMap.getZoom();
+                var cosLat = Math.cos((srcLayer.lat * Math.PI) / 180);
+                var mPerPx = (156543 * cosLat) / Math.pow(2, sZoom);
+                var ctrlRadius = Math.round(
+                  ((24 / mapMeta.mapScale) * 1.25) / mPerPx,
+                );
+                if (!ctrlRadius || ctrlRadius < 4) ctrlRadius = 4;
 
-              var dx = gwPoint.x - srcPoint.x;
-              var dy = gwPoint.y - srcPoint.y;
-              var dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist < 4) return;
+                var dx = gwPoint.x - srcPoint.x;
+                var dy = gwPoint.y - srcPoint.y;
+                var dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 4) return;
 
-              var ux = dx / dist;
-              var uy = dy / dist;
-              // Gap outside the circle: 30% of the radius + fixed 4px
-              var pad = ctrlRadius * 1.3 + 4;
+                var ux = dx / dist;
+                var uy = dy / dist;
+                // Gap outside the circle: 30% of the radius + fixed 4px
+                var pad = ctrlRadius * 1.3 + 4;
 
-              var startPoint = L.point(srcPoint.x + ux * pad, srcPoint.y + uy * pad);
-              var endPoint = L.point(gwPoint.x - ux * pad, gwPoint.y - uy * pad);
+                var startPoint = L.point(
+                  srcPoint.x + ux * pad,
+                  srcPoint.y + uy * pad,
+                );
+                var endPoint = L.point(
+                  gwPoint.x - ux * pad,
+                  gwPoint.y - uy * pad,
+                );
 
-              var startLL = satelliteMap.containerPointToLatLng(startPoint);
-              var endLL = satelliteMap.containerPointToLatLng(endPoint);
+                var startLL = satelliteMap.containerPointToLatLng(startPoint);
+                var endLL = satelliteMap.containerPointToLatLng(endPoint);
 
-              // Store source & dest control lat/lng for height profile
-              var srcLL = L.latLng(srcLayer.lat, srcLayer.lng);
-              var dstLL = L.latLng(gwLayer.lat, gwLayer.lng);
+                // Store source & dest control lat/lng for height profile
+                var srcLL = L.latLng(srcLayer.lat, srcLayer.lng);
+                var dstLL = L.latLng(gwLayer.lat, gwLayer.lng);
 
-              var line = L.polyline([startLL, endLL], {
-                color: '#228B22',
-                weight: Math.round(ctrlRadius * 0.2),
-                dashArray: Math.round(ctrlRadius * 0.9) + ', ' + Math.round(ctrlRadius * 0.7),
-                interactive: false,
-              }).addTo(satelliteGatewayLinesGroup);
+                var line = L.polyline([startLL, endLL], {
+                  color: "#228B22",
+                  weight: Math.round(ctrlRadius * 0.2),
+                  dashArray:
+                    Math.round(ctrlRadius * 0.9) +
+                    ", " +
+                    Math.round(ctrlRadius * 0.7),
+                  interactive: false,
+                }).addTo(satelliteGatewayLinesGroup);
 
-              // Invisible hit-target line — scale proportionally
-              var hitWeight = Math.round(ctrlRadius * 1.2);
-              var hitLine = L.polyline([startLL, endLL], {
-                color: 'transparent',
-                weight: hitWeight,
-                opacity: 0,
-                interactive: !measuringMode,
-                bubblingMouseEvents: false,
-              }).addTo(satelliteGatewayLinesGroup);
-              if (hitLine.getElement()) hitLine.getElement().style.cursor = measuringMode ? '' : 'pointer';
+                // Invisible hit-target line — scale proportionally
+                var hitWeight = Math.round(ctrlRadius * 1.2);
+                var hitLine = L.polyline([startLL, endLL], {
+                  color: "transparent",
+                  weight: hitWeight,
+                  opacity: 0,
+                  interactive: !measuringMode,
+                  bubblingMouseEvents: false,
+                }).addTo(satelliteGatewayLinesGroup);
+                if (hitLine.getElement())
+                  hitLine.getElement().style.cursor = measuringMode
+                    ? ""
+                    : "pointer";
 
-              hitLine.on("click", function(e) {
-                if (measMarkers.length > 0 || measMarkers2.length > 0) clearMeasMarkers();
-                drawMeasureDots(satelliteMap, srcLL, dstLL);
-                sampleElevationProfile(srcLL, dstLL);
-                L.DomEvent.stopPropagation(e);
-              });
+                hitLine.on("click", function (e) {
+                  if (measMarkers.length > 0 || measMarkers2.length > 0)
+                    clearMeasMarkers();
+                  drawMeasureDots(satelliteMap, srcLL, dstLL);
+                  sampleElevationProfile(srcLL, dstLL);
+                  L.DomEvent.stopPropagation(e);
+                });
 
-              // Arrowhead at end — scale proportional to control circle radius
-              var cssAngle = Math.atan2(dy, dx) * 180 / Math.PI;
-              var arrowLen = Math.round(ctrlRadius * 0.5);
-              var arrowHalf = Math.round(arrowLen * 0.5);
-              var iconSz = Math.round(arrowLen * 1.1);
-              var anchorCtr = Math.round(iconSz / 2);
-              L.marker(endLL, {
-                icon: L.divIcon({
-                  className: 'gateway-arrow-sat',
-                  html: '<div style="width:0;height:0;border-left:' + arrowLen + 'px solid #228B22;border-top:' + arrowHalf + 'px solid transparent;border-bottom:' + arrowHalf + 'px solid transparent;transform:rotate(' + cssAngle + 'deg);"></div>',
-                  iconSize: [iconSz, iconSz],
-                  iconAnchor: [anchorCtr, anchorCtr],
-                }),
-                interactive: false,
-              }).addTo(satelliteGatewayLinesGroup);
-            }.bind(this));
+                // Arrowhead at end — scale proportional to control circle radius
+                var cssAngle = (Math.atan2(dy, dx) * 180) / Math.PI;
+                var arrowLen = Math.round(ctrlRadius * 0.5);
+                var arrowHalf = Math.round(arrowLen * 0.5);
+                var iconSz = Math.round(arrowLen * 1.1);
+                var anchorCtr = Math.round(iconSz / 2);
+                L.marker(endLL, {
+                  icon: L.divIcon({
+                    className: "gateway-arrow-sat",
+                    html:
+                      '<div style="width:0;height:0;border-left:' +
+                      arrowLen +
+                      "px solid #228B22;border-top:" +
+                      arrowHalf +
+                      "px solid transparent;border-bottom:" +
+                      arrowHalf +
+                      "px solid transparent;transform:rotate(" +
+                      cssAngle +
+                      'deg);"></div>',
+                    iconSize: [iconSz, iconSz],
+                    iconAnchor: [anchorCtr, anchorCtr],
+                  }),
+                  interactive: false,
+                }).addTo(satelliteGatewayLinesGroup);
+              }.bind(this),
+            );
           });
         }
 
         function toggleGatewayLines() {
           gatewayLinesVisible = !gatewayLinesVisible;
           if (gatewayLinesVisible) {
-            $("#btnToggleGatewayLines").html('<i class="fa fa-exchange"></i> Hide gateway lines');
-            $("#btnToggleGatewayLines").removeClass("btn-dark").addClass("btn-outline-dark");
+            $("#btnToggleGatewayLines").html(
+              '<i class="fa fa-exchange"></i> Hide gateway lines',
+            );
+            $("#btnToggleGatewayLines")
+              .removeClass("btn-dark")
+              .addClass("btn-outline-dark");
           } else {
-            $("#btnToggleGatewayLines").html('<i class="fa fa-exchange"></i> Show gateway lines');
-            $("#btnToggleGatewayLines").removeClass("btn-outline-dark").addClass("btn-dark");
+            $("#btnToggleGatewayLines").html(
+              '<i class="fa fa-exchange"></i> Show gateway lines',
+            );
+            $("#btnToggleGatewayLines")
+              .removeClass("btn-outline-dark")
+              .addClass("btn-dark");
           }
           // Update orienteering map
           if (orienteeringMap) {
             if (gatewayLinesVisible && gatewayLinesGroup) {
               orienteeringMap.addLayer(gatewayLinesGroup);
-            } else if (!gatewayLinesVisible && gatewayLinesGroup && orienteeringMap.hasLayer(gatewayLinesGroup)) {
+            } else if (
+              !gatewayLinesVisible &&
+              gatewayLinesGroup &&
+              orienteeringMap.hasLayer(gatewayLinesGroup)
+            ) {
               orienteeringMap.removeLayer(gatewayLinesGroup);
             }
           }
@@ -2094,7 +2734,11 @@
           if (satelliteMap) {
             if (gatewayLinesVisible && satelliteGatewayLinesGroup) {
               satelliteMap.addLayer(satelliteGatewayLinesGroup);
-            } else if (!gatewayLinesVisible && satelliteGatewayLinesGroup && satelliteMap.hasLayer(satelliteGatewayLinesGroup)) {
+            } else if (
+              !gatewayLinesVisible &&
+              satelliteGatewayLinesGroup &&
+              satelliteMap.hasLayer(satelliteGatewayLinesGroup)
+            ) {
               satelliteMap.removeLayer(satelliteGatewayLinesGroup);
             }
           }
@@ -2122,14 +2766,30 @@
         var elevationCache = {}; // key -> elevation[] avoids hitting rate limits
 
         // Bounding boxes for Sweden and United Kingdom
-        var swedenBounds = { minLat: 55.3, maxLat: 69.1, minLng: 10.9, maxLng: 24.2 };
-        var ukBounds = { minLat: 49.9, maxLat: 58.7, minLng: -8.2, maxLng: 1.8 };
+        var swedenBounds = {
+          minLat: 55.3,
+          maxLat: 69.1,
+          minLng: 10.9,
+          maxLng: 24.2,
+        };
+        var ukBounds = {
+          minLat: 49.9,
+          maxLat: 58.7,
+          minLng: -8.2,
+          maxLng: 1.8,
+        };
 
         function isInSwedenOrUK(lat, lng) {
-          return (lat >= swedenBounds.minLat && lat <= swedenBounds.maxLat &&
-                  lng >= swedenBounds.minLng && lng <= swedenBounds.maxLng) ||
-                 (lat >= ukBounds.minLat && lat <= ukBounds.maxLat &&
-                  lng >= ukBounds.minLng && lng <= ukBounds.maxLng);
+          return (
+            (lat >= swedenBounds.minLat &&
+              lat <= swedenBounds.maxLat &&
+              lng >= swedenBounds.minLng &&
+              lng <= swedenBounds.maxLng) ||
+            (lat >= ukBounds.minLat &&
+              lat <= ukBounds.maxLat &&
+              lng >= ukBounds.minLng &&
+              lng <= ukBounds.maxLng)
+          );
         }
 
         function fetchOpenElevation(lats, lngs, key, p1, p2) {
@@ -2142,47 +2802,90 @@
             method: "POST",
             contentType: "application/json",
             data: JSON.stringify({ locations: locations }),
-            dataType: "json"
-          }).then(function (data) {
-            if (data && data.results) {
-              var elevations = [];
-              for (var i = 0; i < data.results.length; i++) {
-                elevations.push(data.results[i].elevation);
+            dataType: "json",
+          }).then(
+            function (data) {
+              if (data && data.results) {
+                var elevations = [];
+                for (var i = 0; i < data.results.length; i++) {
+                  elevations.push(data.results[i].elevation);
+                }
+                elevationCache[key] = elevations;
+                heightProfileData = elevations;
+                var hDist = 0;
+                if (p1.distanceTo && p2.distanceTo) hDist = p1.distanceTo(p2);
+                heightProfilePoints = {
+                  p1: p1,
+                  p2: p2,
+                  lats: lats,
+                  lngs: lngs,
+                  dist: hDist,
+                };
+                renderHeightProfile(
+                  (function (v) {
+                    var f = parseFloat(v);
+                    return isNaN(f) ? 2 : f;
+                  })($("#profileHeight1").val()),
+                  (function (v) {
+                    var f = parseFloat(v);
+                    return isNaN(f) ? 2 : f;
+                  })($("#profileHeight2").val()),
+                );
+                showElevationAttribution();
               }
-              elevationCache[key] = elevations;
-              heightProfileData = elevations;
-              var hDist = 0;
-              if (p1.distanceTo && p2.distanceTo) hDist = p1.distanceTo(p2);
-              heightProfilePoints = { p1: p1, p2: p2, lats: lats, lngs: lngs, dist: hDist };
-              renderHeightProfile((function(v){ var f = parseFloat(v); return isNaN(f) ? 2 : f; })($("#profileHeight1").val()), (function(v){ var f = parseFloat(v); return isNaN(f) ? 2 : f; })($("#profileHeight2").val()));
-            }
-            elevationSampling = false;
-          }, function (jqXHR) {
-            elevationSampling = false;
-            var msg = "Could not load elevation data from OpenElevation.";
-            $("#linkBudgetResult").html('<span style="color:red;">' + msg + '</span>');
-            $("#linkBudgetSection").show();
-          });
+              elevationSampling = false;
+            },
+            function (jqXHR) {
+              elevationSampling = false;
+              var msg = "Could not load elevation data from OpenElevation.";
+              $("#linkBudgetResult").html(
+                '<span style="color:red;">' + msg + "</span>",
+              );
+              $("#linkBudgetSection").show();
+            },
+          );
         }
 
         function sampleElevationProfile(p1, p2) {
           if (!p1 || !p2 || !p1.lat || !p1.lng || !p2.lat || !p2.lng) return;
 
           // Check cache first (rounded to ~10m to avoid float mismatches)
-          var key = Math.round(p1.lat * 100000) + ',' + Math.round(p1.lng * 100000) + '-' +
-                    Math.round(p2.lat * 100000) + ',' + Math.round(p2.lng * 100000);
+          var key =
+            Math.round(p1.lat * 100000) +
+            "," +
+            Math.round(p1.lng * 100000) +
+            "-" +
+            Math.round(p2.lat * 100000) +
+            "," +
+            Math.round(p2.lng * 100000);
           if (elevationCache[key]) {
             heightProfileData = elevationCache[key];
             var hDistCached = p1.distanceTo ? p1.distanceTo(p2) : 0;
             var nCached = heightProfileData.length;
-            var cl = [], cg = [];
+            var cl = [],
+              cg = [];
             for (var ci = 0; ci < nCached; ci++) {
               var ct = ci / (nCached - 1);
               cl.push(p1.lat + (p2.lat - p1.lat) * ct);
               cg.push(p1.lng + (p2.lng - p1.lng) * ct);
             }
-            heightProfilePoints = { p1: p1, p2: p2, lats: cl, lngs: cg, dist: hDistCached };
-            renderHeightProfile((function(v){ var f = parseFloat(v); return isNaN(f) ? 2 : f; })($("#profileHeight1").val()), (function(v){ var f = parseFloat(v); return isNaN(f) ? 2 : f; })($("#profileHeight2").val()));
+            heightProfilePoints = {
+              p1: p1,
+              p2: p2,
+              lats: cl,
+              lngs: cg,
+              dist: hDistCached,
+            };
+            renderHeightProfile(
+              (function (v) {
+                var f = parseFloat(v);
+                return isNaN(f) ? 2 : f;
+              })($("#profileHeight1").val()),
+              (function (v) {
+                var f = parseFloat(v);
+                return isNaN(f) ? 2 : f;
+              })($("#profileHeight2").val()),
+            );
             return;
           }
           if (elevationSampling) return; // one request at a time
@@ -2195,7 +2898,8 @@
             // OpenElevation: no rate limit, high resolution
             var n = distM < 4000 ? Math.min(Math.ceil(distM / 4), 1000) : 1000;
             n = Math.max(n, 2); // at least 2 points
-            var lats = [], lngs = [];
+            var lats = [],
+              lngs = [];
             for (var i = 0; i < n; i++) {
               var t = i / (n - 1);
               lats.push(p1.lat + (p2.lat - p1.lat) * t);
@@ -2203,8 +2907,9 @@
             }
             fetchOpenElevation(lats, lngs, key, p1, p2);
           } else {
-            var n = Math.min(distM > 2000 ? 80 : (distM > 400 ? 40 : 25), 100); // fewer points to avoid rate limits
-            var lats = [], lngs = [];
+            var n = Math.min(distM > 2000 ? 80 : distM > 400 ? 40 : 25, 100); // fewer points to avoid rate limits
+            var lats = [],
+              lngs = [];
             for (var i = 0; i < n; i++) {
               var t = i / (n - 1);
               lats.push(p1.lat + (p2.lat - p1.lat) * t);
@@ -2213,25 +2918,51 @@
             var latParam = "latitude=" + lats.join(",");
             var lngParam = "&longitude=" + lngs.join(",");
             $.ajax({
-              url: "https://api.open-meteo.com/v1/elevation?" + latParam + lngParam,
-              dataType: "json"
-            }).then(function (data) {
-              if (data && data.elevation) {
-                elevationCache[key] = data.elevation; // cache for reuse
-                heightProfileData = data.elevation;
-                var hDist = 0;
-                if (p1.distanceTo && p2.distanceTo) hDist = p1.distanceTo(p2);
-                heightProfilePoints = { p1: p1, p2: p2, lats: lats, lngs: lngs, dist: hDist };
-                renderHeightProfile((function(v){ var f = parseFloat(v); return isNaN(f) ? 2 : f; })($("#profileHeight1").val()), (function(v){ var f = parseFloat(v); return isNaN(f) ? 2 : f; })($("#profileHeight2").val()));
-              }
-              elevationSampling = false;
-            }, function (jqXHR) {
-              elevationSampling = false;
-              var msg = "Could not load elevation data.";
-              if (jqXHR.status === 429) msg = "Elevation API rate limit reached. Please wait a moment and try again.";
-              $("#linkBudgetResult").html('<span style="color:red;">' + msg + '</span>');
-              $("#linkBudgetSection").show();
-            });
+              url:
+                "https://api.open-meteo.com/v1/elevation?" +
+                latParam +
+                lngParam,
+              dataType: "json",
+            }).then(
+              function (data) {
+                if (data && data.elevation) {
+                  elevationCache[key] = data.elevation; // cache for reuse
+                  heightProfileData = data.elevation;
+                  var hDist = 0;
+                  if (p1.distanceTo && p2.distanceTo) hDist = p1.distanceTo(p2);
+                  heightProfilePoints = {
+                    p1: p1,
+                    p2: p2,
+                    lats: lats,
+                    lngs: lngs,
+                    dist: hDist,
+                  };
+                  renderHeightProfile(
+                    (function (v) {
+                      var f = parseFloat(v);
+                      return isNaN(f) ? 2 : f;
+                    })($("#profileHeight1").val()),
+                    (function (v) {
+                      var f = parseFloat(v);
+                      return isNaN(f) ? 2 : f;
+                    })($("#profileHeight2").val()),
+                  );
+                  showElevationAttribution();
+                }
+                elevationSampling = false;
+              },
+              function (jqXHR) {
+                elevationSampling = false;
+                var msg = "Could not load elevation data.";
+                if (jqXHR.status === 429)
+                  msg =
+                    "Elevation API rate limit reached. Please wait a moment and try again.";
+                $("#linkBudgetResult").html(
+                  '<span style="color:red;">' + msg + "</span>",
+                );
+                $("#linkBudgetSection").show();
+              },
+            );
           }
         }
 
@@ -2244,8 +2975,8 @@
           // Show section first to get proper dimensions, then render
           $("#heightProfileSection").show();
           var ctx = canvas.getContext("2d");
-          var w = canvas.width = canvas.clientWidth || 800;
-          var h = canvas.height = canvas.clientHeight || 200;
+          var w = (canvas.width = canvas.clientWidth || 800);
+          var h = (canvas.height = canvas.clientHeight || 200);
 
           var pad = { top: 15, right: 20, bottom: 30, left: 50 };
           var plotW = w - pad.left - pad.right;
@@ -2255,8 +2986,10 @@
           var maxEl = Math.max.apply(null, elevations);
 
           // Extend max for markers (ground + marker height)
-          var gnd1 = elevations[0], gnd2 = elevations[n-1];
-          var markerTop1 = gnd1 + h1, markerTop2 = gnd2 + h2;
+          var gnd1 = elevations[0],
+            gnd2 = elevations[n - 1];
+          var markerTop1 = gnd1 + h1,
+            markerTop2 = gnd2 + h2;
           maxEl = Math.max(maxEl, markerTop1, markerTop2);
           minEl = Math.min(minEl, markerTop1, markerTop2);
           var elRange = maxEl - minEl || 1;
@@ -2265,8 +2998,12 @@
           maxEl += elRange * 0.05;
           elRange = maxEl - minEl;
 
-          var toX = function(i) { return pad.left + (i / (n-1)) * plotW; };
-          var toY = function(el) { return pad.top + plotH - ((el - minEl) / elRange) * plotH; };
+          var toX = function (i) {
+            return pad.left + (i / (n - 1)) * plotW;
+          };
+          var toY = function (el) {
+            return pad.top + plotH - ((el - minEl) / elRange) * plotH;
+          };
 
           ctx.clearRect(0, 0, w, h);
 
@@ -2274,7 +3011,7 @@
           ctx.beginPath();
           ctx.moveTo(toX(0), pad.top + plotH);
           for (var i = 0; i < n; i++) ctx.lineTo(toX(i), toY(elevations[i]));
-          ctx.lineTo(toX(n-1), pad.top + plotH);
+          ctx.lineTo(toX(n - 1), pad.top + plotH);
           ctx.closePath();
           var grd = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH);
           grd.addColorStop(0, "#2d6a2d");
@@ -2286,43 +3023,71 @@
           ctx.beginPath();
           ctx.strokeStyle = "#1a4314";
           ctx.lineWidth = 1.5;
-          for (var i = 0; i < n; i++) { i === 0 ? ctx.moveTo(toX(i), toY(elevations[i])) : ctx.lineTo(toX(i), toY(elevations[i])); }
+          for (var i = 0; i < n; i++) {
+            i === 0
+              ? ctx.moveTo(toX(i), toY(elevations[i]))
+              : ctx.lineTo(toX(i), toY(elevations[i]));
+          }
           ctx.stroke();
 
           // P1 marker (blue)
-          var p1x = toX(0), p1gndY = toY(gnd1), p1topY = toY(markerTop1);
+          var p1x = toX(0),
+            p1gndY = toY(gnd1),
+            p1topY = toY(markerTop1);
           ctx.strokeStyle = "#0066CC";
           ctx.lineWidth = 2;
-          ctx.beginPath(); ctx.moveTo(p1x, p1gndY); ctx.lineTo(p1x, p1topY); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(p1x, p1gndY);
+          ctx.lineTo(p1x, p1topY);
+          ctx.stroke();
           // P1 top circle
           ctx.fillStyle = "#0066CC";
-          ctx.beginPath(); ctx.arc(p1x, p1topY, 4, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath();
+          ctx.arc(p1x, p1topY, 4, 0, Math.PI * 2);
+          ctx.fill();
 
           // P2 marker (red)
-          var p2x = toX(n-1), p2gndY = toY(gnd2), p2topY = toY(markerTop2);
+          var p2x = toX(n - 1),
+            p2gndY = toY(gnd2),
+            p2topY = toY(markerTop2);
           ctx.strokeStyle = "#CC0000";
-          ctx.beginPath(); ctx.moveTo(p2x, p2gndY); ctx.lineTo(p2x, p2topY); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(p2x, p2gndY);
+          ctx.lineTo(p2x, p2topY);
+          ctx.stroke();
           ctx.fillStyle = "#CC0000";
-          ctx.beginPath(); ctx.arc(p2x, p2topY, 4, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath();
+          ctx.arc(p2x, p2topY, 4, 0, Math.PI * 2);
+          ctx.fill();
 
           // Line of sight — check if it goes through terrain
           var blocked = false;
-          for (var i = 1; i < n-1; i++) {
-            var t = i / (n-1);
+          for (var i = 1; i < n - 1; i++) {
+            var t = i / (n - 1);
             var losEl = markerTop1 + (markerTop2 - markerTop1) * t;
             // Terrain blocks if its elevation + margin exceeds the LOS elevation
-            if (elevations[i] + 1.0 >= losEl) { blocked = true; break; }
+            if (elevations[i] + 1.0 >= losEl) {
+              blocked = true;
+              break;
+            }
           }
           ctx.strokeStyle = blocked ? "#CC0000" : "#1a6b1a";
           ctx.lineWidth = 2.5;
           ctx.setLineDash([6, 3]);
-          ctx.beginPath(); ctx.moveTo(p1x, p1topY); ctx.lineTo(p2x, p2topY); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(p1x, p1topY);
+          ctx.lineTo(p2x, p2topY);
+          ctx.stroke();
           ctx.setLineDash([]);
 
           // Axes
           ctx.strokeStyle = "#666";
           ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.moveTo(pad.left, pad.top); ctx.lineTo(pad.left, pad.top + plotH); ctx.lineTo(pad.left + plotW, pad.top + plotH); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(pad.left, pad.top);
+          ctx.lineTo(pad.left, pad.top + plotH);
+          ctx.lineTo(pad.left + plotW, pad.top + plotH);
+          ctx.stroke();
 
           // Y axis labels
           ctx.fillStyle = "#333";
@@ -2333,7 +3098,10 @@
             ctx.fillText(el + " m", pad.left - 4, y + 3);
             ctx.setLineDash([2, 4]);
             ctx.strokeStyle = "#ddd";
-            ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + plotW, y); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(pad.left, y);
+            ctx.lineTo(pad.left + plotW, y);
+            ctx.stroke();
             ctx.setLineDash([]);
           }
 
@@ -2343,21 +3111,41 @@
           var totalDist = heightProfilePoints.dist || 0;
           if (totalDist > 0) {
             var dm = Math.round(totalDist);
-            var distStep = dm >= 2000 ? 200 : (dm >= 1000 ? 100 : (dm >= 400 ? 50 : (dm >= 200 ? 20 : 10)));
+            var distStep =
+              dm >= 2000
+                ? 200
+                : dm >= 1000
+                  ? 100
+                  : dm >= 400
+                    ? 50
+                    : dm >= 200
+                      ? 20
+                      : 10;
             ctx.font = "9px sans-serif";
             ctx.textAlign = "center";
             for (var ds = 0; ds <= dm; ds += distStep) {
-              var dlabel = ds >= 1000 ? (ds/1000).toFixed(1) + " km" : ds + " m";
-              var dx = toX(Math.round(ds / dm * (n-1)));
+              var dlabel =
+                ds >= 1000 ? (ds / 1000).toFixed(1) + " km" : ds + " m";
+              var dx = toX(Math.round((ds / dm) * (n - 1)));
               ctx.fillText(dlabel, dx, pad.top + plotH + 14);
               // Small tick mark
               ctx.strokeStyle = "#999";
-              ctx.beginPath(); ctx.moveTo(dx, pad.top + plotH); ctx.lineTo(dx, pad.top + plotH + 4); ctx.stroke();
+              ctx.beginPath();
+              ctx.moveTo(dx, pad.top + plotH);
+              ctx.lineTo(dx, pad.top + plotH + 4);
+              ctx.stroke();
             }
             // Always label the end point
-            ctx.fillText((dm >= 1000 ? (dm/1000).toFixed(1) + " km" : dm + " m"), toX(n-1), pad.top + plotH + 14);
+            ctx.fillText(
+              dm >= 1000 ? (dm / 1000).toFixed(1) + " km" : dm + " m",
+              toX(n - 1),
+              pad.top + plotH + 14,
+            );
             ctx.strokeStyle = "#999";
-            ctx.beginPath(); ctx.moveTo(toX(n-1), pad.top + plotH); ctx.lineTo(toX(n-1), pad.top + plotH + 4); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(toX(n - 1), pad.top + plotH);
+            ctx.lineTo(toX(n - 1), pad.top + plotH + 4);
+            ctx.stroke();
           }
 
           computeLinkBudget();
@@ -2366,23 +3154,38 @@
 
           // Hover/cursor on canvas → show marker on map
           canvas.style.cursor = "crosshair";
-          canvas.onmousemove = function(e) {
+          canvas.onmousemove = function (e) {
             var rect = canvas.getBoundingClientRect();
             var cx = e.clientX - rect.left;
             // Map canvas X to index in the profile data
-            var iFloat = (cx - pad.left) / plotW * (n - 1);
+            var iFloat = ((cx - pad.left) / plotW) * (n - 1);
             var i = Math.round(iFloat);
             i = Math.max(0, Math.min(n - 1, i));
 
-            if (!heightProfilePoints || !heightProfilePoints.lats || !heightProfilePoints.lngs) { console.log("no heightProfilePoints"); return; }
+            if (
+              !heightProfilePoints ||
+              !heightProfilePoints.lats ||
+              !heightProfilePoints.lngs
+            ) {
+              console.log("no heightProfilePoints");
+              return;
+            }
             var lat = heightProfilePoints.lats[i];
             var lng = heightProfilePoints.lngs[i];
             var el = elevations[i];
-            var distAlong = heightProfilePoints.dist ? (i / (n - 1) * heightProfilePoints.dist) : 0;
-            var distText = distAlong >= 1000 ? (distAlong / 1000).toFixed(2) + " km" : Math.round(distAlong) + " m";
+            var distAlong = heightProfilePoints.dist
+              ? (i / (n - 1)) * heightProfilePoints.dist
+              : 0;
+            var distText =
+              distAlong >= 1000
+                ? (distAlong / 1000).toFixed(2) + " km"
+                : Math.round(distAlong) + " m";
 
             var markerPos;
-            if (activeMapType === 'orienteering' && typeof latLngToPixel === 'function') {
+            if (
+              activeMapType === "orienteering" &&
+              typeof latLngToPixel === "function"
+            ) {
               var px = latLngToPixel(lat, lng);
               // CRS.Simple: L.latLng(lat, lng) where lat=mapX(Y), lng=mapY(X)
               if (px) markerPos = L.latLng(px.mapX, px.mapY);
@@ -2392,11 +3195,20 @@
             if (!markerPos) return;
 
             // Ensure marker is on the active map
-            var targetMap = activeMapType === 'orienteering' ? orienteeringMap : satelliteMap;
-            if (!targetMap) { console.log("no targetMap, activeMapType=" + activeMapType); return; }
+            var targetMap =
+              activeMapType === "orienteering" ? orienteeringMap : satelliteMap;
+            if (!targetMap) {
+              console.log("no targetMap, activeMapType=" + activeMapType);
+              return;
+            }
 
             if (!profileMapMarker) {
-              console.log("creating marker at", markerPos, "on map", activeMapType);
+              console.log(
+                "creating marker at",
+                markerPos,
+                "on map",
+                activeMapType,
+              );
               profileMapMarker = L.circleMarker(markerPos, {
                 radius: 8,
                 color: "#FF6600",
@@ -2404,38 +3216,103 @@
                 fillColor: "#FF6600",
                 fillOpacity: 0.6,
                 weight: 3,
-                interactive: false
+                interactive: false,
               }).addTo(targetMap);
-              profileMapMarker.bindTooltip(distText + " / " + Math.round(el) + " m", {
-                permanent: true,
-                direction: "top",
-                className: "profile-map-tooltip"
-              });
+              profileMapMarker.bindTooltip(
+                distText + " / " + Math.round(el) + " m",
+                {
+                  permanent: true,
+                  direction: "top",
+                  className: "profile-map-tooltip",
+                },
+              );
             } else {
               // If marker is on wrong map, remove and re-add
               if (profileMapMarker._map !== targetMap) {
-                if (profileMapMarker._map) profileMapMarker._map.removeLayer(profileMapMarker);
+                if (profileMapMarker._map)
+                  profileMapMarker._map.removeLayer(profileMapMarker);
                 profileMapMarker.addTo(targetMap);
               }
               profileMapMarker.setLatLng(markerPos);
-              profileMapMarker.setTooltipContent(distText + " / " + Math.round(el) + " m");
+              profileMapMarker.setTooltipContent(
+                distText + " / " + Math.round(el) + " m",
+              );
+            }
+
+            // 3D terrain marker — move sphere along the LOS line
+            if (terrain3dScene && terrain3dMesh && terrain3dMapParams) {
+              var p3 = terrain3dMapParams;
+              var h1p = parseFloat($("#profileHeight1").val());
+              if (isNaN(h1p)) h1p = 2;
+              var h2p = parseFloat($("#profileHeight2").val());
+              if (isNaN(h2p)) h2p = 2;
+              var h1ps = h1p * p3.elScale;
+              var h2ps = h2p * p3.elScale;
+              var nPts = heightProfileData.length;
+              var t = i / (nPts - 1);
+              // P1 and P2 in 3D space
+              var gnd1p = heightProfileData[0];
+              var gndNp = heightProfileData[nPts - 1];
+              var lat1p = heightProfilePoints.lats[0];
+              var lng1p = heightProfilePoints.lngs[0];
+              var latNp = heightProfilePoints.lats[nPts - 1];
+              var lngNp = heightProfilePoints.lngs[nPts - 1];
+              var tx1 = -(
+                ((lng1p - p3.lngMin) / (p3.lngMax - p3.lngMin)) * p3.w3d -
+                p3.w3d / 2
+              );
+              var tz1 =
+                ((lat1p - p3.latMin) / (p3.latMax - p3.latMin)) * p3.h3d -
+                p3.h3d / 2;
+              var ty1 = (gnd1p - p3.elMin) * p3.elScale + h1ps;
+              var tx2 = -(
+                ((lngNp - p3.lngMin) / (p3.lngMax - p3.lngMin)) * p3.w3d -
+                p3.w3d / 2
+              );
+              var tz2 =
+                ((latNp - p3.latMin) / (p3.latMax - p3.latMin)) * p3.h3d -
+                p3.h3d / 2;
+              var ty2 = (gndNp - p3.elMin) * p3.elScale + h2ps;
+              var lx = tx1 + (tx2 - tx1) * t;
+              var ly = ty1 + (ty2 - ty1) * t;
+              var lz = tz1 + (tz2 - tz1) * t;
+
+              if (!profile3dMarker) {
+                var sGeo = new THREE.SphereGeometry(3, 8, 8);
+                var sMat = new THREE.MeshBasicMaterial({ color: 0xff6600 });
+                profile3dMarker = new THREE.Mesh(sGeo, sMat);
+                terrain3dScene.add(profile3dMarker);
+              }
+              profile3dMarker.position.set(lx, ly, lz);
             }
           };
 
-          canvas.onmouseleave = function() {
+          canvas.onmouseleave = function () {
             if (profileMapMarker) {
-              var targetMap = activeMapType === 'orienteering' ? orienteeringMap : satelliteMap;
+              var targetMap =
+                activeMapType === "orienteering"
+                  ? orienteeringMap
+                  : satelliteMap;
               if (targetMap && profileMapMarker._map === targetMap) {
                 targetMap.removeLayer(profileMapMarker);
               }
               profileMapMarker = null;
+            }
+            if (profile3dMarker && terrain3dScene) {
+              terrain3dScene.remove(profile3dMarker);
+              profile3dMarker.geometry.dispose();
+              profile3dMarker.material.dispose();
+              profile3dMarker = null;
             }
           };
         }
 
         // === Simplified Longley-Rice ITM link budget ===
         function computeLinkBudget() {
-          if (!heightProfileData || !heightProfilePoints) { $("#linkBudgetSection").hide(); return; }
+          if (!heightProfileData || !heightProfilePoints) {
+            $("#linkBudgetSection").hide();
+            return;
+          }
           var elevations = heightProfileData;
           var n = elevations.length;
           var distM = heightProfilePoints.dist || 0;
@@ -2447,24 +3324,36 @@
           var txPower = parseFloat($("#linkTxPower").val()) || 22;
           var txGain = parseFloat($("#linkTxGain").val()) || 0;
           var rxGain = parseFloat($("#linkRxGain").val()) || 0;
-          var rxSens = parseFloat($("#linkRxSens").val()) || parseFloat($("#linkRxSensCustom").val()) || -110;
-          var gnd1 = elevations[0], gnd2 = elevations[n-1];
-          var antenna1h = gnd1 + h1, antenna2h = gnd2 + h2;
+          var rxSens =
+            parseFloat($("#linkRxSens").val()) ||
+            parseFloat($("#linkRxSensCustom").val()) ||
+            -110;
+          var gnd1 = elevations[0],
+            gnd2 = elevations[n - 1];
+          var antenna1h = gnd1 + h1,
+            antenna2h = gnd2 + h2;
           var wavelength = 300 / freq; // meters
           var dkm = distM / 1000;
 
           // Free-space path loss
-          var FSPL = 32.45 + 20 * Math.log10(freq) + 20 * Math.log10(Math.max(dkm, 0.001));
+          var FSPL =
+            32.45 +
+            20 * Math.log10(freq) +
+            20 * Math.log10(Math.max(dkm, 0.001));
 
           // Effective Earth radius (k=4/3) and curvature function
           var k = 4 / 3;
           var Re = 6371e3 * k;
-          function earthCurveHeight(distFromEnd, totalDist, Re_curv) { var d1 = distFromEnd; var d2 = totalDist - distFromEnd; return (d1 * d2) / (2 * Re_curv); }
+          function earthCurveHeight(distFromEnd, totalDist, Re_curv) {
+            var d1 = distFromEnd;
+            var d2 = totalDist - distFromEnd;
+            return (d1 * d2) / (2 * Re_curv);
+          }
 
           var losBlocked = false;
           var maxClearanceRatio = 0;
-          for (var i = 1; i < n-1; i++) {
-            var t = i / (n-1);
+          for (var i = 1; i < n - 1; i++) {
+            var t = i / (n - 1);
             var losEl = antenna1h + (antenna2h - antenna1h) * t;
             var curveEl = earthCurveHeight(t * distM, distM, Re);
             var effectiveTerrain = elevations[i] + curveEl;
@@ -2487,18 +3376,25 @@
             // Diffraction loss (Epstein-Peterson)
             diffLoss = 0;
             var worstClearance = 0;
-            for (var j = 1; j < n-1; j++) {
-              var t2 = j / (n-1);
+            for (var j = 1; j < n - 1; j++) {
+              var t2 = j / (n - 1);
               var losEl2 = antenna1h + (antenna2h - antenna1h) * t2;
               var curveEl2 = earthCurveHeight(t2 * distM, distM, Re);
-              var cl = (elevations[j] + curveEl2) - losEl2; // positive = terrain+curvature above LOS
+              var cl = elevations[j] + curveEl2 - losEl2; // positive = terrain+curvature above LOS
               if (cl > worstClearance) worstClearance = cl;
             }
             if (worstClearance > 0) {
               // Knife-edge diffraction for each obstruction above LOS
-              var v = worstClearance * Math.sqrt(2 * distM / (wavelength * (distM/2) * (distM/2)));
+              var v =
+                worstClearance *
+                Math.sqrt(
+                  (2 * distM) / (wavelength * (distM / 2) * (distM / 2)),
+                );
               if (v > -0.7) {
-                diffLoss = 6.9 + 20 * Math.log10(Math.sqrt((v - 0.1) * (v - 0.1) + 1) + v - 0.1);
+                diffLoss =
+                  6.9 +
+                  20 *
+                    Math.log10(Math.sqrt((v - 0.1) * (v - 0.1) + 1) + v - 0.1);
               }
               totalLoss += Math.max(0, diffLoss);
             }
@@ -2510,10 +3406,16 @@
           }
 
           // Troposcatter beyond radio horizon
-          var horizonDist = Math.sqrt(2 * Re) * (Math.sqrt(antenna1h) + Math.sqrt(antenna2h));
+          var horizonDist =
+            Math.sqrt(2 * Re) * (Math.sqrt(antenna1h) + Math.sqrt(antenna2h));
           if (distM > horizonDist) {
             var scatterDist = Math.max(distM - horizonDist, 1);
-            var scatterLoss = FSPL + 114.4 - 0.8 - 0.1 * (antenna1h + antenna2h) + 10 * Math.log10(scatterDist / 1000);
+            var scatterLoss =
+              FSPL +
+              114.4 -
+              0.8 -
+              0.1 * (antenna1h + antenna2h) +
+              10 * Math.log10(scatterDist / 1000);
             if (scatterLoss < totalLoss) {
               totalLoss = scatterLoss;
               modeDesc = "Troposcatter";
@@ -2532,101 +3434,229 @@
             return k * Math.pow(fGHz, 0.3) * Math.pow(depthMeters, 0.6);
           }
 
-          var folMetersSender = 0, folMetersReceiver = 0;
-          var origInterval = distM / (n-1);
+          var folMetersSender = 0,
+            folMetersReceiver = 0;
+          var origInterval = distM / (n - 1);
           var fineInterval = Math.min(origInterval, 1); // sample every meter for accuracy
           // Near sender: step in 5m increments up to 100m from sender
           var maxDistSender = Math.min(distM / 2, 100);
           for (var sd = fineInterval; sd <= maxDistSender; sd += fineInterval) {
             var t3 = sd / distM;
-            var idx = Math.round(t3 * (n-1));
+            var idx = Math.round(t3 * (n - 1));
             if (idx < 0 || idx >= n) continue;
             var losEl3 = antenna1h + (antenna2h - antenna1h) * t3;
             var groundToLos = losEl3 - elevations[idx];
-            if (groundToLos >= 0 && groundToLos < 15) folMetersSender += fineInterval;
+            if (groundToLos >= 0 && groundToLos < 15)
+              folMetersSender += fineInterval;
           }
           // Near receiver: step from receiver backward up to 100m (or halfway)
           var maxDistReceiver = Math.min(distM / 2, 100);
-          for (var rd = fineInterval; rd <= maxDistReceiver; rd += fineInterval) {
+          for (
+            var rd = fineInterval;
+            rd <= maxDistReceiver;
+            rd += fineInterval
+          ) {
             var distFromSender = distM - rd;
             var t4 = distFromSender / distM;
-            var idx2 = Math.round(t4 * (n-1));
+            var idx2 = Math.round(t4 * (n - 1));
             if (idx2 < 0 || idx2 >= n) continue;
             var losEl4 = antenna1h + (antenna2h - antenna1h) * t4;
             var groundToLos2 = losEl4 - elevations[idx2];
-            if (groundToLos2 >= 0 && groundToLos2 < 15) folMetersReceiver += fineInterval;
+            if (groundToLos2 >= 0 && groundToLos2 < 15)
+              folMetersReceiver += fineInterval;
           }
 
           function endpointForestPenalty(density) {
             switch (density) {
-              case "light": return 3;
-              case "medium": return 8;
-              case "dense": return 15;
-              default: return 8;
+              case "light":
+                return 3;
+              case "medium":
+                return 8;
+              case "dense":
+                return 15;
+              default:
+                return 8;
             }
           }
 
           var vegDensSender = $("#linkVegDensSender").val();
           var vegDensReceiver = $("#linkVegDensReceiver").val();
-          var vegLossSender = vegetationLoss(freq, folMetersSender, vegDensSender);
-          var vegLossReceiver = vegetationLoss(freq, folMetersReceiver, vegDensReceiver);
-          var forestPenaltySender = 0, forestPenaltyReceiver = 0;
-          if ($("#linkForestSender").is(":checked")) forestPenaltySender = endpointForestPenalty(vegDensSender);
-          if ($("#linkForestReceiver").is(":checked")) forestPenaltyReceiver = endpointForestPenalty(vegDensReceiver);
+          var vegLossSender = vegetationLoss(
+            freq,
+            folMetersSender,
+            vegDensSender,
+          );
+          var vegLossReceiver = vegetationLoss(
+            freq,
+            folMetersReceiver,
+            vegDensReceiver,
+          );
+          var forestPenaltySender = 0,
+            forestPenaltyReceiver = 0;
+          if ($("#linkForestSender").is(":checked"))
+            forestPenaltySender = endpointForestPenalty(vegDensSender);
+          if ($("#linkForestReceiver").is(":checked"))
+            forestPenaltyReceiver = endpointForestPenalty(vegDensReceiver);
           var fadeMargin = 15; // dB, typical for Swedish forest
-          totalLoss += vegLossSender + vegLossReceiver + forestPenaltySender + forestPenaltyReceiver + fadeMargin;
+          totalLoss +=
+            vegLossSender +
+            vegLossReceiver +
+            forestPenaltySender +
+            forestPenaltyReceiver +
+            fadeMargin;
 
           var rxp = txPower + txGain + rxGain - totalLoss;
           var margin = rxp - rxSens;
-          var statusColor = margin >= 20 ? "green" : (margin >= 10 ? "orange" : "red");
-          var statusText = margin >= 20 ? "GOOD" : (margin >= 10 ? "MARGINAL" : "POOR");
+          var statusColor =
+            margin >= 20 ? "green" : margin >= 10 ? "orange" : "red";
+          var statusText =
+            margin >= 20 ? "GOOD" : margin >= 10 ? "MARGINAL" : "POOR";
 
           // Build detailed breakdown for popup
-          var breakdownHtml = '<div style="font-size:12px; line-height:1.6;">'
-            + '<b>Link Budget Breakdown</b><br/>'
-            + '<table style="width:100%; font-size:12px;">'
-            + '<tr><td>Distance:</td><td><b>' + Math.round(distM) + ' m (' + dkm.toFixed(2) + ' km)</b></td></tr>'
-            + '<tr><td>Frequency:</td><td>' + freq + ' MHz (λ=' + wavelength.toFixed(2) + ' m)</td></tr>'
-            + '<tr><td colspan="2"><hr style="margin:4px 0;"/></td></tr>'
-            + '<tr><td>TX Power:</td><td>+' + txPower + ' dBm</td></tr>'
-            + '<tr><td>TX Antenna Gain:</td><td>+' + txGain + ' dBi</td></tr>'
-            + '<tr><td>RX Antenna Gain:</td><td>+' + rxGain + ' dBi</td></tr>'
-            + '<tr><td colspan="2"><hr style="margin:4px 0;"/></td></tr>'
-            + '<tr><td>Free Space Path Loss:</td><td>' + FSPL.toFixed(1) + ' dB</td></tr>';
-          if (diffLoss > 0) breakdownHtml += '<tr><td>Diffraction Loss:</td><td style="color:red;">+' + diffLoss.toFixed(1) + ' dB</td></tr>';
-          if (maxClearanceRatio < 0.6) breakdownHtml += '<tr><td>Near-LOS Loss:</td><td>+' + ((0.6 - maxClearanceRatio) * 10).toFixed(1) + ' dB</td></tr>';
-          breakdownHtml += '<tr><td style="color:#888;">  Total (FSPL+extras):</td><td style="color:#888;">' + Math.round(totalLoss - 2 - 3 - vegLossSender - vegLossReceiver - forestPenaltySender - forestPenaltyReceiver - fadeMargin) + ' dB</td></tr>'
-            + '<tr><td colspan="2"><hr style="margin:4px 0;"/></td></tr>'
-            + '<tr><td>Sender module loss:</td><td>+2 dB</td></tr>'
-            + '<tr><td>WiRoc board noise:</td><td>+3 dB</td></tr>'
-            + '<tr><td>Fade margin (Swedish forest):</td><td>+15 dB</td></tr>';
-          if (vegLossSender > 0) breakdownHtml += '<tr><td>Veg. loss sender (' + vegDensSender + ', ' + Math.round(folMetersSender) + ' m):</td><td>+' + vegLossSender.toFixed(1) + ' dB</td></tr>';
-          if (vegLossReceiver > 0) breakdownHtml += '<tr><td>Veg. loss receiver (' + vegDensReceiver + ', ' + Math.round(folMetersReceiver) + ' m):</td><td>+' + vegLossReceiver.toFixed(1) + ' dB</td></tr>';
-          if (forestPenaltySender > 0) breakdownHtml += '<tr><td>Forest penalty sender (' + vegDensSender + '):</td><td>+' + forestPenaltySender + ' dB</td></tr>';
-          if (forestPenaltyReceiver > 0) breakdownHtml += '<tr><td>Forest penalty receiver (' + vegDensReceiver + '):</td><td>+' + forestPenaltyReceiver + ' dB</td></tr>';
-          breakdownHtml += '<tr><td colspan="2"><hr style="margin:4px 0;"/></td></tr>'
-            + '<tr><td><b>Total Path Loss:</b></td><td><b>' + Math.round(totalLoss) + ' dB</b></td></tr>'
-            + '<tr><td><b>Received Signal:</b></td><td><b>' + Math.round(rxp) + ' dBm</b></td></tr>'
-            + '<tr><td>Receiver Sensitivity:</td><td>' + rxSens + ' dBm</td></tr>'
-            + '<tr><td><b>Link Margin:</b></td><td><b style="color:' + statusColor + '">' + Math.round(margin) + ' dB</b></td></tr>'
-            + '<tr><td>Propagation Mode:</td><td>' + modeDesc + '</td></tr>'
-            + '<tr><td><b>Status:</b></td><td><b style="color:' + statusColor + '">' + statusText + '</b></td></tr>'
-            + '</table></div>';
+          var breakdownHtml =
+            '<div style="font-size:12px; line-height:1.6;">' +
+            "<b>Link Budget Breakdown</b><br/>" +
+            '<table style="width:100%; font-size:12px;">' +
+            "<tr><td>Distance:</td><td><b>" +
+            Math.round(distM) +
+            " m (" +
+            dkm.toFixed(2) +
+            " km)</b></td></tr>" +
+            "<tr><td>Frequency:</td><td>" +
+            freq +
+            " MHz (λ=" +
+            wavelength.toFixed(2) +
+            " m)</td></tr>" +
+            '<tr><td colspan="2"><hr style="margin:4px 0;"/></td></tr>' +
+            "<tr><td>TX Power:</td><td>+" +
+            txPower +
+            " dBm</td></tr>" +
+            "<tr><td>TX Antenna Gain:</td><td>+" +
+            txGain +
+            " dBi</td></tr>" +
+            "<tr><td>RX Antenna Gain:</td><td>+" +
+            rxGain +
+            " dBi</td></tr>" +
+            '<tr><td colspan="2"><hr style="margin:4px 0;"/></td></tr>' +
+            "<tr><td>Free Space Path Loss:</td><td>" +
+            FSPL.toFixed(1) +
+            " dB</td></tr>";
+          if (diffLoss > 0)
+            breakdownHtml +=
+              '<tr><td>Diffraction Loss:</td><td style="color:red;">+' +
+              diffLoss.toFixed(1) +
+              " dB</td></tr>";
+          if (maxClearanceRatio < 0.6)
+            breakdownHtml +=
+              "<tr><td>Near-LOS Loss:</td><td>+" +
+              ((0.6 - maxClearanceRatio) * 10).toFixed(1) +
+              " dB</td></tr>";
+          breakdownHtml +=
+            '<tr><td style="color:#888;">  Total (FSPL+extras):</td><td style="color:#888;">' +
+            Math.round(
+              totalLoss -
+                2 -
+                3 -
+                vegLossSender -
+                vegLossReceiver -
+                forestPenaltySender -
+                forestPenaltyReceiver -
+                fadeMargin,
+            ) +
+            " dB</td></tr>" +
+            '<tr><td colspan="2"><hr style="margin:4px 0;"/></td></tr>' +
+            "<tr><td>Sender module loss:</td><td>+2 dB</td></tr>" +
+            "<tr><td>WiRoc board noise:</td><td>+3 dB</td></tr>" +
+            "<tr><td>Fade margin (Swedish forest):</td><td>+15 dB</td></tr>";
+          if (vegLossSender > 0)
+            breakdownHtml +=
+              "<tr><td>Veg. loss sender (" +
+              vegDensSender +
+              ", " +
+              Math.round(folMetersSender) +
+              " m):</td><td>+" +
+              vegLossSender.toFixed(1) +
+              " dB</td></tr>";
+          if (vegLossReceiver > 0)
+            breakdownHtml +=
+              "<tr><td>Veg. loss receiver (" +
+              vegDensReceiver +
+              ", " +
+              Math.round(folMetersReceiver) +
+              " m):</td><td>+" +
+              vegLossReceiver.toFixed(1) +
+              " dB</td></tr>";
+          if (forestPenaltySender > 0)
+            breakdownHtml +=
+              "<tr><td>Forest penalty sender (" +
+              vegDensSender +
+              "):</td><td>+" +
+              forestPenaltySender +
+              " dB</td></tr>";
+          if (forestPenaltyReceiver > 0)
+            breakdownHtml +=
+              "<tr><td>Forest penalty receiver (" +
+              vegDensReceiver +
+              "):</td><td>+" +
+              forestPenaltyReceiver +
+              " dB</td></tr>";
+          breakdownHtml +=
+            '<tr><td colspan="2"><hr style="margin:4px 0;"/></td></tr>' +
+            "<tr><td><b>Total Path Loss:</b></td><td><b>" +
+            Math.round(totalLoss) +
+            " dB</b></td></tr>" +
+            "<tr><td><b>Received Signal:</b></td><td><b>" +
+            Math.round(rxp) +
+            " dBm</b></td></tr>" +
+            "<tr><td>Receiver Sensitivity:</td><td>" +
+            rxSens +
+            " dBm</td></tr>" +
+            '<tr><td><b>Link Margin:</b></td><td><b style="color:' +
+            statusColor +
+            '">' +
+            Math.round(margin) +
+            " dB</b></td></tr>" +
+            "<tr><td>Propagation Mode:</td><td>" +
+            modeDesc +
+            "</td></tr>" +
+            '<tr><td><b>Status:</b></td><td><b style="color:' +
+            statusColor +
+            '">' +
+            statusText +
+            "</b></td></tr>" +
+            "</table></div>";
 
-          var resultHtml = '<span style="color:#333;cursor:pointer;" id="linkBudgetLink">Loss: <b>' + Math.round(totalLoss) + ' dB</b> | '
-            + 'RX: <b>' + Math.round(rxp) + ' dBm</b> | '
-            + 'Margin: <b style="color:' + statusColor + '">' + Math.round(margin) + ' dB</b> | '
-            + 'Mode: <b>' + modeDesc + '</b> | '
-            + 'Status: <b style="color:' + statusColor + '">' + statusText + '</b> &nbsp; <i class="fa fa-info-circle"></i></span>';
+          var resultHtml =
+            '<span style="color:#333;cursor:pointer;" id="linkBudgetLink">Loss: <b>' +
+            Math.round(totalLoss) +
+            " dB</b> | " +
+            "RX: <b>" +
+            Math.round(rxp) +
+            " dBm</b> | " +
+            'Margin: <b style="color:' +
+            statusColor +
+            '">' +
+            Math.round(margin) +
+            " dB</b> | " +
+            "Mode: <b>" +
+            modeDesc +
+            "</b> | " +
+            'Status: <b style="color:' +
+            statusColor +
+            '">' +
+            statusText +
+            '</b> &nbsp; <i class="fa fa-info-circle"></i></span>';
           $("#linkBudgetResult").html(resultHtml);
           $("#linkBudgetSection").show();
           $("#linkBudgetBreakdown").html(breakdownHtml);
           $("#linkBudgetBreakdown").hide();
 
           // Click to toggle breakdown panel
-          $("#linkBudgetLink").off("click").on("click", function () {
-            $("#linkBudgetBreakdown").toggle();
-          });
+          $("#linkBudgetLink")
+            .off("click")
+            .on("click", function () {
+              $("#linkBudgetBreakdown").toggle();
+            });
         }
 
         function renderScaleBar() {
@@ -2714,15 +3744,15 @@
 
         function setGroupInteractive(group, interactive) {
           if (!group) return;
-          group.eachLayer(function(layer) {
+          group.eachLayer(function (layer) {
             if (layer.setInteractive) layer.setInteractive(interactive);
             // Force cursor on the DOM element and all its children
             var el = layer.getElement ? layer.getElement() : null;
             if (el) {
-              el.style.cursor = interactive ? '' : 'crosshair';
-              var children = el.querySelectorAll('*');
+              el.style.cursor = interactive ? "" : "crosshair";
+              var children = el.querySelectorAll("*");
               for (var j = 0; j < children.length; j++) {
-                children[j].style.cursor = interactive ? '' : 'crosshair';
+                children[j].style.cursor = interactive ? "" : "crosshair";
               }
             }
             // Suppress popups during measuring — store content to rebind later
@@ -2747,7 +3777,7 @@
           var container = map.getContainer();
           if (container) container.style.cursor = cursor;
           // Also force cursor on all panes (overlayPane, markerPane, etc.)
-          var panes = container.querySelectorAll('.leaflet-pane');
+          var panes = container.querySelectorAll(".leaflet-pane");
           for (var i = 0; i < panes.length; i++) {
             panes[i].style.cursor = cursor;
           }
@@ -2759,11 +3789,19 @@
           // Measuring and unlocked dragging are mutually exclusive — lock controls
           if (!controlsLocked) {
             controlsLocked = true;
-            $("#btnLockControls").html('<i class="fa fa-lock"></i> Unlock controls');
-            $("#btnLockControls").removeClass("btn-dark").addClass("btn-outline-dark");
+            $("#btnLockControls").html(
+              '<i class="fa fa-lock"></i> Unlock controls',
+            );
+            $("#btnLockControls")
+              .removeClass("btn-dark")
+              .addClass("btn-outline-dark");
             // Re-render to remove drag markers
-            if (orienteeringMap && mapImgWidth > 0) placeControlsOnMap(mapImgWidth, mapImgHeight);
-            if (georefPoints.p1Lat) setTimeout(function() { placeControlsOnSatelliteMap(mapImgWidth, mapImgHeight); }, 300);
+            if (orienteeringMap && mapImgWidth > 0)
+              placeControlsOnMap(mapImgWidth, mapImgHeight);
+            if (georefPoints.p1Lat)
+              setTimeout(function () {
+                placeControlsOnSatelliteMap(mapImgWidth, mapImgHeight);
+              }, 300);
           }
           // Don't force orienteering — let user measure on whichever map is active
           measuringMode = true;
@@ -2782,18 +3820,52 @@
           // Force crosshair cursor on both map containers and all panes
           setMapCursor(orienteeringMap, "crosshair");
           setMapCursor(satelliteMap, "crosshair");
-          if (orienteeringMap) orienteeringMap.getContainer().classList.add("measuring-mode");
-          if (satelliteMap) satelliteMap.getContainer().classList.add("measuring-mode");
+          if (orienteeringMap)
+            orienteeringMap.getContainer().classList.add("measuring-mode");
+          if (satelliteMap)
+            satelliteMap.getContainer().classList.add("measuring-mode");
         }
 
         // Convert world lat/lng to map-specific coordinates
         function worldToMapPos(map, lat, lng) {
           if (map === satelliteMap) return L.latLng(lat, lng);
-          if (map === orienteeringMap && typeof latLngToPixel === 'function') {
+          if (map === orienteeringMap && typeof latLngToPixel === "function") {
             var px = latLngToPixel(lat, lng);
             if (px) return L.latLng(px.mapX, px.mapY); // CRS.Simple: lat=mapX(Y), lng=mapY(X)
           }
           return null;
+        }
+
+        // Check if a lat/lng is in Sweden (not UK)
+        function isInSweden(lat, lng) {
+          return (
+            lat >= swedenBounds.minLat &&
+            lat <= swedenBounds.maxLat &&
+            lng >= swedenBounds.minLng &&
+            lng <= swedenBounds.maxLng
+          );
+        }
+
+        function showElevationAttribution() {
+          if (
+            heightProfilePoints &&
+            heightProfilePoints.lats &&
+            heightProfilePoints.lats.length > 0
+          ) {
+            var midLat =
+              heightProfilePoints.lats[
+                Math.floor(heightProfilePoints.lats.length / 2)
+              ];
+            var midLng =
+              heightProfilePoints.lngs[
+                Math.floor(heightProfilePoints.lngs.length / 2)
+              ];
+            if (isInSweden(midLat, midLng)) {
+              $("#elevationAttribution").show();
+              return;
+            }
+          }
+          $("#elevationAttribution").hide();
         }
 
         // Draw measurement on a single map
@@ -2804,25 +3876,54 @@
           var pos2 = worldToMapPos(map, latlng2.lat, latlng2.lng);
           if (!pos1 || !pos2) return;
 
-          var m1 = L.circle(pos1, { radius: 5, color: "#0066CC", fill: true, fillColor: "#0066CC", fillOpacity: 1, weight: 2, interactive: false }).addTo(map);
+          var m1 = L.circle(pos1, {
+            radius: 5,
+            color: "#0066CC",
+            fill: true,
+            fillColor: "#0066CC",
+            fillOpacity: 1,
+            weight: 2,
+            interactive: false,
+          }).addTo(map);
           markerArray.push(m1);
-          var m2 = L.circle(pos2, { radius: 5, color: "#CC0000", fill: true, fillColor: "#CC0000", fillOpacity: 1, weight: 2, interactive: false }).addTo(map);
+          var m2 = L.circle(pos2, {
+            radius: 5,
+            color: "#CC0000",
+            fill: true,
+            fillColor: "#CC0000",
+            fillOpacity: 1,
+            weight: 2,
+            interactive: false,
+          }).addTo(map);
           markerArray.push(m2);
-          var dline = L.polyline([pos1, pos2], { color: "#000", weight: 2, interactive: false }).addTo(map);
+          var dline = L.polyline([pos1, pos2], {
+            color: "#000",
+            weight: 2,
+            interactive: false,
+          }).addTo(map);
           markerArray.push(dline);
 
           // Distance label
           var meters = null;
-          if (latlng1.lat != null && latlng2.lat != null && typeof latlng1.distanceTo === 'function') {
+          if (
+            latlng1.lat != null &&
+            latlng2.lat != null &&
+            typeof latlng1.distanceTo === "function"
+          ) {
             meters = latlng1.distanceTo(latlng2);
           }
           var distText = meters
-            ? (meters >= 1000 ? (meters / 1000).toFixed(2) + " km" : Math.round(meters) + " m")
+            ? meters >= 1000
+              ? (meters / 1000).toFixed(2) + " km"
+              : Math.round(meters) + " m"
             : "?";
           var label = L.marker(pos2, {
             icon: L.divIcon({
               className: "meas-distance-label",
-              html: '<div style="background:#fff; border:1px solid #333; border-radius:3px; padding:3px 7px; font-size:24px; font-weight:bold; white-space:nowrap; color:#333; display:inline-block;">' + distText + '</div>',
+              html:
+                '<div style="background:#fff; border:1px solid #333; border-radius:3px; padding:3px 7px; font-size:24px; font-weight:bold; white-space:nowrap; color:#333; display:inline-block;">' +
+                distText +
+                "</div>",
               iconSize: [200, 50],
               iconAnchor: [-20, 5],
             }),
@@ -2857,7 +3958,8 @@
           drawMeasOnMap(map, measMarkers, p1, p2);
           // Also draw on the other map
           if (georefPoints.p1Lat) {
-            var otherMap = (map === orienteeringMap) ? satelliteMap : orienteeringMap;
+            var otherMap =
+              map === orienteeringMap ? satelliteMap : orienteeringMap;
             drawMeasOnMap(otherMap, measMarkers2, p1, p2);
           }
         }
@@ -2871,8 +3973,10 @@
           if (hasEditAccess) $("#btnLockControls").prop("disabled", false);
           setMapCursor(orienteeringMap, "");
           setMapCursor(satelliteMap, "");
-          if (orienteeringMap) orienteeringMap.getContainer().classList.remove("measuring-mode");
-          if (satelliteMap) satelliteMap.getContainer().classList.remove("measuring-mode");
+          if (orienteeringMap)
+            orienteeringMap.getContainer().classList.remove("measuring-mode");
+          if (satelliteMap)
+            satelliteMap.getContainer().classList.remove("measuring-mode");
           setGroupInteractive(controlGroup, true);
           setGroupInteractive(satelliteControlGroup, true);
           setGroupInteractive(gatewayLinesGroup, true);
@@ -2890,9 +3994,16 @@
             mapInstance.removeLayer(profileMapMarker);
             profileMapMarker = null;
           }
+          if (profile3dMarker && terrain3dScene) {
+            terrain3dScene.remove(profile3dMarker);
+            profile3dMarker.geometry.dispose();
+            profile3dMarker.material.dispose();
+            profile3dMarker = null;
+          }
           clearMeasMarkers();
           // Clear 3D measurement line
           clearTerrainMeasLine();
+          $("#elevationAttribution").hide();
           // Clear height profile
           heightProfileData = null;
           heightProfilePoints = null;
@@ -2913,9 +4024,9 @@
 
           // Convert click to real-world lat/lng
           var worldPos;
-          if (activeMapType === 'satellite') {
+          if (activeMapType === "satellite") {
             worldPos = pos; // already L.latLng
-          } else if (activeMapType === 'orienteering' && georefPoints.p1Lat) {
+          } else if (activeMapType === "orienteering" && georefPoints.p1Lat) {
             var ll = pixelToLatLng(pos.lng, pos.lat);
             worldPos = ll ? L.latLng(ll.lat, ll.lng) : null;
           } else {
@@ -2927,7 +4038,12 @@
             // First point
             measP1World = worldPos;
             // Draw single blue dot on both maps
-            drawMeasOnMap(orienteeringMap, measMarkers, measP1World, measP1World);
+            drawMeasOnMap(
+              orienteeringMap,
+              measMarkers,
+              measP1World,
+              measP1World,
+            );
             clearMeasOnMap(satelliteMap, measMarkers2);
             drawMeasOnMap(satelliteMap, measMarkers2, measP1World, measP1World);
             // Remove the extra red/line/label that drawMeasOnMap might have added (it draws p1+p2)
@@ -2935,9 +4051,21 @@
             // Let's use a simpler approach: just a single circle
             clearMeasOnMap(orienteeringMap, measMarkers);
             if (orienteeringMap) {
-              var op = worldToMapPos(orienteeringMap, worldPos.lat, worldPos.lng);
+              var op = worldToMapPos(
+                orienteeringMap,
+                worldPos.lat,
+                worldPos.lng,
+              );
               if (op) {
-                var m = L.circle(op, { radius: 5, color: "#0066CC", fill: true, fillColor: "#0066CC", fillOpacity: 1, weight: 2, interactive: false }).addTo(orienteeringMap);
+                var m = L.circle(op, {
+                  radius: 5,
+                  color: "#0066CC",
+                  fill: true,
+                  fillColor: "#0066CC",
+                  fillOpacity: 1,
+                  weight: 2,
+                  interactive: false,
+                }).addTo(orienteeringMap);
                 measMarkers.push(m);
               }
             }
@@ -2945,7 +4073,15 @@
             if (satelliteMap) {
               var sp = worldToMapPos(satelliteMap, worldPos.lat, worldPos.lng);
               if (sp) {
-                var m2 = L.circle(sp, { radius: 5, color: "#0066CC", fill: true, fillColor: "#0066CC", fillOpacity: 1, weight: 2, interactive: false }).addTo(satelliteMap);
+                var m2 = L.circle(sp, {
+                  radius: 5,
+                  color: "#0066CC",
+                  fill: true,
+                  fillColor: "#0066CC",
+                  fillOpacity: 1,
+                  weight: 2,
+                  interactive: false,
+                }).addTo(satelliteMap);
                 measMarkers2.push(m2);
               }
             }
@@ -2958,55 +4094,60 @@
             if (hasEditAccess) $("#btnLockControls").prop("disabled", false);
             setMapCursor(orienteeringMap, "");
             setMapCursor(satelliteMap, "");
-            if (orienteeringMap) orienteeringMap.getContainer().classList.remove("measuring-mode");
-            if (satelliteMap) satelliteMap.getContainer().classList.remove("measuring-mode");
+            if (orienteeringMap)
+              orienteeringMap.getContainer().classList.remove("measuring-mode");
+            if (satelliteMap)
+              satelliteMap.getContainer().classList.remove("measuring-mode");
             setGroupInteractive(controlGroup, true);
             setGroupInteractive(satelliteControlGroup, true);
             setGroupInteractive(gatewayLinesGroup, true);
             setGroupInteractive(satelliteGatewayLinesGroup, true);
             // Sample elevation profile for line-of-sight
-            if (activeMapType === 'orienteering' && georefPoints.p1Lat) {
-              var ll1 = pixelToLatLng(measMarkers[0].getLatLng().lng, measMarkers[0].getLatLng().lat);
+            if (activeMapType === "orienteering" && georefPoints.p1Lat) {
+              var ll1 = pixelToLatLng(
+                measMarkers[0].getLatLng().lng,
+                measMarkers[0].getLatLng().lat,
+              );
               var ll2 = pixelToLatLng(pos.lng, pos.lat);
               if (ll1 && ll2) {
-                sampleElevationProfile(L.latLng(ll1.lat, ll1.lng), L.latLng(ll2.lat, ll2.lng));
+                sampleElevationProfile(
+                  L.latLng(ll1.lat, ll1.lng),
+                  L.latLng(ll2.lat, ll2.lng),
+                );
               }
-            } else if (activeMapType === 'satellite') {
+            } else if (activeMapType === "satellite") {
               sampleElevationProfile(measP1World, measP2World);
             }
           }
         }
 
-
-
-
-
-
         function setupMapResize(handleId, mapId) {
           var handle = document.getElementById(handleId);
           var mapEl = document.getElementById(mapId);
-          var otherEl = document.getElementById(mapId === "map" ? "satelliteMap" : "map");
+          var otherEl = document.getElementById(
+            mapId === "map" ? "satelliteMap" : "map",
+          );
           if (!handle || !mapEl) return;
           var startY, startHeight;
-          handle.addEventListener('mousedown', function(e) {
+          handle.addEventListener("mousedown", function (e) {
             e.preventDefault();
             startY = e.clientY;
             startHeight = mapEl.offsetHeight;
-            document.addEventListener('mousemove', resizeMove);
-            document.addEventListener('mouseup', resizeEnd);
-            document.body.style.userSelect = 'none';
+            document.addEventListener("mousemove", resizeMove);
+            document.addEventListener("mouseup", resizeEnd);
+            document.body.style.userSelect = "none";
           });
           function resizeMove(e) {
             var newH = Math.max(200, startHeight + (e.clientY - startY));
-            mapEl.style.height = newH + 'px';
-            if (otherEl) otherEl.style.height = newH + 'px';
+            mapEl.style.height = newH + "px";
+            if (otherEl) otherEl.style.height = newH + "px";
             if (orienteeringMap) orienteeringMap.invalidateSize();
             if (satelliteMap) satelliteMap.invalidateSize();
           }
           function resizeEnd() {
-            document.removeEventListener('mousemove', resizeMove);
-            document.removeEventListener('mouseup', resizeEnd);
-            document.body.style.userSelect = '';
+            document.removeEventListener("mousemove", resizeMove);
+            document.removeEventListener("mouseup", resizeEnd);
+            document.body.style.userSelect = "";
             if (orienteeringMap) orienteeringMap.invalidateSize();
             if (satelliteMap) satelliteMap.invalidateSize();
           }
@@ -3021,12 +4162,17 @@
           createSatelliteTileLayers(satelliteMap);
           setupMapResize("satelliteMapResizeHandle", "satelliteMap");
           satelliteMap.on("click", function (e) {
-            if (measuringMode) { handleMeasureClick(e.originalEvent); return; }
+            if (measuringMode) {
+              handleMeasureClick(e.originalEvent);
+              return;
+            }
           });
           if (georefPoints.p1Lat) {
             var centerLat = (georefPoints.p1Lat + georefPoints.p2Lat) / 2;
             var centerLng = (georefPoints.p1Lng + georefPoints.p2Lng) / 2;
-            satelliteMap.setView([centerLat, centerLng], 15, { animate: false });
+            satelliteMap.setView([centerLat, centerLng], 15, {
+              animate: false,
+            });
           }
         }
 
@@ -3064,7 +4210,10 @@
               renderScaleBar();
             });
             satelliteMap.on("click", function (e) {
-              if (measuringMode) { handleMeasureClick(e.originalEvent); return; }
+              if (measuringMode) {
+                handleMeasureClick(e.originalEvent);
+                return;
+              }
             });
 
             // Georef click handlers
@@ -3163,13 +4312,19 @@
                     var gDx = Math.abs(georefP2.px - georefP1.px);
                     var gDy = Math.abs(georefP2.py - georefP1.py);
                     var gPx = Math.sqrt(gDx * gDx + gDy * gDy);
-                    var gCosLat = Math.cos(georefP1.lat * Math.PI / 180);
-                    var gME = Math.abs(georefP2.lng - georefP1.lng) * 111320 * gCosLat;
+                    var gCosLat = Math.cos((georefP1.lat * Math.PI) / 180);
+                    var gME =
+                      Math.abs(georefP2.lng - georefP1.lng) * 111320 * gCosLat;
                     var gMN = Math.abs(georefP2.lat - georefP1.lat) * 111320;
                     var gM = Math.sqrt(gME * gME + gMN * gMN);
                     if (gPx > 0 && gM > 0) {
                       mapMeta.mapScale = gPx / gM; // pixels per meter at zoom 0
-                      $.ajax({ url: "/api/v1/Competitions/" + competitionId + "/Map", method: "PATCH", data: JSON.stringify({ mapScale: mapMeta.mapScale }), dataType: "json" });
+                      $.ajax({
+                        url: "/api/v1/Competitions/" + competitionId + "/Map",
+                        method: "PATCH",
+                        data: JSON.stringify({ mapScale: mapMeta.mapScale }),
+                        dataType: "json",
+                      });
                     }
                     updateGeorefBanner(
                       "Georeference saved! Controls placed on satellite map.",
@@ -3240,47 +4395,92 @@
         }
 
         function saveMapViewState() {
-          if (!orienteeringMap) return;
+          if (!orienteeringMap) {
+            console.log("saveMapViewState: no orienteeringMap");
+            return;
+          }
           var map = orienteeringMap;
           var center = map.getCenter();
           var zoom = map.getZoom();
-          var bounds = [
-            [0, 0],
-            [
-              mapInstance.getBounds()._northEast.lat,
-              mapInstance.getBounds()._northEast.lng,
-            ],
-          ];
-          // Get bounds from the image overlay
           var imgBounds;
-          mapInstance.eachLayer(function (layer) {
+          map.eachLayer(function (layer) {
             if (layer instanceof L.ImageOverlay) {
               imgBounds = layer.getBounds();
             }
           });
-          if (!imgBounds) return;
-          var h = imgBounds.getNorth();
-          var w = imgBounds.getEast();
-          var centerX = h > 0 ? center.lat / h : 0;
-          var centerY = w > 0 ? center.lng / w : 0;
+          if (!imgBounds) {
+            console.log("saveMapViewState: no imgBounds — save terrain only");
+            // No orienteering map image, but still save terrain state
+          }
 
+          var payload = {};
+          if (imgBounds) {
+            var h = imgBounds.getNorth();
+            var w = imgBounds.getEast();
+            payload.zoom = zoom;
+            payload.centerX = h > 0 ? center.lat / h : 0;
+            payload.centerY = w > 0 ? center.lng / w : 0;
+          }
+
+          // Save 3D terrain state if we have one
+          if (areaSelectP1 && areaSelectP2) {
+            payload.terrain3dP1Lat = areaSelectP1.lat;
+            payload.terrain3dP1Lng = areaSelectP1.lng;
+            payload.terrain3dP2Lat = areaSelectP2.lat;
+            payload.terrain3dP2Lng = areaSelectP2.lng;
+            payload.terrain3dGridSize = terrain3dGridSize;
+            payload.terrain3dOrbitTheta = orbitTheta;
+            payload.terrain3dOrbitPhi = orbitPhi;
+            payload.terrain3dOrbitDist = orbitDist;
+            payload.terrain3dOrbitTargetX = orbitTarget.x;
+            payload.terrain3dOrbitTargetY = orbitTarget.y;
+            payload.terrain3dOrbitTargetZ = orbitTarget.z;
+          }
+
+          if (Object.keys(payload).length === 0) {
+            console.log("saveMapViewState: nothing to save");
+            return;
+          }
+
+          console.log("saveMapViewState: saving", payload);
           $.ajax({
             url: "/api/v1/Competitions/" + competitionId + "/Map",
             method: "PATCH",
-            data: JSON.stringify({
-              zoom: zoom,
-              centerX: centerX,
-              centerY: centerY,
-            }),
+            data: JSON.stringify(payload),
             dataType: "json",
           }).then(
             function () {
-              $("#mapUpdatedAlert").removeClass("collapse");
+              var alertEl = $("#mapUpdatedAlert");
+              alertEl.show();
+              setTimeout(function() { alertEl.hide(); }, 3000);
             },
-            function () {
+            function (jqXHR) {
+              console.log("Save view state failed: " + jqXHR.status + " " + (jqXHR.responseText || ""));
+              // Clear target fields if they caused the error (old DB schema)
+              if (jqXHR.status === 500) {
+                delete payload.terrain3dOrbitTargetX;
+                delete payload.terrain3dOrbitTargetY;
+                delete payload.terrain3dOrbitTargetZ;
+                $.ajax({
+                  url: "/api/v1/Competitions/" + competitionId + "/Map",
+                  method: "PATCH",
+                  data: JSON.stringify(payload),
+                  dataType: "json",
+                }).then(
+                  function () { showSaveBanner(); },
+                  function () { alert("Failed to save view state"); }
+                );
+                return;
+              }
               alert("Failed to save view state");
             },
           );
+        }
+
+        function showSaveBanner() {
+          var alertEl = $("#mapUpdatedAlert");
+          alertEl.show();
+          setTimeout(function() { alertEl.hide(); }, 3000);
         }
 
         // ============================================================
@@ -3289,7 +4489,8 @@
 
         function onAreaSelectClick(e) {
           if (!areaSelectMode) return;
-          var selMap = (areaSelectMap === "orienteering") ? orienteeringMap : satelliteMap;
+          var selMap =
+            areaSelectMap === "orienteering" ? orienteeringMap : satelliteMap;
           if (!selMap) return;
 
           // Convert click to lat/lng — orienteering uses CRS.Simple
@@ -3304,16 +4505,38 @@
 
           if (!areaSelectP1) {
             areaSelectP1 = latlng;
-            var m = L.circleMarker(e.latlng, { radius: 6, color: "#FF6600", fill: true, fillColor: "#FF6600", fillOpacity: 0.8, weight: 2 }).addTo(selMap);
+            var m = L.circleMarker(e.latlng, {
+              radius: 6,
+              color: "#FF6600",
+              fill: true,
+              fillColor: "#FF6600",
+              fillOpacity: 0.8,
+              weight: 2,
+            }).addTo(selMap);
             areaSelectMarkers.push(m);
           } else {
             areaSelectP2 = latlng;
-            var m = L.circleMarker(e.latlng, { radius: 6, color: "#FF6600", fill: true, fillColor: "#FF6600", fillOpacity: 0.8, weight: 2 }).addTo(selMap);
+            var m = L.circleMarker(e.latlng, {
+              radius: 6,
+              color: "#FF6600",
+              fill: true,
+              fillColor: "#FF6600",
+              fillOpacity: 0.8,
+              weight: 2,
+            }).addTo(selMap);
             areaSelectMarkers.push(m);
 
             // Draw rectangle in map coordinates
-            var bounds = L.latLngBounds(e.latlng, areaSelectMarkers[0].getLatLng());
-            areaSelectRect = L.rectangle(bounds, { color: "#FF6600", weight: 2, fillOpacity: 0.1, dashArray: "5,5" }).addTo(selMap);
+            var bounds = L.latLngBounds(
+              e.latlng,
+              areaSelectMarkers[0].getLatLng(),
+            );
+            areaSelectRect = L.rectangle(bounds, {
+              color: "#FF6600",
+              weight: 2,
+              fillOpacity: 0.1,
+              dashArray: "5,5",
+            }).addTo(selMap);
             areaSelectMarkers.push(areaSelectRect);
 
             selMap.off("click", onAreaSelectClick);
@@ -3336,14 +4559,19 @@
         }
 
         function startAreaSelect() {
-          if (areaSelectMode) { cancelAreaSelect(); return; }
+          if (areaSelectMode) {
+            cancelAreaSelect();
+            return;
+          }
           terrain3dGridSize = 50; // reset on new selection
           if (activeMapType === "terrain3d") {
             if (georefPoints.p1Lat) setActiveMap("orienteering");
             else setActiveMap("satellite");
           }
           if (activeMapType === "orienteering" && !georefPoints.p1Lat) {
-            alert("The orienteering map is not georeferenced. Please switch to the Satellite tab.");
+            alert(
+              "The orienteering map is not georeferenced. Please switch to the Satellite tab.",
+            );
             return;
           }
           cancelAreaSelect();
@@ -3357,15 +4585,20 @@
 
         function setAreaSelectButton(text, addClass, removeClass) {
           var icon = areaSelectMode ? "times" : "crop";
-          $("#btnSelectArea, #btnSelectArea3d").html('<i class="fa fa-' + icon + '"></i> ' + text).removeClass(removeClass).addClass(addClass);
+          $("#btnSelectArea, #btnSelectArea3d")
+            .html('<i class="fa fa-' + icon + '"></i> ' + text)
+            .removeClass(removeClass)
+            .addClass(addClass);
         }
 
         function cancelAreaMarkers() {
           // Remove visual markers only, keep P1/P2 for loading
           while (areaSelectMarkers.length > 0) {
             var layer = areaSelectMarkers.pop();
-            if (orienteeringMap && orienteeringMap.hasLayer(layer)) orienteeringMap.removeLayer(layer);
-            if (satelliteMap && satelliteMap.hasLayer(layer)) satelliteMap.removeLayer(layer);
+            if (orienteeringMap && orienteeringMap.hasLayer(layer))
+              orienteeringMap.removeLayer(layer);
+            if (satelliteMap && satelliteMap.hasLayer(layer))
+              satelliteMap.removeLayer(layer);
           }
           areaSelectRect = null;
         }
@@ -3373,17 +4606,30 @@
         function cancelAreaSelect() {
           areaSelectMode = false;
           areaSelectMap = null;
-          if (orienteeringMap) { orienteeringMap.off("click", onAreaSelectClick); orienteeringMap.getContainer().style.cursor = ""; }
-          if (satelliteMap) { satelliteMap.off("click", onAreaSelectClick); satelliteMap.getContainer().style.cursor = ""; }
+          if (orienteeringMap) {
+            orienteeringMap.off("click", onAreaSelectClick);
+            orienteeringMap.getContainer().style.cursor = "";
+          }
+          if (satelliteMap) {
+            satelliteMap.off("click", onAreaSelectClick);
+            satelliteMap.getContainer().style.cursor = "";
+          }
           areaSelectP1 = null;
           areaSelectP2 = null;
           cancelAreaMarkers();
-          setAreaSelectButton("Select Area for 3D", "btn-outline-dark", "btn-dark");
+          setAreaSelectButton(
+            "Select Area for 3D",
+            "btn-outline-dark",
+            "btn-dark",
+          );
         }
 
         function loadTerrain3D() {
           if (!areaSelectP1 || !areaSelectP2) return;
-          $("#terrain3dStatus").show().text("Loading elevation data...").css("color", "#666");
+          $("#terrain3dStatus")
+            .show()
+            .text("Loading elevation data...")
+            .css("color", "#666");
           $("#btnClear3d").prop("disabled", true);
           $("#btnRefine3d").prop("disabled", true);
 
@@ -3392,20 +4638,31 @@
           var lngMin = Math.min(areaSelectP1.lng, areaSelectP2.lng);
           var lngMax = Math.max(areaSelectP1.lng, areaSelectP2.lng);
 
-          var cosLat = Math.cos((latMin + latMax) / 2 * Math.PI / 180);
-          var widthM  = (lngMax - lngMin) * 111320 * cosLat;
+          var cosLat = Math.cos((((latMin + latMax) / 2) * Math.PI) / 180);
+          var widthM = (lngMax - lngMin) * 111320 * cosLat;
           var heightM = (latMax - latMin) * 111320;
 
           var cols = terrain3dGridSize;
           var rows = terrain3dGridSize;
-          console.log("Terrain load: area=" + widthM.toFixed(0) + "m×" + heightM.toFixed(0) + "m, grid=" + cols + "×" + rows + ", points=" + (cols*rows));
+          console.log(
+            "Terrain load: area=" +
+              widthM.toFixed(0) +
+              "m×" +
+              heightM.toFixed(0) +
+              "m, grid=" +
+              cols +
+              "×" +
+              rows +
+              ", points=" +
+              cols * rows,
+          );
 
           var locations = [];
           for (var r = 0; r < rows; r++) {
             for (var c = 0; c < cols; c++) {
               locations.push({
                 latitude: latMin + (r / (rows - 1)) * (latMax - latMin),
-                longitude: lngMin + (c / (cols - 1)) * (lngMax - lngMin)
+                longitude: lngMin + (c / (cols - 1)) * (lngMax - lngMin),
               });
             }
           }
@@ -3421,7 +4678,17 @@
 
           function fetchChunk(idx) {
             if (idx >= chunks.length) {
-              buildTerrainMesh(allElevations, rows, cols, latMin, latMax, lngMin, lngMax, widthM, heightM);
+              buildTerrainMesh(
+                allElevations,
+                rows,
+                cols,
+                latMin,
+                latMax,
+                lngMin,
+                lngMax,
+                widthM,
+                heightM,
+              );
               return;
             }
             $.ajax({
@@ -3429,25 +4696,46 @@
               method: "POST",
               contentType: "application/json",
               data: JSON.stringify({ locations: chunks[idx] }),
-              dataType: "json"
-            }).then(function (data) {
-              if (data && data.results) {
-                for (var i = 0; i < data.results.length; i++) {
-                  allElevations.push(data.results[i].elevation);
+              dataType: "json",
+            }).then(
+              function (data) {
+                if (data && data.results) {
+                  for (var i = 0; i < data.results.length; i++) {
+                    allElevations.push(data.results[i].elevation);
+                  }
                 }
-              }
-              completed++;
-              var loaded = Math.min(completed * chunkSize, locations.length);
-              $("#terrain3dStatus").text("Loading elevation data... (" + loaded + "/" + locations.length + ")");
-              fetchChunk(idx + 1);
-            }, function () {
-              $("#terrain3dStatus").text("Error loading elevation data.").css("color", "red");
-            });
+                completed++;
+                var loaded = Math.min(completed * chunkSize, locations.length);
+                $("#terrain3dStatus").text(
+                  "Loading elevation data... (" +
+                    loaded +
+                    "/" +
+                    locations.length +
+                    ")",
+                );
+                fetchChunk(idx + 1);
+              },
+              function () {
+                $("#terrain3dStatus")
+                  .text("Error loading elevation data.")
+                  .css("color", "red");
+              },
+            );
           }
           fetchChunk(0);
         }
 
-        function buildTerrainMesh(elevations, rows, cols, latMin, latMax, lngMin, lngMax, widthM, heightM) {
+        function buildTerrainMesh(
+          elevations,
+          rows,
+          cols,
+          latMin,
+          latMax,
+          lngMin,
+          lngMax,
+          widthM,
+          heightM,
+        ) {
           $("#terrain3dStatus").text("Building 3D model...");
           destroyTerrain3D();
 
@@ -3455,9 +4743,11 @@
           var scaleXY = 400 / Math.max(widthM, heightM);
           var w3d = widthM * scaleXY;
           var h3d = heightM * scaleXY;
-          var hw = w3d / 2, hh = h3d / 2; // half-extents
+          var hw = w3d / 2,
+            hh = h3d / 2; // half-extents
 
-          var elMin = Infinity, elMax = -Infinity;
+          var elMin = Infinity,
+            elMax = -Infinity;
           for (var i = 0; i < elevations.length; i++) {
             if (elevations[i] < elMin) elMin = elevations[i];
             if (elevations[i] > elMax) elMax = elevations[i];
@@ -3467,13 +4757,19 @@
           // Elevation with mild exaggeration (~10% of base width)
           var elTargetHeight = Math.max(w3d * 0.1, 10);
           var elScale = elTargetHeight / elRange;
-          elScale = Math.min(elScale, w3d * 0.3 / elRange);
+          elScale = Math.min(elScale, (w3d * 0.3) / elRange);
           elScale = Math.max(elScale, 5 / elRange);
 
           // Store mapping for measurement line overlay
           terrain3dMapParams = {
-            latMin: latMin, latMax: latMax, lngMin: lngMin, lngMax: lngMax,
-            w3d: w3d, h3d: h3d, elScale: elScale, elMin: elMin
+            latMin: latMin,
+            latMax: latMax,
+            lngMin: lngMin,
+            lngMax: lngMax,
+            w3d: w3d,
+            h3d: h3d,
+            elScale: elScale,
+            elMin: elMin,
           };
 
           // === Build BufferGeometry manually ===
@@ -3490,16 +4786,19 @@
             for (var c = 0; c < cols; c++) {
               var idx = r * cols + c;
               var x = -((c / (cols - 1)) * w3d - hw); // mirrored: east=right on screen
-              var z = (r / (rows - 1)) * h3d - hh;  // -hh to +hh
+              var z = (r / (rows - 1)) * h3d - hh; // -hh to +hh
               var y = ((elevations[idx] || elMin) - elMin) * elScale;
-              positions[idx * 3]     = x;
+              positions[idx * 3] = x;
               positions[idx * 3 + 1] = y;
               positions[idx * 3 + 2] = z;
 
               var el2 = elevations[idx] || elMin;
               var t = (el2 - elMin) / elRange;
-              var col = t < 0.5 ? greenLow.clone().lerp(brownMid, t * 2) : brownMid.clone().lerp(whiteHigh, (t - 0.5) * 2);
-              colors[idx * 3]     = col.r;
+              var col =
+                t < 0.5
+                  ? greenLow.clone().lerp(brownMid, t * 2)
+                  : brownMid.clone().lerp(whiteHigh, (t - 0.5) * 2);
+              colors[idx * 3] = col.r;
               colors[idx * 3 + 1] = col.g;
               colors[idx * 3 + 2] = col.b;
             }
@@ -3512,43 +4811,105 @@
               var b = a + 1;
               var d = a + cols;
               var e = d + 1;
-              indices.push(a, b, d);  // triangle 1
-              indices.push(b, e, d);  // triangle 2
+              indices.push(a, b, d); // triangle 1
+              indices.push(b, e, d); // triangle 2
             }
           }
 
           var geometry = new THREE.BufferGeometry();
-          geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+          geometry.setAttribute(
+            "position",
+            new THREE.BufferAttribute(positions, 3),
+          );
           geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
           geometry.setIndex(indices);
           geometry.computeVertexNormals();
 
-          console.log("Terrain mesh: " + rows + "×" + cols + " = " + (rows*cols) + " verts, " + (indices.length/3) + " tris, w=" + w3d.toFixed(0) + " h=" + h3d.toFixed(0) + " elRange=" + elRange.toFixed(0) + " elScale=" + elScale.toFixed(1));
+          console.log(
+            "Terrain mesh: " +
+              rows +
+              "×" +
+              cols +
+              " = " +
+              rows * cols +
+              " verts, " +
+              indices.length / 3 +
+              " tris, w=" +
+              w3d.toFixed(0) +
+              " h=" +
+              h3d.toFixed(0) +
+              " elRange=" +
+              elRange.toFixed(0) +
+              " elScale=" +
+              elScale.toFixed(1),
+          );
 
-          var material = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.75 });
+          var material = new THREE.MeshLambertMaterial({
+            vertexColors: true,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.75,
+          });
           var mesh = new THREE.Mesh(geometry, material);
 
           var edgeGeo = new THREE.EdgesGeometry(geometry);
-          var edgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.15 });
+          var edgeMat = new THREE.LineBasicMaterial({
+            color: 0x000000,
+            transparent: true,
+            opacity: 0.15,
+          });
           var edgeLines = new THREE.LineSegments(edgeGeo, edgeMat);
 
-          // Camera — north=top, east=right
+          // Camera — north=top, east=right (unless restoring saved view)
           var peakH = (elMax - elMin) * elScale;
-          orbitTarget.set(0, peakH * 0.4, 0);
-          orbitTheta = -Math.PI / 2;          // south looking north → north=top
-          orbitPhi = Math.PI / 3;             // 60° up
-          orbitDist = Math.max(w3d, h3d, peakH * 2) * 1.5;
+          if (!window._restoring3dView) {
+            orbitTarget.set(0, peakH * 0.4, 0);
+            orbitTheta = -Math.PI / 2; // south looking north → north=top
+            orbitPhi = Math.PI / 3; // 60° up
+            orbitDist = Math.max(w3d, h3d, peakH * 2) * 1.5;
+          }
 
-          // If scene isn't ready yet, store for later
-          initTerrain3D();
+          // If scene isn't ready yet, store for later (retry polls every 200ms)
           if (!terrain3dScene) {
-            terrain3dPending = { mesh: mesh, edges: edgeLines, camera: true };
-            $("#terrain3dStatus").text(
-              "Area: " + Math.round(widthM) + "m × " + Math.round(heightM) + "m | " +
-              "Grid: " + cols + "×" + rows + " | " +
-              "Elevation: " + Math.round(elMin) + "–" + Math.round(elMax) + "m | " +
-              "Switch to 3D Terrain tab to view"
-            ).css("color", "#aaa");
+            terrain3dPending = { mesh: mesh, edges: edgeLines };
+            (function retry() {
+              if (!terrain3dPending) return;
+              if (terrain3dScene) {
+                addTerrainToScene(
+                  terrain3dPending.mesh,
+                  terrain3dPending.edges,
+                );
+                terrain3dPending = null;
+                updateCamera();
+                $("#terrain3dPlaceholder").hide();
+                if (heightProfileData && heightProfilePoints)
+                  drawTerrainMeasLine();
+                $("#terrain3dStatus")
+                  .text(
+                    "Area: " +
+                      Math.round(widthM) +
+                      "m × " +
+                      Math.round(heightM) +
+                      "m | " +
+                      "Grid: " +
+                      cols +
+                      "×" +
+                      rows +
+                      " | " +
+                      "Elevation: " +
+                      Math.round(elMin) +
+                      "–" +
+                      Math.round(elMax) +
+                      "m",
+                  )
+                  .css("color", "#aaa");
+              } else {
+                setTimeout(retry, 200);
+              }
+            })();
+            $("#terrain3dStatus")
+              .text("Waiting for 3D view...")
+              .css("color", "#aaa");
             $("#btnClear3d").prop("disabled", false);
             $("#btnRefine3d").prop("disabled", false);
             return;
@@ -3556,11 +4917,25 @@
 
           addTerrainToScene(mesh, edgeLines);
 
-          $("#terrain3dStatus").text(
-            "Area: " + Math.round(widthM) + "m × " + Math.round(heightM) + "m | " +
-            "Grid: " + cols + "×" + rows + " | " +
-            "Elevation: " + Math.round(elMin) + "–" + Math.round(elMax) + "m"
-          ).css("color", "#aaa");
+          $("#terrain3dStatus")
+            .text(
+              "Area: " +
+                Math.round(widthM) +
+                "m × " +
+                Math.round(heightM) +
+                "m | " +
+                "Grid: " +
+                cols +
+                "×" +
+                rows +
+                " | " +
+                "Elevation: " +
+                Math.round(elMin) +
+                "–" +
+                Math.round(elMax) +
+                "m",
+            )
+            .css("color", "#aaa");
           $("#btnClear3d").prop("disabled", false);
           $("#btnRefine3d").prop("disabled", terrain3dGridSize >= 200);
           $("#terrain3dPlaceholder").hide();
@@ -3581,6 +4956,8 @@
           terrain3dMesh = mesh;
           terrain3dScene.add(mesh);
           terrain3dScene.add(edgeLines);
+          // Show elevation attribution if we're in Sweden
+          showElevationAttribution();
           terrain3dMesh.userData.edgeLines = edgeLines;
           updateCamera();
           // Redraw measurement line on new terrain
@@ -3589,21 +4966,30 @@
 
         function initTerrain3D() {
           if (terrain3dInitialized) {
-            // Scene exists — check for pending mesh data
             if (terrain3dPending && terrain3dScene) {
               addTerrainToScene(terrain3dPending.mesh, terrain3dPending.edges);
-              terrain3dPending = null;
-              $("#terrain3dPlaceholder").hide();
-              if (heightProfileData && heightProfilePoints) drawTerrainMeasLine();
+              if (heightProfileData && heightProfilePoints)
+                drawTerrainMeasLine();
             }
             return;
           }
+          if (terrain3dInitInProgress) return;
           var container = document.getElementById("terrain3dCanvas");
           if (!container) return;
-          var w = container.clientWidth, h = container.clientHeight;
-          if (w === 0 || h === 0) return; // container not visible yet
+          var w = container.clientWidth,
+            h = container.clientHeight;
+          if (w === 0 || h === 0) {
+            requestAnimationFrame(function () {
+              initTerrain3D();
+            });
+            return;
+          }
+          terrain3dInitInProgress = true;
 
-          terrain3dRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+          terrain3dRenderer = new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: true,
+          });
           terrain3dRenderer.setSize(w, h);
           terrain3dRenderer.setPixelRatio(window.devicePixelRatio);
           terrain3dRenderer.setClearColor(0x1a1a2e, 1);
@@ -3617,11 +5003,13 @@
           terrain3dScene.fog = new THREE.Fog(0x1a1a2e, 200, 2000);
 
           terrain3dCamera = new THREE.PerspectiveCamera(50, w / h, 1, 5000);
-          // Default view: north-up, east-right
-          orbitTarget.set(0, 0, 0);
-          orbitTheta = -Math.PI / 2;
-          orbitPhi = Math.PI / 3;
-          orbitDist = 400;
+          // Default view (unless we're restoring a saved view)
+          if (!window._restoring3dView) {
+            orbitTarget.set(0, 0, 0);
+            orbitTheta = -Math.PI / 2;
+            orbitPhi = Math.PI / 3;
+            orbitDist = 400;
+          }
           updateCamera();
 
           var ambient = new THREE.AmbientLight(0x404060, 0.6);
@@ -3647,6 +5035,7 @@
           animate();
 
           terrain3dInitialized = true;
+          terrain3dInitInProgress = false;
 
           // If mesh data arrived while scene was being created, add it now
           if (terrain3dPending) {
@@ -3658,7 +5047,11 @@
 
         function setupOrbitControls(container) {
           container.addEventListener("mousedown", function (e) {
-            if (e.target !== terrain3dRenderer.domElement && e.target !== container) return;
+            if (
+              e.target !== terrain3dRenderer.domElement &&
+              e.target !== container
+            )
+              return;
             if (e.button === 0) {
               // Left button: rotate
               orbitActive = true;
@@ -3675,7 +5068,9 @@
             orbitStartY = e.clientY;
             e.preventDefault();
           });
-          container.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+          container.addEventListener("contextmenu", function (e) {
+            e.preventDefault();
+          });
 
           window.addEventListener("mousemove", function (e) {
             if (!orbitActive && !orbitPanning) return;
@@ -3691,9 +5086,15 @@
               orbitPhi = Math.max(0.1, Math.min(Math.PI / 2 - 0.05, orbitPhi));
             } else if (orbitPanning) {
               // Pan: move target in camera's local right/up plane
-              var view = new THREE.Vector3().subVectors(terrain3dCamera.position, orbitTarget).normalize();
-              var camRight = new THREE.Vector3().crossVectors(view, terrain3dCamera.up).normalize();
-              var camUp = new THREE.Vector3().crossVectors(camRight, view).normalize();
+              var view = new THREE.Vector3()
+                .subVectors(terrain3dCamera.position, orbitTarget)
+                .normalize();
+              var camRight = new THREE.Vector3()
+                .crossVectors(view, terrain3dCamera.up)
+                .normalize();
+              var camUp = new THREE.Vector3()
+                .crossVectors(camRight, view)
+                .normalize();
               var panSpeed = orbitDist * 0.0015;
               orbitTarget.addScaledVector(camRight, dx * panSpeed);
               orbitTarget.addScaledVector(camUp, dy * panSpeed);
@@ -3710,7 +5111,7 @@
 
           container.addEventListener("wheel", function (e) {
             e.preventDefault();
-            orbitDist *= (e.deltaY > 0 ? 1.08 : 0.92);
+            orbitDist *= e.deltaY > 0 ? 1.08 : 0.92;
             orbitDist = Math.max(20, Math.min(4000, orbitDist));
             updateCamera();
           });
@@ -3718,9 +5119,13 @@
 
         function updateCamera() {
           if (!terrain3dCamera) return;
-          var x = orbitTarget.x + orbitDist * Math.sin(orbitPhi) * Math.cos(orbitTheta);
+          var x =
+            orbitTarget.x +
+            orbitDist * Math.sin(orbitPhi) * Math.cos(orbitTheta);
           var y = orbitTarget.y + orbitDist * Math.cos(orbitPhi);
-          var z = orbitTarget.z + orbitDist * Math.sin(orbitPhi) * Math.sin(orbitTheta);
+          var z =
+            orbitTarget.z +
+            orbitDist * Math.sin(orbitPhi) * Math.sin(orbitTheta);
           terrain3dCamera.position.set(x, y, z);
           terrain3dCamera.lookAt(orbitTarget);
         }
@@ -3729,7 +5134,8 @@
           if (!terrain3dRenderer || !terrain3dCamera) return;
           var container = document.getElementById("terrain3dCanvas");
           if (!container) return;
-          var w = container.clientWidth, h = container.clientHeight;
+          var w = container.clientWidth,
+            h = container.clientHeight;
           terrain3dRenderer.setSize(w, h);
           terrain3dCamera.aspect = w / h;
           terrain3dCamera.updateProjectionMatrix();
@@ -3737,12 +5143,24 @@
 
         function refineTerrain3D() {
           if (!areaSelectP1 || !areaSelectP2 || !terrain3dMesh) {
-            $("#terrain3dStatus").text("Select an area first, then use Refine to increase resolution.").css("color", "#aaa");
+            $("#terrain3dStatus")
+              .text(
+                "Select an area first, then use Refine to increase resolution.",
+              )
+              .css("color", "#aaa");
             return;
           }
           var maxGrid = 200;
           if (terrain3dGridSize >= maxGrid) {
-            $("#terrain3dStatus").text("Already at maximum resolution (" + maxGrid + "×" + maxGrid + ")").css("color", "#aaa");
+            $("#terrain3dStatus")
+              .text(
+                "Already at maximum resolution (" +
+                  maxGrid +
+                  "×" +
+                  maxGrid +
+                  ")",
+              )
+              .css("color", "#aaa");
             return;
           }
           terrain3dGridSize = Math.min(terrain3dGridSize * 2, maxGrid);
@@ -3753,13 +5171,9 @@
         function destroyTerrain3D() {
           // Remove measurement line
           clearTerrainMeasLine();
-          // Clear any pending mesh data
+          // Clear any pending mesh data and stop retry loop
           if (terrain3dPending) {
-            terrain3dPending.mesh.geometry.dispose();
-            terrain3dPending.mesh.material.dispose();
-            terrain3dPending.edges.geometry.dispose();
-            terrain3dPending.edges.material.dispose();
-            terrain3dPending = null;
+            terrain3dPending = null; // null first to stop retry loop
           }
           if (terrain3dScene && terrain3dMesh) {
             if (terrain3dMesh.userData.edgeLines) {
@@ -3783,14 +5197,20 @@
           var tLng = (lng - p.lngMin) / (p.lngMax - p.lngMin); // 0..1 eastward
           var tLat = (lat - p.latMin) / (p.latMax - p.latMin); // 0..1 northward
           var x = -(tLng * p.w3d - p.w3d / 2); // mirrored X: east=right
-          var z = tLat * p.h3d - p.h3d / 2;      // Z: north=toward viewer
+          var z = tLat * p.h3d - p.h3d / 2; // Z: north=toward viewer
           var y = 0; // don't know elevation here (not needed for line above terrain)
           return new THREE.Vector3(x, y, z);
         }
 
         // Draw line-of-sight (straight 3D line between antenna heights) on the terrain
         function drawTerrainMeasLine() {
-          if (!terrain3dScene || !terrain3dMesh || !heightProfilePoints || !terrain3dMapParams) return;
+          if (
+            !terrain3dScene ||
+            !terrain3dMesh ||
+            !heightProfilePoints ||
+            !terrain3dMapParams
+          )
+            return;
           clearTerrainMeasLine();
 
           var p = terrain3dMapParams;
@@ -3827,8 +5247,16 @@
           var p2v = new THREE.Vector3(x2, y2, z2);
 
           // Materials for LOS segments
-          var aboveMat = new THREE.LineBasicMaterial({ color: 0xff6600, linewidth: 2, depthTest: true }); // orange = above ground
-          var belowMat = new THREE.LineBasicMaterial({ color: 0xcc0000, linewidth: 2, depthTest: true }); // red = below ground
+          var aboveMat = new THREE.LineBasicMaterial({
+            color: 0xff6600,
+            linewidth: 2,
+            depthTest: true,
+          }); // orange = above ground
+          var belowMat = new THREE.LineBasicMaterial({
+            color: 0xcc0000,
+            linewidth: 2,
+            depthTest: true,
+          }); // red = below ground
 
           // Initialize terrain3dMeasLine as a dummy group for cleanup tracking
           var dummyGeo = new THREE.BufferGeometry().setFromPoints([p1v, p1v]);
@@ -3852,13 +5280,14 @@
             var i0 = Math.floor(profIdx);
             var i1 = Math.min(i0 + 1, n - 1);
             var frac = profIdx - i0;
-            var terrainY = ((heightProfileData[i0] - p.elMin) * p.elScale) * (1 - frac) +
-                           ((heightProfileData[i1] - p.elMin) * p.elScale) * frac;
+            var terrainY =
+              (heightProfileData[i0] - p.elMin) * p.elScale * (1 - frac) +
+              (heightProfileData[i1] - p.elMin) * p.elScale * frac;
 
             var pt = new THREE.Vector3(x, losY, z);
             var above = losY >= terrainY;
 
-            if (curState === null) curState = (above ? "above" : "below");
+            if (curState === null) curState = above ? "above" : "below";
 
             if (above) {
               if (curState === "below" && belowPts.length >= 2) {
@@ -3899,28 +5328,48 @@
           }
 
           // Vertical posts from ground to antenna
-          var postMat = new THREE.LineBasicMaterial({ color: 0x0066cc, linewidth: 1, depthTest: true });
+          var postMat = new THREE.LineBasicMaterial({
+            color: 0x0066cc,
+            linewidth: 1,
+            depthTest: true,
+          });
           var post1 = new THREE.Line(
-            new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x1, (gnd1 - p.elMin) * p.elScale, z1), p1v]),
-            postMat
+            new THREE.BufferGeometry().setFromPoints([
+              new THREE.Vector3(x1, (gnd1 - p.elMin) * p.elScale, z1),
+              p1v,
+            ]),
+            postMat,
           );
           terrain3dScene.add(post1);
 
-          var postMat2 = new THREE.LineBasicMaterial({ color: 0xcc0000, linewidth: 1, depthTest: true });
+          var postMat2 = new THREE.LineBasicMaterial({
+            color: 0xcc0000,
+            linewidth: 1,
+            depthTest: true,
+          });
           var post2 = new THREE.Line(
-            new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x2, (gnd2 - p.elMin) * p.elScale, z2), p2v]),
-            postMat2
+            new THREE.BufferGeometry().setFromPoints([
+              new THREE.Vector3(x2, (gnd2 - p.elMin) * p.elScale, z2),
+              p2v,
+            ]),
+            postMat2,
           );
           terrain3dScene.add(post2);
 
           // Endpoint spheres at antenna heights
           var sphereGeo = new THREE.SphereGeometry(2, 8, 8);
-          var m1 = new THREE.Mesh(sphereGeo, new THREE.MeshBasicMaterial({ color: 0x0066cc }));
+          var m1 = new THREE.Mesh(
+            sphereGeo,
+            new THREE.MeshBasicMaterial({ color: 0x0066cc }),
+          );
           m1.position.copy(p1v);
           terrain3dScene.add(m1);
           terrain3dMeasLine.userData.markers.push(m1);
 
-          var m2 = new THREE.Mesh(sphereGeo, new THREE.MeshBasicMaterial({ color: 0xcc0000 }));
+          var m2 = new THREE.Mesh(
+            sphereGeo,
+            new THREE.MeshBasicMaterial({ color: 0xcc0000 }),
+          );
           m2.position.copy(p2v);
           terrain3dScene.add(m2);
           terrain3dMeasLine.userData.markers.push(m2);
@@ -3998,7 +5447,9 @@
               }).then(
                 function (res) {
                   if (res.code === 0) {
-                    $("#mapUpdatedAlert").removeClass("collapse");
+                    var alertEl = $("#mapUpdatedAlert");
+              alertEl.show();
+              setTimeout(function() { alertEl.hide(); }, 3000);
                     loadMap();
                   } else {
                     alert(res.message || "Upload failed");
@@ -4057,7 +5508,16 @@
 
             $("#profileHeight1, #profileHeight2").on("input", function () {
               if (heightProfileData) {
-                renderHeightProfile((function(v){ var f = parseFloat(v); return isNaN(f) ? 2 : f; })($("#profileHeight1").val()), (function(v){ var f = parseFloat(v); return isNaN(f) ? 2 : f; })($("#profileHeight2").val()));
+                renderHeightProfile(
+                  (function (v) {
+                    var f = parseFloat(v);
+                    return isNaN(f) ? 2 : f;
+                  })($("#profileHeight1").val()),
+                  (function (v) {
+                    var f = parseFloat(v);
+                    return isNaN(f) ? 2 : f;
+                  })($("#profileHeight2").val()),
+                );
               }
             });
 
@@ -4070,7 +5530,9 @@
               if (heightProfileData) computeLinkBudget();
             });
 
-            $("#linkFreq, #linkTxPower, #linkTxGain, #linkRxGain, #linkRxSens, #linkRxSensCustom, #linkForestSender, #linkForestReceiver, #linkVegDensSender, #linkVegDensReceiver").on("input change", function () {
+            $(
+              "#linkFreq, #linkTxPower, #linkTxGain, #linkRxGain, #linkRxSens, #linkRxSensCustom, #linkForestSender, #linkForestReceiver, #linkVegDensSender, #linkVegDensReceiver",
+            ).on("input change", function () {
               if (heightProfileData) computeLinkBudget();
             });
 
@@ -4325,23 +5787,23 @@
               });
             },
           );
-            // === 3D Terrain: Area selection ===
+          // === 3D Terrain: Area selection ===
 
-            $("#btnSelectArea, #btnSelectArea3d").click(startAreaSelect);
+          $("#btnSelectArea, #btnSelectArea3d").click(startAreaSelect);
 
-            $("#btnClear3d").click(function () {
-              destroyTerrain3D();
-              cancelAreaSelect();
-              terrain3dGridSize = 50;
-              $("#btnClear3d").prop("disabled", true);
-              $("#btnRefine3d").prop("disabled", true);
-              $("#terrain3dPlaceholder").show();
-              $("#terrain3dStatus").hide();
-            });
-
-            $("#btnRefine3d").click(refineTerrain3D);
-
+          $("#btnClear3d").click(function () {
+            destroyTerrain3D();
+            cancelAreaSelect();
+            terrain3dGridSize = 50;
+            $("#btnClear3d").prop("disabled", true);
+            $("#btnRefine3d").prop("disabled", true);
+            $("#terrain3dPlaceholder").show();
+            $("#terrain3dStatus").hide();
+            $("#elevationAttribution").hide();
           });
+
+          $("#btnRefine3d").click(refineTerrain3D);
+        });
       </script>
     </div>
   </body>

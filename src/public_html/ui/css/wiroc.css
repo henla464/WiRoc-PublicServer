@@ -242,8 +242,12 @@
   border-radius: 8px !important;
   border: 2px solid #f1f1f1;
 }
+/* Group toggles handled via JS at table creation - no CSS needed */
 tr.subrow td {
   background-color: #faf3d1 !important;
+}
+.rep-pending-ack {
+  background-color: #e0f5e0 !important;
 }
 tr.subrow td.ack-cell {
   background-color: #d4edda !important;

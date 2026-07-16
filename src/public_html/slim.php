@@ -4918,7 +4918,7 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
             . "substr(msd.SentDate, 1, 19) AS SentDate, substr(msd.SendFailedDate, 1, 19) AS SendFailedDate, substr(msd.AckReceivedDate, 1, 19) AS AckReceivedDate, "
             . "msd.NoOfSendTries, "
             . "NULL AS SubscriberTypeName, NULL AS TransformName, "
-            . "'active' AS source, mbd.id AS orig_id "
+            . "'active' AS source, mbd.id AS orig_id, hex(msd.MessageID) AS MessageID "
             . "FROM MessageBoxData mbd "
             . "JOIN MessageSubscriptionData msd ON mbd.id = msd.MessageBoxId "
             . "UNION ALL SELECT "
@@ -4932,7 +4932,7 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
             . "substr(msad.SentDate, 1, 19) AS SentDate, substr(msad.SendFailedDate, 1, 19) AS SendFailedDate, substr(msad.AckReceivedDate, 1, 19) AS AckReceivedDate, "
             . "msad.NoOfSendTries, "
             . "msad.SubscriberTypeName, msad.TransformName, "
-            . "'archive' AS source, mbad.OrigId AS orig_id "
+            . "'archive' AS source, mbad.OrigId AS orig_id, hex(msad.MessageID) AS MessageID "
             . "FROM MessageBoxArchiveData mbad "
             . "JOIN MessageSubscriptionArchiveData msad ON mbad.OrigId = msad.MessageBoxId "
             . ") AS subq $whereClause ORDER BY SentDate ASC, CreatedDate ASC";
@@ -5022,6 +5022,7 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                     'OrigId' => $rm['orig_id'] ?? null,
                     'CreatedDate' => $rm['CreatedDate'] ?? null,
                     'MessageData' => $rm['MessageData'] ?? null,
+                    'MessageID' => $rm['MessageID'] ?? null,
                     'SICardNumber' => $rm['SICardNumber'] ?? null,
                     'SportIdentHour' => $rm['SportIdentHour'] ?? null,
                     'SportIdentMinute' => $rm['SportIdentMinute'] ?? null,
@@ -5079,14 +5080,17 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
     if ($receiverLookup !== null) {
         foreach ($messages as &$msg) {
             if (($msg['InstanceName'] ?? '') === 'resubmit1') continue;
-            $key = $siMatchKey($msg['SICardNumber'] ?? '', $msg['SportIdentHour'] ?? '', $msg['SportIdentMinute'] ?? '', $msg['SportIdentSecond'] ?? '', $msg['SIStationNumber'] ?? '');
+            // STATUS messages match on MessageData, non-STATUS on SI data
+            $key = ($msg['MessageTypeName'] ?? '') === 'STATUS'
+                ? ('STATUS|' . $msg['MessageData'])
+                : $siMatchKey($msg['SICardNumber'] ?? '', $msg['SportIdentHour'] ?? '', $msg['SportIdentMinute'] ?? '', $msg['SportIdentSecond'] ?? '', $msg['SIStationNumber'] ?? '');
             $matches = $receiverLookup[$key] ?? [];
 
             if (count($matches) === 0) {
                 $msg['recv_SentDate'] = null; $msg['recv_SendFailedDate'] = null;
                 $msg['recv_AckReceivedDate'] = null; $msg['recv_NoOfSendTries'] = null;
                 $msg['recv_SubscriberTypeName'] = null; $msg['recv_TransformName'] = null;
-                $msg['recv_OrigId'] = null; $msg['recv_CreatedDate'] = null;
+                $msg['recv_OrigId'] = null; $msg['recv_MessageID'] = null; $msg['recv_CreatedDate'] = null;
                 $msg['recv_MessageData'] = null;
                 $copySIFields($msg, [], 'recv_');
             } else {
@@ -5098,6 +5102,7 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                 $msg['recv_SubscriberTypeName'] = $matches[0]['SubscriberTypeName'] ?? null;
                 $msg['recv_TransformName'] = $matches[0]['TransformName'] ?? null;
                 $msg['recv_OrigId'] = $matches[0]['OrigId'] ?? null;
+                $msg['recv_MessageID'] = $matches[0]['MessageID'] ?? null;
                 $msg['recv_CreatedDate'] = $matches[0]['CreatedDate'] ?? null;
                 $msg['recv_MessageData'] = $matches[0]['MessageData'] ?? null;
                 $copySIFields($msg, $matches[0], 'recv_');
@@ -5112,6 +5117,7 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                             'recv_SubscriberTypeName' => $matches[$i]['SubscriberTypeName'] ?? null,
                             'recv_TransformName' => $matches[$i]['TransformName'] ?? null,
                             'recv_OrigId' => $matches[$i]['OrigId'] ?? null,
+                            'recv_MessageID' => $matches[$i]['MessageID'] ?? null,
                             'recv_CreatedDate' => $matches[$i]['CreatedDate'] ?? null,
                             'recv_MessageData' => $matches[$i]['MessageData'] ?? null,
                             'recv_SICardNumber' => $matches[$i]['SICardNumber'] ?? null,
@@ -5154,6 +5160,7 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                     'MessageData' => $rm['MessageData'] ?? null,
                     'OrigId' => $rm['orig_id'] ?? null,
                     'CreatedDate' => $rm['CreatedDate'] ?? null,
+                    'MessageID' => $rm['MessageID'] ?? null,
                     'SICardNumber' => $rm['SICardNumber'] ?? null,
                     'SportIdentHour' => $rm['SportIdentHour'] ?? null,
                     'SportIdentMinute' => $rm['SportIdentMinute'] ?? null,
@@ -5208,7 +5215,7 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                 $msg['rep_AckReceivedDate'] = null; $msg['rep_NoOfSendTries'] = null;
                 $msg['rep_SubscriberTypeName'] = null; $msg['rep_TransformName'] = null;
                 $msg['rep_MessageData'] = null;
-                $msg['rep_OrigId'] = null; $msg['rep_CreatedDate'] = null;
+                $msg['rep_OrigId'] = null; $msg['rep_MessageID'] = null; $msg['rep_CreatedDate'] = null;
                 $copySIFields($msg, [], 'rep_');
             } else {
                 $msg['rep_SentDate'] = $matches[0]['SentDate'] ?? null;
@@ -5219,6 +5226,7 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                 $msg['rep_TransformName'] = $matches[0]['TransformName'] ?? null;
                 $msg['rep_MessageData'] = $matches[0]['MessageData'] ?? null;
                 $msg['rep_OrigId'] = $matches[0]['OrigId'] ?? null;
+                $msg['rep_MessageID'] = $matches[0]['MessageID'] ?? null;
                 $msg['rep_CreatedDate'] = $matches[0]['CreatedDate'] ?? null;
                 $copySIFields($msg, $matches[0], 'rep_');
                 if (count($matches) > 1) {
@@ -5233,6 +5241,7 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
                             'rep_TransformName' => $matches[$i]['TransformName'] ?? null,
                             'rep_MessageData' => $matches[$i]['MessageData'] ?? null,
                             'rep_OrigId' => $matches[$i]['OrigId'] ?? null,
+                            'rep_MessageID' => $matches[$i]['MessageID'] ?? null,
                             'rep_CreatedDate' => $matches[$i]['CreatedDate'] ?? null,
                             'rep_SICardNumber' => $matches[$i]['SICardNumber'] ?? null,
                             'rep_SportIdentHour' => $matches[$i]['SportIdentHour'] ?? null,
@@ -5389,6 +5398,59 @@ $app->get('/api/v1/LogArchives/LogContent', function (Request $request, Response
     $response->getBody()->write(json_encode($parsed));
     return $response->withHeader('Content-Type', 'application/json');
 })->setName("getLogArchivesLogContent");
+
+/**
+ * @SWG\Post(
+ *     path="/api/v1/elevation",
+ *     description="Proxy elevation requests to OpenElevation API",
+ *     operationId="postElevation",
+ *     produces={"application/json"},
+ *     @SWG\Parameter(name="body", in="body", required=true, @SWG\Schema(ref="#/definitions/ElevationRequest"))
+ * )
+ */
+$app->post('/api/v1/elevation', function (Request $request, Response $response) {
+    $body = $request->getBody()->__toString();
+    $json = json_decode($body, true);
+    if (!$json || !isset($json['locations'])) {
+        $response->getBody()->write(json_encode(['error' => 'Invalid request, locations required']));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+    }
+
+    $ch = curl_init('http://home.chenfei.se:80/api/v1/lookup');
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['locations' => $json['locations']]));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+    $result = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    $curlErrno = curl_errno($ch);
+    curl_close($ch);
+
+    if ($curlError) {
+        $response->getBody()->write(json_encode([
+            'error' => $curlError,
+            'errno' => $curlErrno,
+            'upstream' => 'http://home.chenfei.se:80/api/v1/lookup'
+        ]));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(502);
+    }
+
+    if (empty($result) || $httpCode >= 500) {
+        $response->getBody()->write(json_encode([
+            'error' => 'Upstream returned ' . $httpCode,
+            'upstream_response' => $result,
+            'upstream' => 'http://home.chenfei.se:80/api/v1/lookup'
+        ]));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(502);
+    }
+
+    $response->getBody()->write($result);
+    return $response->withHeader('Content-Type', 'application/json')->withStatus($httpCode);
+})->setName("postElevation");
 
 $app->run();
 

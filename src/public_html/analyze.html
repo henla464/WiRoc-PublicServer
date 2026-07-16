@@ -299,42 +299,49 @@
         },
       };
 
-      var theadHtml =
-        "<thead><tr>" +
-        '<th scope="col" colspan="14" class="sorter-false filter-false">Sender</th>' +
-        '<th scope="col" colspan="7" class="sorter-false filter-false rep-group">Repeater</th>' +
-        '<th scope="col" colspan="8" class="sorter-false filter-false recv-group">Receiver</th>' +
-        "</tr><tr>" +
-        '<th scope="col" style="width:24px" class="sorter-false filter-false"></th>' +
-        '<th scope="col" style="width:24px" class="sorter-false filter-false">&#9432;</th>' +
-        '<th scope="col">MessageTypeName</th>' +
-        '<th scope="col">InstanceName</th>' +
-        '<th scope="col">MessageSubTypeName</th>' +
-        '<th scope="col">SICardNumber</th>' +
-        '<th scope="col">Punch time</th>' +
-        '<th scope="col">SIStationNumber</th>' +
-        '<th scope="col" class="sorter-shortDate" data-sorter="shortDate">SentDate</th>' +
-        '<th scope="col">Ack/SendFailed</th>' +
-        '<th scope="col">Time to Ack (s)</th>' +
-        '<th scope="col">NoOfSendTries</th>' +
-        '<th scope="col">SubscriberTypeName</th>' +
-        '<th scope="col">TransformName</th>' +
-        '<th scope="col" class="rep-group group-first">Repeater requested</th>' +
-        '<th scope="col" class="rep-group filter-false">&#9432;</th>' +
-        '<th scope="col" class="rep-group">Rep SentDate</th>' +
-        '<th scope="col" class="rep-group">Rep Ack/SendFailed</th>' +
-        '<th scope="col" class="rep-group">Rep NoOfSendTries</th>' +
-        '<th scope="col" class="rep-group">Rep SubscriberTypeName</th>' +
-        '<th scope="col" class="rep-group">Rep TransformName</th>' +
-        '<th scope="col" class="recv-group group-first">Recv Repeater requested</th>' +
-        '<th scope="col" class="recv-group filter-false">&#9432;</th>' +
-        '<th scope="col" class="recv-group">Recv SentDate</th>' +
-        '<th scope="col" class="recv-group">Recv Ack/SendFailed</th>' +
-        '<th scope="col" class="recv-group">Recv NoOfSendTries</th>' +
-        '<th scope="col" class="recv-group">Recv SubscriberTypeName</th>' +
-        '<th scope="col" class="recv-group">Recv TransformName</th>' +
-        '<th scope="col" class="recv-group" title="Punch time to SentDate in receiver">Total time</th>' +
-        "</tr></thead>";
+      function buildTheadHtml() {
+        var h = "<thead><tr>";
+        var senderCols = 14, totalCols = senderCols;
+        if (hasRepeaterData) totalCols += 7;
+        if (hasReceiverData) totalCols += 8;
+        h += '<th scope="col" colspan="' + senderCols + '" class="sorter-false filter-false">Sender</th>';
+        if (hasRepeaterData) h += '<th scope="col" colspan="7" class="sorter-false filter-false">Repeater</th>';
+        if (hasReceiverData) h += '<th scope="col" colspan="8" class="sorter-false filter-false">Receiver</th>';
+        h += '</tr><tr>' +
+          '<th scope="col" style="width:24px" class="sorter-false filter-false"></th>' +
+          '<th scope="col" style="width:24px" class="sorter-false filter-false">&#9432;</th>' +
+          '<th scope="col">MessageTypeName</th>' +
+          '<th scope="col">InstanceName</th>' +
+          '<th scope="col">MessageSubTypeName</th>' +
+          '<th scope="col">SICardNumber</th>' +
+          '<th scope="col">Punch time</th>' +
+          '<th scope="col">SIStationNumber</th>' +
+          '<th scope="col" class="sorter-shortDate" data-sorter="shortDate">SentDate</th>' +
+          '<th scope="col">Ack/SendFailed</th>' +
+          '<th scope="col">Time to Ack (s)</th>' +
+          '<th scope="col">NoOfSendTries</th>' +
+          '<th scope="col">SubscriberTypeName</th>' +
+          '<th scope="col">TransformName</th>';
+        if (hasRepeaterData) h +=
+          '<th scope="col" class="group-first">Repeater requested</th>' +
+          '<th scope="col" class="filter-false">&#9432;</th>' +
+          '<th scope="col">Rep SentDate</th>' +
+          '<th scope="col">Rep Ack/SendFailed</th>' +
+          '<th scope="col">Rep NoOfSendTries</th>' +
+          '<th scope="col">Rep SubscriberTypeName</th>' +
+          '<th scope="col">Rep TransformName</th>';
+        if (hasReceiverData) h +=
+          '<th scope="col" class="group-first">Recv Repeater requested</th>' +
+          '<th scope="col" class="filter-false">&#9432;</th>' +
+          '<th scope="col">Recv SentDate</th>' +
+          '<th scope="col">Recv Ack/SendFailed</th>' +
+          '<th scope="col">Recv NoOfSendTries</th>' +
+          '<th scope="col">Recv SubscriberTypeName</th>' +
+          '<th scope="col">Recv TransformName</th>' +
+          '<th scope="col" title="Punch time to SentDate in receiver">Total time</th>';
+        h += '</tr></thead>';
+        return h;
+      }
 
       function formatSportIdentTime(hour, minute, second) {
         if (hour == null && minute == null && second == null) return "";
@@ -792,11 +799,18 @@
           return '<td style="' + bg + ';font-size:13px;cursor:help;text-align:center" title="' + title + '">&#9432;</td>';
         }
         function emptyTd(bg) { return '<td style="' + bg + '"></td>'; }
-        function emptyTds(n, bg) { var s = ''; for (var i = 0; i < n; i++) s += emptyTd(bg); return s; }
+        function emptyTds(n, bg, cls) { var s = ''; for (var i = 0; i < n; i++) s += '<td style="' + bg + '" class="' + (cls || '') + '"></td>'; return s; }
 
         // Compute info tooltips for all groups
         var senderInfoTitle = '';
-        if (row.orig_id) senderInfoTitle += 'orig_id: ' + row.orig_id;
+        if (row.SICardNumber) senderInfoTitle += 'SICardNumber: ' + row.SICardNumber;
+        if (row.SportIdentHour != null) senderInfoTitle += (senderInfoTitle ? '\n' : '') + 'Punch time: ' + formatSportIdentTime(row.SportIdentHour, row.SportIdentMinute, row.SportIdentSecond);
+        if (row.SIStationNumber) senderInfoTitle += (senderInfoTitle ? '\n' : '') + 'SIStationNumber: ' + row.SIStationNumber;
+        if (row.SICardNumber2) senderInfoTitle += (senderInfoTitle ? '\n' : '') + 'SICardNumber2: ' + row.SICardNumber2;
+        if (row.SportIdentHour2 != null) senderInfoTitle += (senderInfoTitle ? '\n' : '') + 'Punch time2: ' + formatSportIdentTime(row.SportIdentHour2, row.SportIdentMinute2, row.SportIdentSecond2);
+        if (row.SIStationNumber2) senderInfoTitle += (senderInfoTitle ? '\n' : '') + 'SIStationNumber2: ' + row.SIStationNumber2;
+        if (row.MessageID) senderInfoTitle += (senderInfoTitle ? '\n' : '') + 'MessageID: ' + row.MessageID;
+        if (row.orig_id) senderInfoTitle += (senderInfoTitle ? '\n' : '') + 'orig_id: ' + row.orig_id;
         if (row.CreatedDate) senderInfoTitle += (senderInfoTitle ? '\n' : '') + 'CreatedDate: ' + row.CreatedDate;
 
         var repInfoTitle = '';
@@ -806,6 +820,7 @@
         if (row.rep_SICardNumber2) repInfoTitle += (repInfoTitle ? '\n' : '') + 'SICardNumber2: ' + row.rep_SICardNumber2;
         if (row.rep_SportIdentHour2 != null) repInfoTitle += (repInfoTitle ? '\n' : '') + 'Punch time2: ' + formatSportIdentTime(row.rep_SportIdentHour2, row.rep_SportIdentMinute2, row.rep_SportIdentSecond2);
         if (row.rep_SIStationNumber2) repInfoTitle += (repInfoTitle ? '\n' : '') + 'SIStationNumber2: ' + row.rep_SIStationNumber2;
+        if (row.rep_MessageID) repInfoTitle += (repInfoTitle ? '\n' : '') + 'MessageID: ' + row.rep_MessageID;
         if (row.rep_OrigId) repInfoTitle += (repInfoTitle ? '\n' : '') + 'orig_id: ' + row.rep_OrigId;
         if (row.rep_CreatedDate) repInfoTitle += (repInfoTitle ? '\n' : '') + 'CreatedDate: ' + row.rep_CreatedDate;
 
@@ -816,12 +831,13 @@
         if (row.recv_SICardNumber2) recvInfoTitle += (recvInfoTitle ? '\n' : '') + 'SICardNumber2: ' + row.recv_SICardNumber2;
         if (row.recv_SportIdentHour2 != null) recvInfoTitle += (recvInfoTitle ? '\n' : '') + 'Punch time2: ' + formatSportIdentTime(row.recv_SportIdentHour2, row.recv_SportIdentMinute2, row.recv_SportIdentSecond2);
         if (row.recv_SIStationNumber2) recvInfoTitle += (recvInfoTitle ? '\n' : '') + 'SIStationNumber2: ' + row.recv_SIStationNumber2;
+        if (row.recv_MessageID) recvInfoTitle += (recvInfoTitle ? '\n' : '') + 'MessageID: ' + row.recv_MessageID;
         if (row.recv_OrigId) recvInfoTitle += (recvInfoTitle ? '\n' : '') + 'orig_id: ' + row.recv_OrigId;
         if (row.recv_CreatedDate) recvInfoTitle += (recvInfoTitle ? '\n' : '') + 'CreatedDate: ' + row.recv_CreatedDate;
 
         // Repeater columns (between sender and receiver)
         var REP_COLS = 7, RECV_COLS = 8;
-        var repeaterCols = emptyTds(REP_COLS, cellBg);
+        var repeaterCols = '';
         if (hasRepeaterData) {
           var repAckBg = isChild ? ackCellBg : cellBg;
           var repReqCell = '<td style="' + cellBg + '" class="group-first"></td>';
@@ -844,17 +860,23 @@
           } else {
             repAckCell = '<td style="' + repAckBg + '"></td>';
           }
+          // Very light green if ack transform sent but no ack date yet (pending ack)
+          var repTransform = row.rep_TransformName || '';
+          if (!row.rep_AckReceivedDate && !row.rep_SendFailedDate && row.rep_SentDate &&
+              (repTransform === 'RepeaterSIMessageToLoraAckTransform' || repTransform === 'RepeaterSIMessageDoubleToLoraAckTransform')) {
+            repAckCell = '<td style="box-shadow:none;background-color:#edf7ed" class="rep-pending-ack"></td>';
+          }
           repeaterCols =
             repReqCell +
             infoCell(repCellBg, repInfoTitle) +
-            '<td style="' + repCellBg + '">' + (row.rep_SentDate || "") + "</td>" +
+            '<td style="' + repCellBg + '">' + (row.rep_SentDate || (row.rep_TransformName ? 'Not Sent' : '')) + "</td>" +
             repAckCell +
             '<td style="' + repCellBg + '">' + (row.rep_NoOfSendTries != null ? row.rep_NoOfSendTries : "") + "</td>" +
             '<td style="' + repCellBg + '">' + (row.rep_SubscriberTypeName || "") + "</td>" +
             '<td style="' + repCellBg + '">' + (row.rep_TransformName || "") + "</td>";
         }
 
-        var receiverCols = emptyTds(RECV_COLS, cellBg);
+        var receiverCols = '';
         if (hasReceiverData) {
           var recvAckBg = isChild ? ackCellBg : cellBg;
           var recvAckCell = "";
@@ -1008,40 +1030,105 @@
               return oa - ob;
             });
 
-            // Build dup rows: the original carries first recv + first rep (from server).
-            // recvList/repList are extras arrays (no null sentinel). Create un-mixed dup rows
-            // for each extra, plus cross-product if both sides have extras.
-            var combos = [];
-            // Recv extras: each pairs with the original's first rep match
-            for (var ri = 0; ri < recvList.length; ri++) {
-              if (!recvList[ri]) continue;
-              var dup = $.extend({}, this, recvList[ri], { _rowKind: 'duplicate', _dupSource: 'recv' });
-              combos.push(dup);
+            // Pair by closest time: each recv matched with closest rep, each rep matched with closest recv.
+            // Unmatched entries get their own row with the other group empty.
+            function timeDiff(a, b) {
+              if (!a || !b) return Infinity;
+              return Math.abs(new Date(a.replace(' ', 'T')).getTime() - new Date(b.replace(' ', 'T')).getTime());
             }
-            // Rep extras: each pairs with the original's first recv match
+
+            var recvEntries = []; // { sent, data }
+            if (this.recv_SentDate) recvEntries.push({ sent: this.recv_SentDate, data: null }); // first match (on original)
+            for (var ri = 0; ri < recvList.length; ri++) {
+              if (recvList[ri] && recvList[ri].recv_SentDate) recvEntries.push({ sent: recvList[ri].recv_SentDate, data: recvList[ri] });
+            }
+
+            var repEntries = [];
+            if (this.rep_SentDate) repEntries.push({ sent: this.rep_SentDate, data: null });
             for (var pi = 0; pi < repList.length; pi++) {
-              if (!repList[pi]) continue;
-              var dup = $.extend({}, this, repList[pi], { _rowKind: 'duplicate', _dupSource: 'rep' });
+              if (repList[pi] && repList[pi].rep_SentDate) repEntries.push({ sent: repList[pi].rep_SentDate, data: repList[pi] });
+            }
+
+            // Greedy closest-match: for n = min(len(recv), len(rep)), pair each recv[i] with unmatched best rep
+            var nPairs = Math.min(recvEntries.length, repEntries.length);
+            var usedRep = {};
+            var pairs = [];
+            for (var ri = 0; ri < nPairs; ri++) {
+              var bestPi = -1, bestDist = Infinity;
+              for (var pi = 0; pi < repEntries.length; pi++) {
+                if (usedRep[pi]) continue;
+                var d = timeDiff(recvEntries[ri].sent, repEntries[pi].sent);
+                if (d < bestDist) { bestDist = d; bestPi = pi; }
+              }
+              if (bestPi >= 0) {
+                pairs.push({ recv: recvEntries[ri], rep: repEntries[bestPi], recvIdx: ri, repIdx: bestPi });
+                usedRep[bestPi] = true;
+              }
+            }
+            // Unmatched entries get paired with null (empty on that side)
+            for (var ri = 0; ri < recvEntries.length; ri++) {
+              var alreadyPaired = false;
+              for (var p = 0; p < pairs.length; p++) { if (pairs[p].recvIdx === ri) { alreadyPaired = true; break; } }
+              if (!alreadyPaired && ri > 0) pairs.push({ recv: recvEntries[ri], rep: null, recvIdx: ri, repIdx: -1 });
+            }
+            for (var pi = 0; pi < repEntries.length; pi++) {
+              if (!usedRep[pi] && pi > 0) pairs.push({ recv: null, rep: repEntries[pi], recvIdx: -1, repIdx: pi });
+            }
+
+            // Build combos: each pair (skip first — that's the original). Non-first entries get empty for unmatched side.
+            var combos = [];
+            for (var p = 0; p < pairs.length; p++) {
+              if (pairs[p].recvIdx === 0 && pairs[p].repIdx === 0) continue; // skip original
+              var dup = $.extend({}, this);
+              // Clear the default data for the group we're going to override
+              if (pairs[p].recvIdx !== 0 && pairs[p].recv && pairs[p].recv.data) {
+                $.extend(dup, pairs[p].recv.data);
+              }
+              if (pairs[p].repIdx !== 0 && pairs[p].rep && pairs[p].rep.data) {
+                $.extend(dup, pairs[p].rep.data);
+              }
+              // If a recv entry has no rep match, null out rep fields
+              if (!pairs[p].rep || pairs[p].repIdx < 0) {
+                var repFields = ['rep_SentDate','rep_SendFailedDate','rep_AckReceivedDate','rep_NoOfSendTries','rep_SubscriberTypeName','rep_TransformName','rep_MessageData','rep_OrigId','rep_MessageID','rep_CreatedDate','rep_SICardNumber','rep_SportIdentHour','rep_SportIdentMinute','rep_SportIdentSecond','rep_SIStationNumber','rep_SICardNumber2','rep_SportIdentHour2','rep_SportIdentMinute2','rep_SportIdentSecond2','rep_SIStationNumber2'];
+                for (var f = 0; f < repFields.length; f++) dup[repFields[f]] = null;
+              }
+              // If a rep entry has no recv match, null out recv fields
+              if (!pairs[p].recv || pairs[p].recvIdx < 0) {
+                var recvFields = ['recv_SentDate','recv_SendFailedDate','recv_AckReceivedDate','recv_NoOfSendTries','recv_SubscriberTypeName','recv_TransformName','recv_MessageData','recv_OrigId','recv_MessageID','recv_CreatedDate','recv_SICardNumber','recv_SportIdentHour','recv_SportIdentMinute','recv_SportIdentSecond','recv_SIStationNumber','recv_SICardNumber2','recv_SportIdentHour2','recv_SportIdentMinute2','recv_SportIdentSecond2','recv_SIStationNumber2'];
+                for (var f = 0; f < recvFields.length; f++) dup[recvFields[f]] = null;
+              }
+              dup._rowKind = 'duplicate';
+              dup._dupSource = (!pairs[p].recv || pairs[p].recvIdx < 0) ? 'rep' : ((!pairs[p].rep || pairs[p].repIdx < 0) ? 'recv' : 'recv+rep');
               combos.push(dup);
             }
             // Sort combos by best available SentDate (repeater first, receiver fallback)
             // Save original copy for sorting. If there are receiver extras, the original
             // carries the first (earliest) match from server, which is the first recv extra.
             // For sorting, pick the best SentDate value from rep > recv > sender
-            function bestSentDate(row) {
-              return row.rep_SentDate || row.recv_SentDate || row.SentDate || '';
+            // Sort rows: original first, then by recv_SentDate (unmatched recv last), then by rep_SentDate (rep-only last)
+            for (var c = 0; c < combos.length; c++) {
+              combos[c]._sortRecv = combos[c].recv_SentDate || '';
+              combos[c]._sortRep = combos[c].rep_SentDate || '';
             }
-            var allRows = [this].concat(combos);
-            allRows.sort(function (a, b) {
-              var sa = bestSentDate(a);
-              var sb = bestSentDate(b);
-              if (sa < sb) return -1;
-              if (sa > sb) return 1;
-              // original before duplicates when same time
-              if (a._rowKind === 'original' && b._rowKind === 'duplicate') return -1;
-              if (a._rowKind === 'duplicate' && b._rowKind === 'original') return 1;
+            combos.sort(function (a, b) {
+              // recv-paired before rep-only
+              var aHasRecv = !!a.recv_SentDate;
+              var bHasRecv = !!b.recv_SentDate;
+              if (aHasRecv && !bHasRecv) return -1;
+              if (!aHasRecv && bHasRecv) return 1;
+              // If both have recv, sort by recv_SentDate
+              if (aHasRecv && bHasRecv) {
+                if (a._sortRecv < b._sortRecv) return -1;
+                if (a._sortRecv > b._sortRecv) return 1;
+              }
+              // If both rep-only, sort by rep_SentDate
+              if (!aHasRecv && !bHasRecv) {
+                if (a._sortRep < b._sortRep) return -1;
+                if (a._sortRep > b._sortRep) return 1;
+              }
               return 0;
             });
+            var allRows = [this].concat(combos);
             for (var c = 0; c < allRows.length; c++) expanded.push(allRows[c]);
           });
           data = expanded;
@@ -1055,7 +1142,7 @@
           '<table class="table table-hover table-sm" id="analyzeResultsTable"></table>',
         );
         $table.append("<caption>Analyzed Messages</caption>");
-        $table.append(theadHtml);
+        $table.append(buildTheadHtml());
         var $tbody = $("<tbody></tbody>");
 
         // Build row-key helper
@@ -1531,7 +1618,8 @@
               } else if (i % 2 === 1) {
                 bg += ";background-color:rgba(0,0,0,.05)";
               }
-              $row.find("td").attr("style", bg);
+              // Apply stripe to all cells EXCEPT ack/sendfailed/pending cells
+              $row.find("td").not(".ack-cell,.sendfailed-cell,.rep-pending-ack").attr("style", bg);
               // Re-apply muted color/italic for duplicate sender cells (expand col + sender cols)
               if (isDup) {
                 $row.find("td").slice(0, 14).css({color: '#999', fontStyle: 'italic'});
@@ -1556,134 +1644,47 @@
 
         // Init TableFilter
         var tip = 'Quotes (") match phrases...';
+        var colFilters = [
+          { columnName: "", inputType: "None" },
+          { columnName: "&#9432;", inputType: "None" },
+          { columnName: "MessageTypeName", inputType: "text", toolTipMessage: tip },
+          { columnName: "InstanceName", inputType: "text", toolTipMessage: tip },
+          { columnName: "MessageSubTypeName", inputType: "text", toolTipMessage: tip },
+          { columnName: "SICardNumber", inputType: "text", toolTipMessage: tip },
+          { columnName: "Punch time", inputType: "text", toolTipMessage: tip },
+          { columnName: "SIStationNumber", inputType: "text", toolTipMessage: tip },
+          { columnName: "SentDate", inputType: "text", toolTipMessage: tip },
+          { columnName: "Ack/SendFailed", inputType: "text", toolTipMessage: tip },
+          { columnName: "Time to Ack (s)", inputType: "text", toolTipMessage: tip },
+          { columnName: "NoOfSendTries", inputType: "text", toolTipMessage: tip },
+          { columnName: "SubscriberTypeName", inputType: "text", toolTipMessage: tip },
+          { columnName: "TransformName", inputType: "text", toolTipMessage: tip }
+        ];
+        if (hasRepeaterData) {
+          colFilters.push(
+            { columnName: "Repeater requested", inputType: "text", toolTipMessage: tip },
+            { columnName: "&#9432;", inputType: "None" },
+            { columnName: "Rep SentDate", inputType: "text", toolTipMessage: tip },
+            { columnName: "Rep Ack/SendFailed", inputType: "text", toolTipMessage: tip },
+            { columnName: "Rep NoOfSendTries", inputType: "text", toolTipMessage: tip },
+            { columnName: "Rep SubscriberTypeName", inputType: "text", toolTipMessage: tip },
+            { columnName: "Rep TransformName", inputType: "text", toolTipMessage: tip }
+          );
+        }
+        if (hasReceiverData) {
+          colFilters.push(
+            { columnName: "Recv Repeater requested", inputType: "text", toolTipMessage: tip },
+            { columnName: "&#9432;", inputType: "None" },
+            { columnName: "Recv SentDate", inputType: "text", toolTipMessage: tip },
+            { columnName: "Recv Ack/SendFailed", inputType: "text", toolTipMessage: tip },
+            { columnName: "Recv NoOfSendTries", inputType: "text", toolTipMessage: tip },
+            { columnName: "Recv SubscriberTypeName", inputType: "text", toolTipMessage: tip },
+            { columnName: "Recv TransformName", inputType: "text", toolTipMessage: tip },
+            { columnName: "Total time", inputType: "text", toolTipMessage: tip }
+          );
+        }
         $table.tableFilter({
-          columnFilters: [
-            { columnName: "", inputType: "None" },
-            { columnName: "&#9432;", inputType: "None" },
-            {
-              columnName: "MessageTypeName",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "InstanceName",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "MessageSubTypeName",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "SICardNumber",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "Punch time",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "SIStationNumber",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            { columnName: "SentDate", inputType: "text", toolTipMessage: tip },
-            {
-              columnName: "Ack/SendFailed",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "Time to Ack (s)",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "NoOfSendTries",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "SubscriberTypeName",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "TransformName",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "Repeater requested",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            { columnName: "&#9432;", inputType: "None" },
-            {
-              columnName: "Rep SentDate",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "Rep Ack/SendFailed",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "Rep NoOfSendTries",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "Rep SubscriberTypeName",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "Rep TransformName",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "Recv Repeater requested",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            { columnName: "&#9432;", inputType: "None" },
-            {
-              columnName: "Recv SentDate",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "Recv Ack/SendFailed",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "Recv NoOfSendTries",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "Recv SubscriberTypeName",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "Recv TransformName",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-            {
-              columnName: "Total time",
-              inputType: "text",
-              toolTipMessage: tip,
-            },
-          ],
+          columnFilters: colFilters,
           enableCookies: false,
           filteredRows: function () {
             syncSubrowVisibility();
@@ -1921,8 +1922,6 @@
 
               hasReceiverData = !!receiverZip;
               hasRepeaterData = !!$("#repeaterZipSelect").val();
-              $(".recv-group").toggle(hasReceiverData);
-              $(".rep-group").toggle(hasRepeaterData);
 
               buildTable(messages, recvExtra, repExtra);
             })
@@ -1930,6 +1929,11 @@
               $("#btnAnalyzeSpinner").hide();
               $("#btnAnalyze").prop("disabled", false);
               $("#analyzeLoading").hide();
+              if (jqXHR.status === 401) {
+                $("#loginRequiredAlert").removeClass("collapse");
+                $("#analyzerSection").hide();
+                return;
+              }
               var msg = "Analysis failed";
               try {
                 var resp = JSON.parse(jqXHR.responseText);

@@ -750,6 +750,7 @@
         var heightProfileSampling = false;
         var measuringMode = false;
         var measMarkers = []; // [point1, point2, line, label]
+        var profileMapMarker = null; // marker on map showing canvas hover position
 
         // ============================================================
         // Shared helpers
@@ -2038,6 +2039,50 @@
         var elevationSampling = false; // prevent concurrent requests
         var elevationCache = {}; // key -> elevation[] avoids hitting rate limits
 
+        // Bounding boxes for Sweden and United Kingdom
+        var swedenBounds = { minLat: 55.3, maxLat: 69.1, minLng: 10.9, maxLng: 24.2 };
+        var ukBounds = { minLat: 49.9, maxLat: 58.7, minLng: -8.2, maxLng: 1.8 };
+
+        function isInSwedenOrUK(lat, lng) {
+          return (lat >= swedenBounds.minLat && lat <= swedenBounds.maxLat &&
+                  lng >= swedenBounds.minLng && lng <= swedenBounds.maxLng) ||
+                 (lat >= ukBounds.minLat && lat <= ukBounds.maxLat &&
+                  lng >= ukBounds.minLng && lng <= ukBounds.maxLng);
+        }
+
+        function fetchOpenElevation(lats, lngs, key, p1, p2) {
+          var locations = [];
+          for (var i = 0; i < lats.length; i++) {
+            locations.push({ latitude: lats[i], longitude: lngs[i] });
+          }
+          $.ajax({
+            url: "/api/v1/elevation",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ locations: locations }),
+            dataType: "json"
+          }).then(function (data) {
+            if (data && data.results) {
+              var elevations = [];
+              for (var i = 0; i < data.results.length; i++) {
+                elevations.push(data.results[i].elevation);
+              }
+              elevationCache[key] = elevations;
+              heightProfileData = elevations;
+              var hDist = 0;
+              if (p1.distanceTo && p2.distanceTo) hDist = p1.distanceTo(p2);
+              heightProfilePoints = { p1: p1, p2: p2, lats: lats, lngs: lngs, dist: hDist };
+              renderHeightProfile(parseFloat($("#profileHeight1").val()) || 2, parseFloat($("#profileHeight2").val()) || 2);
+            }
+            elevationSampling = false;
+          }, function (jqXHR) {
+            elevationSampling = false;
+            var msg = "Could not load elevation data from OpenElevation.";
+            $("#linkBudgetResult").html('<span style="color:red;">' + msg + '</span>');
+            $("#linkBudgetSection").show();
+          });
+        }
+
         function sampleElevationProfile(p1, p2) {
           if (!p1 || !p2 || !p1.lat || !p1.lng || !p2.lat || !p2.lng) return;
 
@@ -2061,35 +2106,51 @@
           if (elevationSampling) return; // one request at a time
           elevationSampling = true;
           var distM = p1.distanceTo ? p1.distanceTo(p2) : 0;
-          var n = Math.min(distM > 2000 ? 80 : (distM > 400 ? 40 : 25), 100); // fewer points to avoid rate limits
-          var lats = [], lngs = [];
-          for (var i = 0; i < n; i++) {
-            var t = i / (n - 1);
-            lats.push(p1.lat + (p2.lat - p1.lat) * t);
-            lngs.push(p1.lng + (p2.lng - p1.lng) * t);
-          }
-          var latParam = "latitude=" + lats.join(",");
-          var lngParam = "&longitude=" + lngs.join(",");
-          $.ajax({
-            url: "https://api.open-meteo.com/v1/elevation?" + latParam + lngParam,
-            dataType: "json"
-          }).then(function (data) {
-            if (data && data.elevation) {
-              elevationCache[key] = data.elevation; // cache for reuse
-              heightProfileData = data.elevation;
-              var hDist = 0;
-              if (p1.distanceTo && p2.distanceTo) hDist = p1.distanceTo(p2);
-              heightProfilePoints = { p1: p1, p2: p2, lats: lats, lngs: lngs, dist: hDist };
-              renderHeightProfile(parseFloat($("#profileHeight1").val()) || 2, parseFloat($("#profileHeight2").val()) || 2);
+          // Check if midpoint is in Sweden or UK → use OpenElevation
+          var midLat = (p1.lat + p2.lat) / 2;
+          var midLng = (p1.lng + p2.lng) / 2;
+          if (isInSwedenOrUK(midLat, midLng)) {
+            // OpenElevation: no rate limit, high resolution
+            var n = distM < 4000 ? Math.min(Math.ceil(distM / 4), 1000) : 1000;
+            n = Math.max(n, 2); // at least 2 points
+            var lats = [], lngs = [];
+            for (var i = 0; i < n; i++) {
+              var t = i / (n - 1);
+              lats.push(p1.lat + (p2.lat - p1.lat) * t);
+              lngs.push(p1.lng + (p2.lng - p1.lng) * t);
             }
-            elevationSampling = false;
-          }, function (jqXHR) {
-            elevationSampling = false;
-            var msg = "Could not load elevation data.";
-            if (jqXHR.status === 429) msg = "Elevation API rate limit reached. Please wait a moment and try again.";
-            $("#linkBudgetResult").html('<span style="color:red;">' + msg + '</span>');
-            $("#linkBudgetSection").show();
-          });
+            fetchOpenElevation(lats, lngs, key, p1, p2);
+          } else {
+            var n = Math.min(distM > 2000 ? 80 : (distM > 400 ? 40 : 25), 100); // fewer points to avoid rate limits
+            var lats = [], lngs = [];
+            for (var i = 0; i < n; i++) {
+              var t = i / (n - 1);
+              lats.push(p1.lat + (p2.lat - p1.lat) * t);
+              lngs.push(p1.lng + (p2.lng - p1.lng) * t);
+            }
+            var latParam = "latitude=" + lats.join(",");
+            var lngParam = "&longitude=" + lngs.join(",");
+            $.ajax({
+              url: "https://api.open-meteo.com/v1/elevation?" + latParam + lngParam,
+              dataType: "json"
+            }).then(function (data) {
+              if (data && data.elevation) {
+                elevationCache[key] = data.elevation; // cache for reuse
+                heightProfileData = data.elevation;
+                var hDist = 0;
+                if (p1.distanceTo && p2.distanceTo) hDist = p1.distanceTo(p2);
+                heightProfilePoints = { p1: p1, p2: p2, lats: lats, lngs: lngs, dist: hDist };
+                renderHeightProfile(parseFloat($("#profileHeight1").val()) || 2, parseFloat($("#profileHeight2").val()) || 2);
+              }
+              elevationSampling = false;
+            }, function (jqXHR) {
+              elevationSampling = false;
+              var msg = "Could not load elevation data.";
+              if (jqXHR.status === 429) msg = "Elevation API rate limit reached. Please wait a moment and try again.";
+              $("#linkBudgetResult").html('<span style="color:red;">' + msg + '</span>');
+              $("#linkBudgetSection").show();
+            });
+          }
         }
 
         function renderHeightProfile(h1, h2) {
@@ -2218,6 +2279,74 @@
           }
 
           computeLinkBudget();
+
+          // Hover/cursor on canvas → show marker on map
+          canvas.style.cursor = "crosshair";
+          canvas.onmousemove = function(e) {
+            var rect = canvas.getBoundingClientRect();
+            var cx = e.clientX - rect.left;
+            // Map canvas X to index in the profile data
+            var iFloat = (cx - pad.left) / plotW * (n - 1);
+            var i = Math.round(iFloat);
+            i = Math.max(0, Math.min(n - 1, i));
+
+            if (!heightProfilePoints || !heightProfilePoints.lats || !heightProfilePoints.lngs) { console.log("no heightProfilePoints"); return; }
+            var lat = heightProfilePoints.lats[i];
+            var lng = heightProfilePoints.lngs[i];
+            var el = elevations[i];
+            var distAlong = heightProfilePoints.dist ? (i / (n - 1) * heightProfilePoints.dist) : 0;
+            var distText = distAlong >= 1000 ? (distAlong / 1000).toFixed(2) + " km" : Math.round(distAlong) + " m";
+
+            var markerPos;
+            if (activeMapType === 'orienteering' && typeof latLngToPixel === 'function') {
+              var px = latLngToPixel(lat, lng);
+              // CRS.Simple: L.latLng(lat, lng) where lat=mapX(Y), lng=mapY(X)
+              if (px) markerPos = L.latLng(px.mapX, px.mapY);
+            } else {
+              markerPos = [lat, lng];
+            }
+            if (!markerPos) return;
+
+            // Ensure marker is on the active map
+            var targetMap = activeMapType === 'orienteering' ? orienteeringMap : satelliteMap;
+            if (!targetMap) { console.log("no targetMap, activeMapType=" + activeMapType); return; }
+
+            if (!profileMapMarker) {
+              console.log("creating marker at", markerPos, "on map", activeMapType);
+              profileMapMarker = L.circleMarker(markerPos, {
+                radius: 8,
+                color: "#FF6600",
+                fill: true,
+                fillColor: "#FF6600",
+                fillOpacity: 0.6,
+                weight: 3,
+                interactive: false
+              }).addTo(targetMap);
+              profileMapMarker.bindTooltip(distText + " / " + Math.round(el) + " m", {
+                permanent: true,
+                direction: "top",
+                className: "profile-map-tooltip"
+              });
+            } else {
+              // If marker is on wrong map, remove and re-add
+              if (profileMapMarker._map !== targetMap) {
+                if (profileMapMarker._map) profileMapMarker._map.removeLayer(profileMapMarker);
+                profileMapMarker.addTo(targetMap);
+              }
+              profileMapMarker.setLatLng(markerPos);
+              profileMapMarker.setTooltipContent(distText + " / " + Math.round(el) + " m");
+            }
+          };
+
+          canvas.onmouseleave = function() {
+            if (profileMapMarker) {
+              var targetMap = activeMapType === 'orienteering' ? orienteeringMap : satelliteMap;
+              if (targetMap && profileMapMarker._map === targetMap) {
+                targetMap.removeLayer(profileMapMarker);
+              }
+              profileMapMarker = null;
+            }
+          };
         }
 
         // === Simplified Longley-Rice ITM link budget ===
@@ -2631,10 +2760,22 @@
         }
 
         function stopMeasuring() {
+          // Remove profile map marker
+          if (profileMapMarker && mapInstance) {
+            mapInstance.removeLayer(profileMapMarker);
+            profileMapMarker = null;
+          }
           clearMeasMarkers();
           // Clear height profile
           heightProfileData = null;
           heightProfilePoints = null;
+          // Remove canvas event handlers
+          var canvas = document.getElementById("profileCanvas");
+          if (canvas) {
+            canvas.onmousemove = null;
+            canvas.onmouseleave = null;
+            canvas.style.cursor = "";
+          }
           $("#heightProfileSection").hide();
           $("#linkBudgetSection").hide();
         }

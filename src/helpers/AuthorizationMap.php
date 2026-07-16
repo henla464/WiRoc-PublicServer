@@ -40,7 +40,8 @@ class AuthorizationMap {
             'getLogArchivesDevices',
             'getLogArchivesFiles',
             'getLogArchivesLogFiles',
-            'getLogArchivesLogContent');
+            'getLogArchivesLogContent'
+            );
 
         
         
@@ -135,7 +136,8 @@ class AuthorizationMap {
             'getControl',
             'getCompetitionControlsWithDevices',
             'getCompetitionMapFile',
-            'getLogArchivesAnalyze');
+            'getLogArchivesAnalyze',
+            'postElevation');
     }
 
     public function needsAuthorization(ServerRequestInterface $request) {

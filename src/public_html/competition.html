@@ -35,6 +35,7 @@
     />
 
     <title>Competition - WiRoc Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/build/three.min.js"></script>
   </head>
   <body>
     <div id="nav-placeholder"></div>
@@ -51,6 +52,9 @@
             <li class="nav-item">
               <button type="button" id="btnTabSatellite" class="nav-link" data-maptype="satellite">Satellite/Street Map</button>
             </li>
+            <li class="nav-item" id="tab3dItem" style="display:none">
+              <button type="button" id="btnTab3DTerrain" class="nav-link" data-maptype="terrain3d">3D Terrain</button>
+            </li>
           </ul>
           <div id="mapOrienteeringButtons" class="me-1" style="display:none">
             <button type="button" id="btnUploadMap" class="btn btn-outline-dark btn me-1"><i class="fa fa-upload"></i> Upload Map</button>
@@ -65,6 +69,7 @@
           <div id="mapMeasureArea" style="display:none">
             <button type="button" id="btnMeasure" class="btn btn-outline-dark btn me-1"><i class="fa fa-arrows-h"></i> Measure distance</button>
             <button type="button" id="btnToggleGatewayLines" class="btn btn-outline-dark btn me-1"><i class="fa fa-exchange"></i> Hide gateway lines</button>
+            <button type="button" id="btnSelectArea" class="btn btn-outline-dark btn me-1" style="display:none"><i class="fa fa-crop"></i> Select Area for 3D</button>
             <span id="measureResult" style="font-size:13px; color:#333; display:none"></span>
           </div>
         </div>
@@ -181,6 +186,22 @@
             "
           >
             No map uploaded yet. Upload a PNG image using the button above.
+          </div>
+        </div>
+      </div>
+
+      <!-- 3D Terrain -->
+      <div id="terrain3dSection" style="display:none;" class="mb-3">
+        <div class="d-flex align-items-center mb-2">
+          <h5 class="mb-0 me-auto">3D Terrain Model</h5>
+          <button type="button" id="btnSelectArea3d" class="btn btn-outline-dark btn me-1"><i class="fa fa-crop"></i> Select Area on Map</button>
+          <button type="button" id="btnClear3d" class="btn btn-outline-dark btn me-1" disabled><i class="fa fa-trash"></i> Clear</button>
+          <button type="button" id="btnRefine3d" class="btn btn-outline-dark btn me-1"><i class="fa fa-plus"></i> Refine</button>
+          <span id="terrain3dStatus" style="font-size:12px; color:#666; display:none"></span>
+        </div>
+        <div id="terrain3dCanvas" style="width:100%; height:450px; border:1px solid #ccc; border-radius:4px; background:#1a1a2e; position:relative; overflow:hidden; cursor:grab;">
+          <div id="terrain3dPlaceholder" class="text-muted text-center p-5" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#888;">
+            Use the map to select a rectangular area, then click "Select Area on Map".
           </div>
         </div>
       </div>
@@ -749,8 +770,38 @@
         var heightProfilePoints = null; // {lat1, lng1, lat2, lng2}
         var heightProfileSampling = false;
         var measuringMode = false;
-        var measMarkers = []; // [point1, point2, line, label]
+        var measMarkers = []; // markers on orienteering map
+        var measMarkers2 = []; // markers on satellite map
+        var measP1World = null; // L.latLng — real-world coords of P1
+        var measP2World = null; // L.latLng — real-world coords of P2
         var profileMapMarker = null; // marker on map showing canvas hover position
+
+        // 3D Terrain state
+        var areaSelectMode = false;
+        var areaSelectRect = null;   // Leaflet rectangle on map
+        var areaSelectMarkers = [];  // corner markers
+        var areaSelectP1 = null;     // L.latLng
+        var areaSelectP2 = null;
+        var areaSelectMap = null;    // "orienteering" or "satellite"
+        var terrain3dGridSize = 50;  // current grid points per side
+        var terrain3dInitialized = false;
+        var terrain3dScene = null;
+        var terrain3dRenderer = null;
+        var terrain3dCamera = null;
+        var terrain3dMesh = null;
+        var terrain3dMapParams = null; // {latMin,latMax,lngMin,lngMax,w3d,h3d,elScale,elMin}
+        var terrain3dMeasLine = null;  // 3D line showing current measurement
+        var terrain3dAnimId = null;
+        var terrain3dPending = null; // stored mesh + edge data waiting for scene init
+
+        // 3D orbit controls state
+        var orbitActive = false;
+        var orbitPanning = false;
+        var orbitStartX = 0, orbitStartY = 0;
+        var orbitTheta = Math.PI / 4;  // horizontal angle
+        var orbitPhi = Math.PI / 3;    // vertical angle
+        var orbitDist = 500;           // camera distance
+        var orbitTarget = new THREE.Vector3(0, 0, 0);
 
         // ============================================================
         // Shared helpers
@@ -983,6 +1034,14 @@
                 $("#btnTabSatellite").removeAttr("disabled");
               }
 
+              // Show 3D Terrain tab if map coordinates are in Sweden or UK
+              if (hasGeo && georefPoints.p1Lat && isInSwedenOrUK(georefPoints.p1Lat, georefPoints.p1Lng)) {
+                $("#tab3dItem").show();
+              } else {
+                $("#tab3dItem").hide();
+                if (activeMapType === "terrain3d") setActiveMap("satellite");
+              }
+
               $("#mapSection").show();
               $("#mapContainer").show();
 
@@ -1053,21 +1112,45 @@
 
         function setActiveMap(type) {
           if (type === activeMapType) return;
-          if (measuringMode || measMarkers.length > 0) stopMeasuring();
+          if (areaSelectMode) cancelAreaSelect();
           activeMapType = type;
+          // Reset all tab buttons
+          $("#btnTabOrienteering").removeClass("active");
+          $("#btnTabSatellite").removeClass("active");
+          $("#btnTab3DTerrain").removeClass("active");
+          // Hide all containers
+          $("#orienteeringMapContainer").hide();
+          $("#satelliteMapContainer").hide();
+          $("#terrain3dSection").hide();
+          $("#mapOrienteeringButtons").hide();
+          $("#mapMeasureArea").hide();
+          $("#btnSelectArea").hide();
+          // Show mapSection when not in 3D mode
+          if (type === "terrain3d") {
+            $("#mapContainer").hide();
+            $("#heightProfileSection").hide();
+            $("#terrain3dSection").show();
+            $("#btnTab3DTerrain").addClass("active");
+            setAreaSelectButton("Select Area on Map", "btn-outline-dark", "btn-dark");
+            initTerrain3D();
+            // Restore measurement line if there's active measurement data
+            if (heightProfileData && heightProfilePoints) {
+              setTimeout(function() { drawTerrainMeasLine(); }, 100);
+            }
+            return;
+          }
+          $("#mapContainer").show();
+          if ($("#tab3dItem").is(":visible")) $("#btnSelectArea").show();
           if (type === "orienteering") {
             if (!orienteeringMap) return;
             mapInstance = orienteeringMap;
             $("#orienteeringMapContainer").show();
-            $("#satelliteMapContainer").hide();
             $("#btnTabOrienteering").addClass("active");
-            $("#btnTabSatellite").removeClass("active");
             if (hasEditAccess) $("#mapOrienteeringButtons").show();
+            if (hasViewAccess) $("#mapMeasureArea").show();
           } else {
             mapInstance = satelliteMap;
-            $("#orienteeringMapContainer").hide();
             $("#satelliteMapContainer").show();
-            $("#mapOrienteeringButtons").hide();
             $("#satelliteMap").show();
             $("#satelliteMapNoGeo").hide();
             if (georefPoints.p1Lat || georefState) {
@@ -1085,11 +1168,11 @@
                 }
               }
             }
-            $("#btnTabOrienteering").removeClass("active");
             $("#btnTabSatellite").addClass("active");
             // Container is now visible — recalculate control sizes with real dimensions
             satelliteMap.invalidateSize();
             if (satelliteControlLayers.length > 0) adjustSatelliteControlSizes();
+            if (hasViewAccess) $("#mapMeasureArea").show();
           }
           if (mapInstance) {
             mapInstance.invalidateSize();
@@ -1549,7 +1632,7 @@
               hitLine._gatewaySrc = { x: srcLayer.x, y: srcLayer.y };
               hitLine._gatewayDst = { x: gwLayer.x, y: gwLayer.y };
               hitLine.on("click", function(e) {
-                if (measMarkers.length > 0) clearMeasMarkers();
+                if (measMarkers.length > 0 || measMarkers2.length > 0) clearMeasMarkers();
                 // Draw blue/red dots on orienteering map at control centers
                 // In CRS.Simple: L.latLng(lat, lng) where lat=y (mapX), lng=x (mapY)
                 // Control layers: x=mapY(CRS lng), y=mapX(CRS lat)
@@ -1966,7 +2049,7 @@
               if (hitLine.getElement()) hitLine.getElement().style.cursor = measuringMode ? '' : 'pointer';
 
               hitLine.on("click", function(e) {
-                if (measMarkers.length > 0) clearMeasMarkers();
+                if (measMarkers.length > 0 || measMarkers2.length > 0) clearMeasMarkers();
                 drawMeasureDots(satelliteMap, srcLL, dstLL);
                 sampleElevationProfile(srcLL, dstLL);
                 L.DomEvent.stopPropagation(e);
@@ -2279,6 +2362,8 @@
           }
 
           computeLinkBudget();
+          // Also draw measurement on 3D terrain if visible
+          drawTerrainMeasLine();
 
           // Hover/cursor on canvas → show marker on map
           canvas.style.cursor = "crosshair";
@@ -2700,27 +2785,40 @@
           if (satelliteMap) satelliteMap.getContainer().classList.add("measuring-mode");
         }
 
-        function drawMeasureDots(map, p1, p2) {
-          if (!map) return;
-          var m1 = L.circle(p1, { radius: 5, color: "#0066CC", fill: true, fillColor: "#0066CC", fillOpacity: 1, weight: 2, interactive: false }).addTo(map);
-          measMarkers.push(m1);
-          var m2 = L.circle(p2, { radius: 5, color: "#CC0000", fill: true, fillColor: "#CC0000", fillOpacity: 1, weight: 2, interactive: false }).addTo(map);
-          measMarkers.push(m2);
-          var dline = L.polyline([p1, p2], { color: "#000", weight: 2, interactive: false }).addTo(map);
-          measMarkers.push(dline);
+        // Convert world lat/lng to map-specific coordinates
+        function worldToMapPos(map, lat, lng) {
+          if (map === satelliteMap) return L.latLng(lat, lng);
+          if (map === orienteeringMap && typeof latLngToPixel === 'function') {
+            var px = latLngToPixel(lat, lng);
+            if (px) return L.latLng(px.mapX, px.mapY); // CRS.Simple: lat=mapX(Y), lng=mapY(X)
+          }
+          return null;
+        }
+
+        // Draw measurement on a single map
+        function drawMeasOnMap(map, markerArray, latlng1, latlng2) {
+          if (!map || !latlng1 || !latlng2) return;
+          clearMeasOnMap(map, markerArray);
+          var pos1 = worldToMapPos(map, latlng1.lat, latlng1.lng);
+          var pos2 = worldToMapPos(map, latlng2.lat, latlng2.lng);
+          if (!pos1 || !pos2) return;
+
+          var m1 = L.circle(pos1, { radius: 5, color: "#0066CC", fill: true, fillColor: "#0066CC", fillOpacity: 1, weight: 2, interactive: false }).addTo(map);
+          markerArray.push(m1);
+          var m2 = L.circle(pos2, { radius: 5, color: "#CC0000", fill: true, fillColor: "#CC0000", fillOpacity: 1, weight: 2, interactive: false }).addTo(map);
+          markerArray.push(m2);
+          var dline = L.polyline([pos1, pos2], { color: "#000", weight: 2, interactive: false }).addTo(map);
+          markerArray.push(dline);
+
           // Distance label
           var meters = null;
-          if (map === satelliteMap && p1.lat != null && p2.lat != null) {
-            meters = p1.distanceTo(p2);
-          } else if (map === orienteeringMap) {
-            var totalPx = map.distance(p1, p2);
-            var ppm = mapMeta && mapMeta.mapScale ? mapMeta.mapScale : 0;
-            meters = ppm > 0 ? totalPx / ppm : null;
+          if (latlng1.lat != null && latlng2.lat != null && typeof latlng1.distanceTo === 'function') {
+            meters = latlng1.distanceTo(latlng2);
           }
           var distText = meters
             ? (meters >= 1000 ? (meters / 1000).toFixed(2) + " km" : Math.round(meters) + " m")
-            : Math.round(map.distance(p1, p2)) + " px";
-          var label = L.marker(p2, {
+            : "?";
+          var label = L.marker(pos2, {
             icon: L.divIcon({
               className: "meas-distance-label",
               html: '<div style="background:#fff; border:1px solid #333; border-radius:3px; padding:3px 7px; font-size:24px; font-weight:bold; white-space:nowrap; color:#333; display:inline-block;">' + distText + '</div>',
@@ -2729,19 +2827,45 @@
             }),
             interactive: false,
           }).addTo(map);
-          measMarkers.push(label);
+          markerArray.push(label);
+        }
+
+        // Clear measurement from a single map
+        function clearMeasOnMap(map, markerArray) {
+          if (!map) return;
+          while (markerArray.length > 0) {
+            var layer = markerArray.pop();
+            map.removeLayer(layer);
+          }
+        }
+
+        // Draw measurement on both maps
+        function drawMeasOnBothMaps() {
+          if (!measP1World || !measP2World) return;
+          drawMeasOnMap(orienteeringMap, measMarkers, measP1World, measP2World);
+          drawMeasOnMap(satelliteMap, measMarkers2, measP1World, measP2World);
           $("#btnMeasure")
             .html('<i class="fa fa-arrows-h"></i> Clear distance')
             .removeClass("btn-outline-dark")
             .addClass("btn-dark");
         }
 
+        function drawMeasureDots(map, p1, p2) {
+          // Legacy — now unused but kept for reference
+          if (!map) return;
+          drawMeasOnMap(map, measMarkers, p1, p2);
+          // Also draw on the other map
+          if (georefPoints.p1Lat) {
+            var otherMap = (map === orienteeringMap) ? satelliteMap : orienteeringMap;
+            drawMeasOnMap(otherMap, measMarkers2, p1, p2);
+          }
+        }
+
         function clearMeasMarkers() {
-          $.each(measMarkers, function () {
-            if (orienteeringMap) orienteeringMap.removeLayer(this);
-            if (satelliteMap) satelliteMap.removeLayer(this);
-          });
-          measMarkers = [];
+          clearMeasOnMap(orienteeringMap, measMarkers);
+          clearMeasOnMap(satelliteMap, measMarkers2);
+          measP1World = null;
+          measP2World = null;
           measuringMode = false;
           if (hasEditAccess) $("#btnLockControls").prop("disabled", false);
           setMapCursor(orienteeringMap, "");
@@ -2766,6 +2890,8 @@
             profileMapMarker = null;
           }
           clearMeasMarkers();
+          // Clear 3D measurement line
+          clearTerrainMeasLine();
           // Clear height profile
           heightProfileData = null;
           heightProfilePoints = null;
@@ -2784,49 +2910,48 @@
           if (!measuringMode || !mapInstance) return;
           var pos = mapInstance.mouseEventToLatLng(e);
 
-          if (measMarkers.length === 0) {
-            // First point (sender = blue)
-            var m = L.circle(pos, { radius: 5, color: "#0066CC", fill: true, fillColor: "#0066CC", fillOpacity: 1, weight: 2, interactive: false }).addTo(mapInstance);
-            measMarkers.push(m);
-          } else if (measMarkers.length === 1) {
-            // Second point (receiver = red) — draw line, calculate, show label
-            var p1 = measMarkers[0].getLatLng();
-            var m = L.circle(pos, { radius: 5, color: "#CC0000", fill: true, fillColor: "#CC0000", fillOpacity: 1, weight: 2, interactive: false }).addTo(mapInstance);
-            measMarkers.push(m);
-            var line = L.polyline([p1, pos], {
-              color: "#000",
-              weight: 2,
-              interactive: false,
-            }).addTo(mapInstance);
-            measMarkers.push(line);
+          // Convert click to real-world lat/lng
+          var worldPos;
+          if (activeMapType === 'satellite') {
+            worldPos = pos; // already L.latLng
+          } else if (activeMapType === 'orienteering' && georefPoints.p1Lat) {
+            var ll = pixelToLatLng(pos.lng, pos.lat);
+            worldPos = ll ? L.latLng(ll.lat, ll.lng) : null;
+          } else {
+            worldPos = null;
+          }
+          if (!worldPos) return;
 
-            var meters;
-            if (activeMapType === 'satellite' && pos.lat) {
-              // Satellite: use geodesic distance (Haversine)
-              meters = p1.distanceTo(pos);
-            } else {
-              // Orienteering: pixels → meters via mapScale
-              var totalPx = mapInstance.distance(p1, pos);
-              var ppm = mapMeta && mapMeta.mapScale ? mapMeta.mapScale : 0;
-              meters = ppm > 0 ? totalPx / ppm : null;
+          if (measMarkers.length === 0 && measMarkers2.length === 0) {
+            // First point
+            measP1World = worldPos;
+            // Draw single blue dot on both maps
+            drawMeasOnMap(orienteeringMap, measMarkers, measP1World, measP1World);
+            clearMeasOnMap(satelliteMap, measMarkers2);
+            drawMeasOnMap(satelliteMap, measMarkers2, measP1World, measP1World);
+            // Remove the extra red/line/label that drawMeasOnMap might have added (it draws p1+p2)
+            // Actually drawMeasOnMap draws both points — for first click we want just blue dot
+            // Let's use a simpler approach: just a single circle
+            clearMeasOnMap(orienteeringMap, measMarkers);
+            if (orienteeringMap) {
+              var op = worldToMapPos(orienteeringMap, worldPos.lat, worldPos.lng);
+              if (op) {
+                var m = L.circle(op, { radius: 5, color: "#0066CC", fill: true, fillColor: "#0066CC", fillOpacity: 1, weight: 2, interactive: false }).addTo(orienteeringMap);
+                measMarkers.push(m);
+              }
             }
-            var distText = meters
-              ? (meters >= 1000 ? (meters / 1000).toFixed(2) + " km" : Math.round(meters) + " m")
-              : Math.round(mapInstance.distance(p1, pos)) + " px";
-
-            var label = L.marker(pos, {
-              icon: L.divIcon({
-                className: "meas-distance-label",
-                html:
-                  '<div style="background:#fff; border:1px solid #333; border-radius:3px; padding:3px 7px; font-size:24px; font-weight:bold; white-space:nowrap; color:#333; display:inline-block;">' +
-                  distText +
-                  "</div>",
-                iconSize: [200, 50],
-                iconAnchor: [-20, 5],
-              }),
-              interactive: false,
-            }).addTo(mapInstance);
-            measMarkers.push(label);
+            clearMeasOnMap(satelliteMap, measMarkers2);
+            if (satelliteMap) {
+              var sp = worldToMapPos(satelliteMap, worldPos.lat, worldPos.lng);
+              if (sp) {
+                var m2 = L.circle(sp, { radius: 5, color: "#0066CC", fill: true, fillColor: "#0066CC", fillOpacity: 1, weight: 2, interactive: false }).addTo(satelliteMap);
+                measMarkers2.push(m2);
+              }
+            }
+          } else {
+            // Second point — complete measurement on both maps
+            measP2World = worldPos;
+            drawMeasOnBothMaps();
 
             measuringMode = false;
             if (hasEditAccess) $("#btnLockControls").prop("disabled", false);
@@ -2838,19 +2963,15 @@
             setGroupInteractive(satelliteControlGroup, true);
             setGroupInteractive(gatewayLinesGroup, true);
             setGroupInteractive(satelliteGatewayLinesGroup, true);
-            $("#btnMeasure").html('<i class="fa fa-arrows-h"></i> Clear distance').removeClass("btn-outline-dark").addClass("btn-dark");
             // Sample elevation profile for line-of-sight
-            var measP1 = p1, measP2 = pos;
             if (activeMapType === 'orienteering' && georefPoints.p1Lat) {
-              var ll1 = pixelToLatLng(p1.lng, p1.lat);
+              var ll1 = pixelToLatLng(measMarkers[0].getLatLng().lng, measMarkers[0].getLatLng().lat);
               var ll2 = pixelToLatLng(pos.lng, pos.lat);
               if (ll1 && ll2) {
-                var gp1 = L.latLng(ll1.lat, ll1.lng);
-                var gp2 = L.latLng(ll2.lat, ll2.lng);
-                sampleElevationProfile(gp1, gp2);
+                sampleElevationProfile(L.latLng(ll1.lat, ll1.lng), L.latLng(ll2.lat, ll2.lng));
               }
             } else if (activeMapType === 'satellite') {
-              sampleElevationProfile(measP1, measP2);
+              sampleElevationProfile(measP1World, measP2World);
             }
           }
         }
@@ -3161,6 +3282,569 @@
           );
         }
 
+        // ============================================================
+        // 3D Terrain functions (global scope, called from setActiveMap)
+        // ============================================================
+
+        function onAreaSelectClick(e) {
+          if (!areaSelectMode) return;
+          var selMap = (areaSelectMap === "orienteering") ? orienteeringMap : satelliteMap;
+          if (!selMap) return;
+
+          // Convert click to lat/lng — orienteering uses CRS.Simple
+          var latlng;
+          if (areaSelectMap === "orienteering") {
+            var ll = pixelToLatLng(e.latlng.lng, e.latlng.lat);
+            if (!ll) return;
+            latlng = L.latLng(ll.lat, ll.lng);
+          } else {
+            latlng = e.latlng;
+          }
+
+          if (!areaSelectP1) {
+            areaSelectP1 = latlng;
+            var m = L.circleMarker(e.latlng, { radius: 6, color: "#FF6600", fill: true, fillColor: "#FF6600", fillOpacity: 0.8, weight: 2 }).addTo(selMap);
+            areaSelectMarkers.push(m);
+          } else {
+            areaSelectP2 = latlng;
+            var m = L.circleMarker(e.latlng, { radius: 6, color: "#FF6600", fill: true, fillColor: "#FF6600", fillOpacity: 0.8, weight: 2 }).addTo(selMap);
+            areaSelectMarkers.push(m);
+
+            // Draw rectangle in map coordinates
+            var bounds = L.latLngBounds(e.latlng, areaSelectMarkers[0].getLatLng());
+            areaSelectRect = L.rectangle(bounds, { color: "#FF6600", weight: 2, fillOpacity: 0.1, dashArray: "5,5" }).addTo(selMap);
+            areaSelectMarkers.push(areaSelectRect);
+
+            selMap.off("click", onAreaSelectClick);
+            selMap.getContainer().style.cursor = "";
+            areaSelectMode = false;
+            areaSelectMap = null;
+
+            var midLat = (areaSelectP1.lat + areaSelectP2.lat) / 2;
+            var midLng = (areaSelectP1.lng + areaSelectP2.lng) / 2;
+            if (!isInSwedenOrUK(midLat, midLng)) {
+              alert("3D terrain is only available for Sweden and UK.");
+              cancelAreaSelect();
+              return;
+            }
+            // Clean markers, then switch to 3D tab and load
+            cancelAreaMarkers();
+            setActiveMap("terrain3d");
+            loadTerrain3D();
+          }
+        }
+
+        function startAreaSelect() {
+          if (areaSelectMode) { cancelAreaSelect(); return; }
+          terrain3dGridSize = 50; // reset on new selection
+          if (activeMapType === "terrain3d") {
+            if (georefPoints.p1Lat) setActiveMap("orienteering");
+            else setActiveMap("satellite");
+          }
+          if (activeMapType === "orienteering" && !georefPoints.p1Lat) {
+            alert("The orienteering map is not georeferenced. Please switch to the Satellite tab.");
+            return;
+          }
+          cancelAreaSelect();
+          areaSelectMode = true;
+          areaSelectMap = activeMapType;
+          var selMap = mapInstance;
+          setAreaSelectButton("Cancel", "btn-dark", "btn-outline-dark");
+          selMap.getContainer().style.cursor = "crosshair";
+          selMap.on("click", onAreaSelectClick);
+        }
+
+        function setAreaSelectButton(text, addClass, removeClass) {
+          var icon = areaSelectMode ? "times" : "crop";
+          $("#btnSelectArea, #btnSelectArea3d").html('<i class="fa fa-' + icon + '"></i> ' + text).removeClass(removeClass).addClass(addClass);
+        }
+
+        function cancelAreaMarkers() {
+          // Remove visual markers only, keep P1/P2 for loading
+          while (areaSelectMarkers.length > 0) {
+            var layer = areaSelectMarkers.pop();
+            if (orienteeringMap && orienteeringMap.hasLayer(layer)) orienteeringMap.removeLayer(layer);
+            if (satelliteMap && satelliteMap.hasLayer(layer)) satelliteMap.removeLayer(layer);
+          }
+          areaSelectRect = null;
+        }
+
+        function cancelAreaSelect() {
+          areaSelectMode = false;
+          areaSelectMap = null;
+          if (orienteeringMap) { orienteeringMap.off("click", onAreaSelectClick); orienteeringMap.getContainer().style.cursor = ""; }
+          if (satelliteMap) { satelliteMap.off("click", onAreaSelectClick); satelliteMap.getContainer().style.cursor = ""; }
+          areaSelectP1 = null;
+          areaSelectP2 = null;
+          cancelAreaMarkers();
+          setAreaSelectButton("Select Area for 3D", "btn-outline-dark", "btn-dark");
+        }
+
+        function loadTerrain3D() {
+          if (!areaSelectP1 || !areaSelectP2) return;
+          $("#terrain3dStatus").show().text("Loading elevation data...").css("color", "#666");
+          $("#btnClear3d").prop("disabled", true);
+          $("#btnRefine3d").prop("disabled", true);
+
+          var latMin = Math.min(areaSelectP1.lat, areaSelectP2.lat);
+          var latMax = Math.max(areaSelectP1.lat, areaSelectP2.lat);
+          var lngMin = Math.min(areaSelectP1.lng, areaSelectP2.lng);
+          var lngMax = Math.max(areaSelectP1.lng, areaSelectP2.lng);
+
+          var cosLat = Math.cos((latMin + latMax) / 2 * Math.PI / 180);
+          var widthM  = (lngMax - lngMin) * 111320 * cosLat;
+          var heightM = (latMax - latMin) * 111320;
+
+          var cols = terrain3dGridSize;
+          var rows = terrain3dGridSize;
+          console.log("Terrain load: area=" + widthM.toFixed(0) + "m×" + heightM.toFixed(0) + "m, grid=" + cols + "×" + rows + ", points=" + (cols*rows));
+
+          var locations = [];
+          for (var r = 0; r < rows; r++) {
+            for (var c = 0; c < cols; c++) {
+              locations.push({
+                latitude: latMin + (r / (rows - 1)) * (latMax - latMin),
+                longitude: lngMin + (c / (cols - 1)) * (lngMax - lngMin)
+              });
+            }
+          }
+
+          var chunkSize = 1000;
+          var chunks = [];
+          for (var i = 0; i < locations.length; i += chunkSize) {
+            chunks.push(locations.slice(i, i + chunkSize));
+          }
+
+          var allElevations = [];
+          var completed = 0;
+
+          function fetchChunk(idx) {
+            if (idx >= chunks.length) {
+              buildTerrainMesh(allElevations, rows, cols, latMin, latMax, lngMin, lngMax, widthM, heightM);
+              return;
+            }
+            $.ajax({
+              url: "/api/v1/elevation",
+              method: "POST",
+              contentType: "application/json",
+              data: JSON.stringify({ locations: chunks[idx] }),
+              dataType: "json"
+            }).then(function (data) {
+              if (data && data.results) {
+                for (var i = 0; i < data.results.length; i++) {
+                  allElevations.push(data.results[i].elevation);
+                }
+              }
+              completed++;
+              var loaded = Math.min(completed * chunkSize, locations.length);
+              $("#terrain3dStatus").text("Loading elevation data... (" + loaded + "/" + locations.length + ")");
+              fetchChunk(idx + 1);
+            }, function () {
+              $("#terrain3dStatus").text("Error loading elevation data.").css("color", "red");
+            });
+          }
+          fetchChunk(0);
+        }
+
+        function buildTerrainMesh(elevations, rows, cols, latMin, latMax, lngMin, lngMax, widthM, heightM) {
+          $("#terrain3dStatus").text("Building 3D model...");
+          destroyTerrain3D();
+
+          // XY: normalize terrain to fit in ~400 units
+          var scaleXY = 400 / Math.max(widthM, heightM);
+          var w3d = widthM * scaleXY;
+          var h3d = heightM * scaleXY;
+          var hw = w3d / 2, hh = h3d / 2; // half-extents
+
+          var elMin = Infinity, elMax = -Infinity;
+          for (var i = 0; i < elevations.length; i++) {
+            if (elevations[i] < elMin) elMin = elevations[i];
+            if (elevations[i] > elMax) elMax = elevations[i];
+          }
+          var elRange = elMax - elMin || 1;
+
+          // Elevation with mild exaggeration (~10% of base width)
+          var elTargetHeight = Math.max(w3d * 0.1, 10);
+          var elScale = elTargetHeight / elRange;
+          elScale = Math.min(elScale, w3d * 0.3 / elRange);
+          elScale = Math.max(elScale, 5 / elRange);
+
+          // Store mapping for measurement line overlay
+          terrain3dMapParams = {
+            latMin: latMin, latMax: latMax, lngMin: lngMin, lngMax: lngMax,
+            w3d: w3d, h3d: h3d, elScale: elScale, elMin: elMin
+          };
+
+          // === Build BufferGeometry manually ===
+          // vertices: rows*cols positions (flat XZ grid)
+          var positions = new Float32Array(rows * cols * 3);
+          var colors = new Float32Array(rows * cols * 3);
+          var indices = [];
+
+          var greenLow = new THREE.Color("#2d6a2d");
+          var brownMid = new THREE.Color("#8b7355");
+          var whiteHigh = new THREE.Color("#e8e8e8");
+
+          for (var r = 0; r < rows; r++) {
+            for (var c = 0; c < cols; c++) {
+              var idx = r * cols + c;
+              var x = -((c / (cols - 1)) * w3d - hw); // mirrored: east=right on screen
+              var z = (r / (rows - 1)) * h3d - hh;  // -hh to +hh
+              var y = ((elevations[idx] || elMin) - elMin) * elScale;
+              positions[idx * 3]     = x;
+              positions[idx * 3 + 1] = y;
+              positions[idx * 3 + 2] = z;
+
+              var el2 = elevations[idx] || elMin;
+              var t = (el2 - elMin) / elRange;
+              var col = t < 0.5 ? greenLow.clone().lerp(brownMid, t * 2) : brownMid.clone().lerp(whiteHigh, (t - 0.5) * 2);
+              colors[idx * 3]     = col.r;
+              colors[idx * 3 + 1] = col.g;
+              colors[idx * 3 + 2] = col.b;
+            }
+          }
+
+          // Triangles: two per grid cell
+          for (var r = 0; r < rows - 1; r++) {
+            for (var c = 0; c < cols - 1; c++) {
+              var a = r * cols + c;
+              var b = a + 1;
+              var d = a + cols;
+              var e = d + 1;
+              indices.push(a, b, d);  // triangle 1
+              indices.push(b, e, d);  // triangle 2
+            }
+          }
+
+          var geometry = new THREE.BufferGeometry();
+          geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+          geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+          geometry.setIndex(indices);
+          geometry.computeVertexNormals();
+
+          console.log("Terrain mesh: " + rows + "×" + cols + " = " + (rows*cols) + " verts, " + (indices.length/3) + " tris, w=" + w3d.toFixed(0) + " h=" + h3d.toFixed(0) + " elRange=" + elRange.toFixed(0) + " elScale=" + elScale.toFixed(1));
+
+          var material = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+          var mesh = new THREE.Mesh(geometry, material);
+
+          var edgeGeo = new THREE.EdgesGeometry(geometry);
+          var edgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.15 });
+          var edgeLines = new THREE.LineSegments(edgeGeo, edgeMat);
+
+          // Camera — north=top, east=right
+          var peakH = (elMax - elMin) * elScale;
+          orbitTarget.set(0, peakH * 0.4, 0);
+          orbitTheta = -Math.PI / 2;          // south looking north → north=top
+          orbitPhi = Math.PI / 3;             // 60° up
+          orbitDist = Math.max(w3d, h3d, peakH * 2) * 1.5;
+
+          // If scene isn't ready yet, store for later
+          initTerrain3D();
+          if (!terrain3dScene) {
+            terrain3dPending = { mesh: mesh, edges: edgeLines, camera: true };
+            $("#terrain3dStatus").text(
+              "Area: " + Math.round(widthM) + "m × " + Math.round(heightM) + "m | " +
+              "Grid: " + cols + "×" + rows + " | " +
+              "Elevation: " + Math.round(elMin) + "–" + Math.round(elMax) + "m | " +
+              "Switch to 3D Terrain tab to view"
+            ).css("color", "#aaa");
+            $("#btnClear3d").prop("disabled", false);
+            $("#btnRefine3d").prop("disabled", false);
+            return;
+          }
+
+          addTerrainToScene(mesh, edgeLines);
+          updateCamera();
+
+          $("#terrain3dStatus").text(
+            "Area: " + Math.round(widthM) + "m × " + Math.round(heightM) + "m | " +
+            "Grid: " + cols + "×" + rows + " | " +
+            "Elevation: " + Math.round(elMin) + "–" + Math.round(elMax) + "m"
+          ).css("color", "#aaa");
+          $("#btnClear3d").prop("disabled", false);
+          $("#btnRefine3d").prop("disabled", terrain3dGridSize >= 200);
+          $("#terrain3dPlaceholder").hide();
+        }
+
+        function addTerrainToScene(mesh, edgeLines) {
+          // Remove old mesh
+          if (terrain3dScene && terrain3dMesh) {
+            if (terrain3dMesh.userData.edgeLines) {
+              terrain3dScene.remove(terrain3dMesh.userData.edgeLines);
+              terrain3dMesh.userData.edgeLines.geometry.dispose();
+              terrain3dMesh.userData.edgeLines.material.dispose();
+            }
+            terrain3dScene.remove(terrain3dMesh);
+            terrain3dMesh.geometry.dispose();
+            terrain3dMesh.material.dispose();
+          }
+          terrain3dMesh = mesh;
+          terrain3dScene.add(mesh);
+          terrain3dScene.add(edgeLines);
+          terrain3dMesh.userData.edgeLines = edgeLines;
+          updateCamera();
+        }
+
+        function initTerrain3D() {
+          if (terrain3dInitialized) {
+            // Scene exists — check for pending mesh data
+            if (terrain3dPending && terrain3dScene) {
+              addTerrainToScene(terrain3dPending.mesh, terrain3dPending.edges);
+              terrain3dPending = null;
+              $("#terrain3dPlaceholder").hide();
+            }
+            return;
+          }
+          var container = document.getElementById("terrain3dCanvas");
+          if (!container) return;
+          var w = container.clientWidth, h = container.clientHeight;
+          if (w === 0 || h === 0) return; // container not visible yet
+
+          terrain3dRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+          terrain3dRenderer.setSize(w, h);
+          terrain3dRenderer.setPixelRatio(window.devicePixelRatio);
+          terrain3dRenderer.setClearColor(0x1a1a2e, 1);
+          container.appendChild(terrain3dRenderer.domElement);
+          terrain3dRenderer.domElement.style.position = "absolute";
+          terrain3dRenderer.domElement.style.top = "0";
+          terrain3dRenderer.domElement.style.left = "0";
+
+          terrain3dScene = new THREE.Scene();
+          terrain3dScene.background = new THREE.Color(0x1a1a2e);
+          terrain3dScene.fog = new THREE.Fog(0x1a1a2e, 200, 2000);
+
+          terrain3dCamera = new THREE.PerspectiveCamera(50, w / h, 1, 5000);
+          // Default view: north-up, east-right
+          orbitTarget.set(0, 0, 0);
+          orbitTheta = -Math.PI / 2;
+          orbitPhi = Math.PI / 3;
+          orbitDist = 400;
+          updateCamera();
+
+          var ambient = new THREE.AmbientLight(0x404060, 0.6);
+          terrain3dScene.add(ambient);
+          var sun = new THREE.DirectionalLight(0xffffff, 1.0);
+          sun.position.set(200, 400, 100);
+          terrain3dScene.add(sun);
+          var fill = new THREE.DirectionalLight(0x8899cc, 0.4);
+          fill.position.set(-100, 100, -100);
+          terrain3dScene.add(fill);
+
+          var grid = new THREE.GridHelper(500, 20, 0x444466, 0x222244);
+          grid.position.y = -1;
+          terrain3dScene.add(grid);
+
+          setupOrbitControls(container);
+          window.addEventListener("resize", onTerrain3dResize);
+
+          function animate() {
+            terrain3dAnimId = requestAnimationFrame(animate);
+            terrain3dRenderer.render(terrain3dScene, terrain3dCamera);
+          }
+          animate();
+
+          terrain3dInitialized = true;
+
+          // If mesh data arrived while scene was being created, add it now
+          if (terrain3dPending) {
+            addTerrainToScene(terrain3dPending.mesh, terrain3dPending.edges);
+            terrain3dPending = null;
+            $("#terrain3dPlaceholder").hide();
+          }
+        }
+
+        function setupOrbitControls(container) {
+          container.addEventListener("mousedown", function (e) {
+            if (e.target !== terrain3dRenderer.domElement && e.target !== container) return;
+            if (e.button === 0) {
+              // Left button: rotate
+              orbitActive = true;
+              orbitPanning = false;
+              container.style.cursor = "grabbing";
+            } else if (e.button === 1 || e.button === 2) {
+              // Middle or right button: pan
+              orbitPanning = true;
+              orbitActive = false;
+              container.style.cursor = "move";
+              e.preventDefault();
+            }
+            orbitStartX = e.clientX;
+            orbitStartY = e.clientY;
+            e.preventDefault();
+          });
+          container.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+          window.addEventListener("mousemove", function (e) {
+            if (!orbitActive && !orbitPanning) return;
+            var dx = e.clientX - orbitStartX;
+            var dy = e.clientY - orbitStartY;
+            orbitStartX = e.clientX;
+            orbitStartY = e.clientY;
+
+            if (orbitActive) {
+              // Rotate
+              orbitTheta += dx * 0.005;
+              orbitPhi -= dy * 0.005;
+              orbitPhi = Math.max(0.1, Math.min(Math.PI / 2 - 0.05, orbitPhi));
+            } else if (orbitPanning) {
+              // Pan: move target in camera's local right/up plane
+              var view = new THREE.Vector3().subVectors(terrain3dCamera.position, orbitTarget).normalize();
+              var camRight = new THREE.Vector3().crossVectors(view, terrain3dCamera.up).normalize();
+              var camUp = new THREE.Vector3().crossVectors(camRight, view).normalize();
+              var panSpeed = orbitDist * 0.0015;
+              orbitTarget.addScaledVector(camRight, dx * panSpeed);
+              orbitTarget.addScaledVector(camUp, dy * panSpeed);
+            }
+            updateCamera();
+          });
+
+          window.addEventListener("mouseup", function () {
+            if (!orbitActive && !orbitPanning) return;
+            orbitActive = false;
+            orbitPanning = false;
+            container.style.cursor = "grab";
+          });
+
+          container.addEventListener("wheel", function (e) {
+            e.preventDefault();
+            orbitDist *= (e.deltaY > 0 ? 1.08 : 0.92);
+            orbitDist = Math.max(20, Math.min(4000, orbitDist));
+            updateCamera();
+          });
+        }
+
+        function updateCamera() {
+          if (!terrain3dCamera) return;
+          var x = orbitTarget.x + orbitDist * Math.sin(orbitPhi) * Math.cos(orbitTheta);
+          var y = orbitTarget.y + orbitDist * Math.cos(orbitPhi);
+          var z = orbitTarget.z + orbitDist * Math.sin(orbitPhi) * Math.sin(orbitTheta);
+          terrain3dCamera.position.set(x, y, z);
+          terrain3dCamera.lookAt(orbitTarget);
+        }
+
+        function onTerrain3dResize() {
+          if (!terrain3dRenderer || !terrain3dCamera) return;
+          var container = document.getElementById("terrain3dCanvas");
+          if (!container) return;
+          var w = container.clientWidth, h = container.clientHeight;
+          terrain3dRenderer.setSize(w, h);
+          terrain3dCamera.aspect = w / h;
+          terrain3dCamera.updateProjectionMatrix();
+        }
+
+        function refineTerrain3D() {
+          if (!areaSelectP1 || !areaSelectP2 || !terrain3dMesh) {
+            $("#terrain3dStatus").text("Select an area first, then use Refine to increase resolution.").css("color", "#aaa");
+            return;
+          }
+          var maxGrid = 200;
+          if (terrain3dGridSize >= maxGrid) {
+            $("#terrain3dStatus").text("Already at maximum resolution (" + maxGrid + "×" + maxGrid + ")").css("color", "#aaa");
+            return;
+          }
+          terrain3dGridSize = Math.min(terrain3dGridSize * 2, maxGrid);
+          // Reload with doubled grid
+          loadTerrain3D();
+        }
+
+        function destroyTerrain3D() {
+          // Remove measurement line
+          clearTerrainMeasLine();
+          // Clear any pending mesh data
+          if (terrain3dPending) {
+            terrain3dPending.mesh.geometry.dispose();
+            terrain3dPending.mesh.material.dispose();
+            terrain3dPending.edges.geometry.dispose();
+            terrain3dPending.edges.material.dispose();
+            terrain3dPending = null;
+          }
+          if (terrain3dScene && terrain3dMesh) {
+            if (terrain3dMesh.userData.edgeLines) {
+              terrain3dScene.remove(terrain3dMesh.userData.edgeLines);
+              terrain3dMesh.userData.edgeLines.geometry.dispose();
+              terrain3dMesh.userData.edgeLines.material.dispose();
+              terrain3dMesh.userData.edgeLines = null;
+            }
+            terrain3dScene.remove(terrain3dMesh);
+            terrain3dMesh.geometry.dispose();
+            terrain3dMesh.material.dispose();
+            terrain3dMesh = null;
+          }
+          terrain3dMapParams = null;
+        }
+
+        // Convert lat/lng to terrain mesh XYZ coordinates
+        function latLngToTerrain3D(lat, lng) {
+          if (!terrain3dMapParams) return null;
+          var p = terrain3dMapParams;
+          var tLng = (lng - p.lngMin) / (p.lngMax - p.lngMin); // 0..1 eastward
+          var tLat = (lat - p.latMin) / (p.latMax - p.latMin); // 0..1 northward
+          var x = -(tLng * p.w3d - p.w3d / 2); // mirrored X: east=right
+          var z = tLat * p.h3d - p.h3d / 2;      // Z: north=toward viewer
+          var y = 0; // don't know elevation here (not needed for line above terrain)
+          return new THREE.Vector3(x, y, z);
+        }
+
+        // Draw the current measurement line on the 3D terrain
+        function drawTerrainMeasLine() {
+          if (!terrain3dScene || !terrain3dMesh || !heightProfilePoints || !terrain3dMapParams) return;
+          clearTerrainMeasLine();
+          if (!heightProfilePoints.lats || !heightProfilePoints.lngs) return;
+
+          var points = [];
+          var p = terrain3dMapParams;
+          for (var i = 0; i < heightProfilePoints.lats.length; i++) {
+            var lat = heightProfilePoints.lats[i];
+            var lng = heightProfilePoints.lngs[i];
+            var tLng = (lng - p.lngMin) / (p.lngMax - p.lngMin);
+            var tLat = (lat - p.latMin) / (p.latMax - p.latMin);
+            var x = -(tLng * p.w3d - p.w3d / 2);
+            var z = tLat * p.h3d - p.h3d / 2;
+            var y = (heightProfileData[i] - p.elMin) * p.elScale + 2; // slightly above terrain
+            points.push(new THREE.Vector3(x, y, z));
+          }
+
+          if (points.length < 2) return;
+          var lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+          var lineMat = new THREE.LineBasicMaterial({ color: 0xff6600, linewidth: 2, depthTest: true });
+          terrain3dMeasLine = new THREE.Line(lineGeo, lineMat);
+          terrain3dScene.add(terrain3dMeasLine);
+
+          // Endpoint markers
+          var m1Geo = new THREE.SphereGeometry(3, 8, 8);
+          var m1Mat = new THREE.MeshBasicMaterial({ color: 0x0066cc });
+          var m1 = new THREE.Mesh(m1Geo, m1Mat);
+          m1.position.copy(points[0]);
+          m1.name = "measMarker";
+          terrain3dScene.add(m1);
+
+          var m2Geo = new THREE.SphereGeometry(3, 8, 8);
+          var m2Mat = new THREE.MeshBasicMaterial({ color: 0xcc0000 });
+          var m2 = new THREE.Mesh(m2Geo, m2Mat);
+          m2.position.copy(points[points.length - 1]);
+          m2.name = "measMarker";
+          terrain3dScene.add(m2);
+
+          // Store markers for cleanup (line + two spheres)
+          terrain3dMeasLine.userData = { markers: [m1, m2] };
+        }
+
+        function clearTerrainMeasLine() {
+          if (!terrain3dScene || !terrain3dMeasLine) return;
+          // Remove markers
+          if (terrain3dMeasLine.userData && terrain3dMeasLine.userData.markers) {
+            for (var i = 0; i < terrain3dMeasLine.userData.markers.length; i++) {
+              terrain3dScene.remove(terrain3dMeasLine.userData.markers[i]);
+              terrain3dMeasLine.userData.markers[i].geometry.dispose();
+              terrain3dMeasLine.userData.markers[i].material.dispose();
+            }
+          }
+          terrain3dScene.remove(terrain3dMeasLine);
+          terrain3dMeasLine.geometry.dispose();
+          terrain3dMeasLine.material.dispose();
+          terrain3dMeasLine = null;
+        }
+
         $(document).ready(function () {
           $("#nav-placeholder").load("navigation.html", function () {
             initNavigation();
@@ -3245,7 +3929,7 @@
             $("#btnMeasure").click(function () {
               if (measuringMode) {
                 stopMeasuring();
-              } else if (measMarkers.length > 0) {
+              } else if (measMarkers.length > 0 || measMarkers2.length > 0) {
                 stopMeasuring();
               } else {
                 startMeasuring();
@@ -3280,6 +3964,9 @@
             });
             $("#btnTabSatellite").click(function () {
               setActiveMap("satellite");
+            });
+            $("#btnTab3DTerrain").click(function () {
+              setActiveMap("terrain3d");
             });
 
             // Georef button
@@ -3523,7 +4210,23 @@
               });
             },
           );
-        });
+            // === 3D Terrain: Area selection ===
+
+            $("#btnSelectArea, #btnSelectArea3d").click(startAreaSelect);
+
+            $("#btnClear3d").click(function () {
+              destroyTerrain3D();
+              cancelAreaSelect();
+              terrain3dGridSize = 50;
+              $("#btnClear3d").prop("disabled", true);
+              $("#btnRefine3d").prop("disabled", true);
+              $("#terrain3dPlaceholder").show();
+              $("#terrain3dStatus").hide();
+            });
+
+            $("#btnRefine3d").click(refineTerrain3D);
+
+          });
       </script>
     </div>
   </body>

@@ -3410,7 +3410,7 @@ $app->get('/api/v1/Competitions/{competitionId}/Map', function (Request $request
     }
 
     $res = new \stdClass();
-    $res->exists = true;
+    $res->exists = !empty($map->storedFileName);
     $res->id = $map->id;
     $res->competitionId = $map->competitionId;
     $res->originalFileName = $map->originalFileName;
@@ -3439,6 +3439,9 @@ $app->get('/api/v1/Competitions/{competitionId}/Map', function (Request $request
     $res->terrain3dOrbitTargetX = $map->terrain3dOrbitTargetX;
     $res->terrain3dOrbitTargetY = $map->terrain3dOrbitTargetY;
     $res->terrain3dOrbitTargetZ = $map->terrain3dOrbitTargetZ;
+    $res->satLat = $map->satLat;
+    $res->satLng = $map->satLng;
+    $res->satZoom = $map->satZoom;
     $response->getBody()->write(json_encode($res));
     return $response;
 })->setName("getCompetitionMap");
@@ -3602,13 +3605,6 @@ $app->patch('/api/v1/Competitions/{competitionId}/Map', function (Request $reque
     $mapCls = CompetitionMap::class;
     $oldSql = "SELECT * FROM {$mapCls::$tableName} WHERE competitionId = :competitionId";
     $map = $this->get('helper')->GetBySql($mapCls, $oldSql, ['competitionId' => $competitionId]);
-    if (!$map) {
-        $res = new CommandResponse();
-        $res->code = 1;
-        $res->message = "No map exists for this competition";
-        $response->getBody()->write(json_encode($res));
-        return $response->withStatus(404);
-    }
 
     $updateData = [];
     if (isset($objectArray['zoom'])) $updateData['defaultZoom'] = $objectArray['zoom'];
@@ -3635,7 +3631,17 @@ $app->patch('/api/v1/Competitions/{competitionId}/Map', function (Request $reque
     if (isset($objectArray['terrain3dOrbitTargetX'])) $updateData['terrain3dOrbitTargetX'] = $objectArray['terrain3dOrbitTargetX'];
     if (isset($objectArray['terrain3dOrbitTargetY'])) $updateData['terrain3dOrbitTargetY'] = $objectArray['terrain3dOrbitTargetY'];
     if (isset($objectArray['terrain3dOrbitTargetZ'])) $updateData['terrain3dOrbitTargetZ'] = $objectArray['terrain3dOrbitTargetZ'];
-    $this->get('helper')->Update($mapCls, $updateData, $mapCls::$tableName, $map->id);
+    if (isset($objectArray['satLat'])) $updateData['satLat'] = $objectArray['satLat'];
+    if (isset($objectArray['satLng'])) $updateData['satLng'] = $objectArray['satLng'];
+    if (isset($objectArray['satZoom'])) $updateData['satZoom'] = $objectArray['satZoom'];
+
+    if (!$map) {
+        // No map record exists yet — create one (satellite-only / no file uploaded yet)
+        $updateData['competitionId'] = $competitionId;
+        $this->get('helper')->Insert($mapCls, $updateData, $mapCls::$tableName);
+    } else {
+        $this->get('helper')->Update($mapCls, $updateData, $mapCls::$tableName, $map->id);
+    }
 
     $res = new CommandResponse();
     $res->code = 0;

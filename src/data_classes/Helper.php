@@ -316,6 +316,12 @@ class Helper
 			$stmt = $this->db->query($sql);
 			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dOrbitTargetZ double";
 			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS satLat double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS satLng double";
+			$stmt = $this->db->query($sql);
+			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS satZoom int";
+			$stmt = $this->db->query($sql);
 			$sql = 'CREATE TABLE IF NOT EXISTS CompetitionMaps (id int NOT NULL AUTO_INCREMENT, competitionId int NOT NULL,
 					originalFileName varchar(255), storedFileName varchar(255), fileType varchar(10),
 					defaultZoom int, defaultCenterX double, defaultCenterY double,

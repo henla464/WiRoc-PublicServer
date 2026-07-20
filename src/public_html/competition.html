@@ -297,6 +297,7 @@
         </div>
         <div
           id="terrain3dCanvas"
+          class="map-resizable"
           style="
             width: 100%;
             height: 450px;
@@ -323,6 +324,11 @@
             Map".
           </div>
         </div>
+        <div
+          id="terrain3dResizeHandle"
+          class="map-resize-handle"
+          title="Drag to resize 3D view"
+        ></div>
       </div>
 
       <div
@@ -1425,15 +1431,19 @@
                 $("#btnTabSatellite").removeAttr("disabled");
               }
 
-              // Show 3D Terrain tab if map coordinates are in Sweden or UK
-              if (
-                hasGeo &&
-                georefPoints.p1Lat &&
-                isInSwedenOrUK(georefPoints.p1Lat, georefPoints.p1Lng)
-              ) {
+              // Show 3D Terrain tab if map coordinates are in Sweden or UK,
+              // OR if saved terrain3d state exists in meta (satellite-only case)
+              var hasTerrain = meta.terrain3dP1Lat && meta.terrain3dP2Lat;
+              var show3d =
+                (hasGeo &&
+                  georefPoints.p1Lat &&
+                  isInSwedenOrUK(georefPoints.p1Lat, georefPoints.p1Lng)) ||
+                hasTerrain ||
+                (!hasGeo && !hasMap); // satellite defaults to Linköping, Sweden
+              if (show3d) {
                 $("#tab3dItem").show();
-                // Auto-load saved 3D terrain state
-                if (meta.terrain3dP1Lat && meta.terrain3dP2Lat) {
+                // Restore saved 3D terrain state if available
+                if (hasTerrain) {
                   areaSelectP1 = L.latLng(
                     meta.terrain3dP1Lat,
                     meta.terrain3dP1Lng,
@@ -1500,12 +1510,30 @@
                 $("#mapTabs").show();
                 $("#btnTabOrienteering").show();
                 $("#satelliteMapContainer").show();
+                $("#satelliteMap").show();
                 $("#satelliteMapNoGeo").hide();
                 if (satelliteMap) {
                   satelliteMap.remove();
                   satelliteMap = null;
                 }
                 initSatelliteOnlyMap();
+                // Restore saved satellite view if available
+                if (meta.satLat && meta.satLng && meta.satZoom) {
+                  satelliteMap.setView(
+                    [meta.satLat, meta.satLng],
+                    meta.satZoom,
+                    { animate: false }
+                  );
+                }
+                // Show 3D Terrain tab — satellite defaults to Linköping, Sweden
+                if (
+                  satelliteMap &&
+                  isInSwedenOrUK(
+                    satelliteMap.getCenter().lat,
+                    satelliteMap.getCenter().lng
+                  )
+                )
+                  $("#tab3dItem").show();
                 setActiveMap("satellite");
                 return;
               }
@@ -1551,11 +1579,69 @@
                   window._restoring3dView = true;
                 }
               } else {
+                // No uploaded map: show satellite map centered on Linköping, Sweden
                 $("#map").hide();
-                $("#mapMeasureArea").hide();
-                $("#mapNoFile").show();
-                $("#btnSaveMapView").hide();
-                $("#btnDeleteMap").hide();
+                $("#orienteeringMapContainer").hide();
+                $("#mapNoFile").hide();
+                if (!hasEditAccess) {
+                  $("#btnSaveMapView").hide();
+                  $("#btnDeleteMap").hide();
+                  $("#mapOrienteeringButtons").hide();
+                  $("#mapEditButtons").hide();
+                }
+                $("#mapTabs").show();
+                $("#btnTabOrienteering").show();
+                if (satelliteMap) {
+                  satelliteMap.remove();
+                  satelliteMap = null;
+                }
+                // Show container before init so Leaflet gets correct dimensions
+                $("#satelliteMapContainer").show();
+                $("#satelliteMap").show();
+                $("#satelliteMapNoGeo").hide();
+                initSatelliteOnlyMap();
+                // Restore saved satellite view if available
+                if (meta.satLat && meta.satLng && meta.satZoom) {
+                  satelliteMap.setView(
+                    [meta.satLat, meta.satLng],
+                    meta.satZoom,
+                    { animate: false }
+                  );
+                }
+                // Show 3D Terrain tab — satellite defaults to Linköping, Sweden
+                if (
+                  satelliteMap &&
+                  isInSwedenOrUK(
+                    satelliteMap.getCenter().lat,
+                    satelliteMap.getCenter().lng
+                  )
+                )
+                  $("#tab3dItem").show();
+                // Restore saved 3D terrain state from _savedTerrain3dHolder
+                var hasSaved3d =
+                  window._savedTerrain3dHolder &&
+                  window._savedTerrain3dHolder.length > 0;
+                if (hasSaved3d) {
+                  var saved3d2 = window._savedTerrain3dHolder.pop();
+                  window._savedTerrain3dHolder = [];
+                  areaSelectP1 = L.latLng(saved3d2.p1lat, saved3d2.p1lng);
+                  areaSelectP2 = L.latLng(saved3d2.p2lat, saved3d2.p2lng);
+                  terrain3dGridSize = saved3d2.gridsize;
+                  if (saved3d2.theta !== undefined) orbitTheta = saved3d2.theta;
+                  if (saved3d2.phi !== undefined) orbitPhi = saved3d2.phi;
+                  if (saved3d2.dist !== undefined) orbitDist = saved3d2.dist;
+                  if (saved3d2.targetX !== undefined) orbitTarget.set(
+                    saved3d2.targetX, saved3d2.targetY, saved3d2.targetZ);
+                  window._restoring3dView = true;
+                }
+                if (hasSaved3d) {
+                  activeMapType = "satellite"; // allow setActiveMap to proceed
+                  setActiveMap("terrain3d");
+                } else {
+                  // go through setActiveMap so all UI state is consistent
+                  activeMapType = ""; // reset so setActiveMap proceeds
+                  setActiveMap("satellite");
+                }
               }
             },
             function () {
@@ -1629,9 +1715,18 @@
           $("#mapContainer").show();
           if ($("#tab3dItem").is(":visible")) $("#btnSelectArea").show();
           if (type === "orienteering") {
-            if (!orienteeringMap) return;
+            if (!orienteeringMap) {
+              // No orienteering map loaded — show message and switch to satellite
+              $("#orienteeringMapContainer").show();
+              $("#map").hide();
+              $("#mapNoFile").show();
+              $("#btnTabOrienteering").addClass("active");
+              return;
+            }
             mapInstance = orienteeringMap;
             $("#orienteeringMapContainer").show();
+            $("#map").show();
+            $("#mapNoFile").hide();
             $("#btnTabOrienteering").addClass("active");
             if (hasEditAccess) $("#mapOrienteeringButtons").show();
             if (hasViewAccess) $("#mapMeasureArea").show();
@@ -1640,6 +1735,7 @@
             $("#satelliteMapContainer").show();
             $("#satelliteMap").show();
             $("#satelliteMapNoGeo").hide();
+            $("#mapNoFile").hide();
             if (georefPoints.p1Lat || georefState) {
               // Sync satellite view to show same area as orienteering map
               if (orienteeringMap && georefPoints.p1Lat && mapMeta.mapScale) {
@@ -4153,10 +4249,42 @@
           }
         }
 
+        function setupTerrain3dResize() {
+          var handle = document.getElementById("terrain3dResizeHandle");
+          var canvasEl = document.getElementById("terrain3dCanvas");
+          if (!handle || !canvasEl) return;
+          if (handle._resizeInitialized) return;
+          handle._resizeInitialized = true;
+          var startY, startHeight;
+          handle.addEventListener("mousedown", function (e) {
+            e.preventDefault();
+            startY = e.clientY;
+            startHeight = canvasEl.offsetHeight;
+            document.addEventListener("mousemove", resizeMove);
+            document.addEventListener("mouseup", resizeEnd);
+            document.body.style.userSelect = "none";
+          });
+          function resizeMove(e) {
+            var newH = Math.max(200, startHeight + (e.clientY - startY));
+            canvasEl.style.height = newH + "px";
+            if (typeof onTerrain3dResize === "function") onTerrain3dResize();
+          }
+          function resizeEnd() {
+            document.removeEventListener("mousemove", resizeMove);
+            document.removeEventListener("mouseup", resizeEnd);
+            document.body.style.userSelect = "";
+            if (typeof onTerrain3dResize === "function") onTerrain3dResize();
+          }
+        }
+
         function initSatelliteOnlyMap() {
+          // Linköping, Sweden coordinates (used when no georeferenced map is available)
+          var defaultLat = 58.4108;
+          var defaultLng = 15.6214;
+          var defaultZoom = 13;
           satelliteMap = L.map("satelliteMap", {
-            center: [0, 0],
-            zoom: 1,
+            center: [defaultLat, defaultLng],
+            zoom: defaultZoom,
             scrollWheelZoom: true,
           });
           createSatelliteTileLayers(satelliteMap);
@@ -4193,9 +4321,13 @@
             mapInstance = orienteeringMap;
 
             // Create satellite map (Web Mercator)
+            // Default to Linköping, Sweden when no georeference data exists
+            var defaultLat = 58.4108;
+            var defaultLng = 15.6214;
+            var defaultZoom = 13;
             satelliteMap = L.map("satelliteMap", {
-              center: [0, 0],
-              zoom: 1,
+              center: [defaultLat, defaultLng],
+              zoom: defaultZoom,
               scrollWheelZoom: true,
             });
             createSatelliteTileLayers(satelliteMap);
@@ -4395,31 +4527,34 @@
         }
 
         function saveMapViewState() {
-          if (!orienteeringMap) {
-            console.log("saveMapViewState: no orienteeringMap");
-            return;
-          }
-          var map = orienteeringMap;
-          var center = map.getCenter();
-          var zoom = map.getZoom();
-          var imgBounds;
-          map.eachLayer(function (layer) {
-            if (layer instanceof L.ImageOverlay) {
-              imgBounds = layer.getBounds();
+          var payload = {};
+
+          // Save orienteering map state if available
+          if (orienteeringMap) {
+            var map = orienteeringMap;
+            var center = map.getCenter();
+            var zoom = map.getZoom();
+            var imgBounds;
+            map.eachLayer(function (layer) {
+              if (layer instanceof L.ImageOverlay) {
+                imgBounds = layer.getBounds();
+              }
+            });
+            if (imgBounds) {
+              var h = imgBounds.getNorth();
+              var w = imgBounds.getEast();
+              payload.zoom = zoom;
+              payload.centerX = h > 0 ? center.lat / h : 0;
+              payload.centerY = w > 0 ? center.lng / w : 0;
             }
-          });
-          if (!imgBounds) {
-            console.log("saveMapViewState: no imgBounds — save terrain only");
-            // No orienteering map image, but still save terrain state
           }
 
-          var payload = {};
-          if (imgBounds) {
-            var h = imgBounds.getNorth();
-            var w = imgBounds.getEast();
-            payload.zoom = zoom;
-            payload.centerX = h > 0 ? center.lat / h : 0;
-            payload.centerY = w > 0 ? center.lng / w : 0;
+          // Save satellite view state
+          if (satelliteMap) {
+            var satCenter = satelliteMap.getCenter();
+            payload.satZoom = Math.round(satelliteMap.getZoom());
+            payload.satLat = satCenter.lat;
+            payload.satLng = satCenter.lng;
           }
 
           // Save 3D terrain state if we have one
@@ -5027,6 +5162,7 @@
 
           setupOrbitControls(container);
           window.addEventListener("resize", onTerrain3dResize);
+          setupTerrain3dResize();
 
           function animate() {
             terrain3dAnimId = requestAnimationFrame(animate);

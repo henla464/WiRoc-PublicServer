@@ -151,6 +151,22 @@ class CompetitionMap
      */
     public $terrain3dOrbitTargetZ;
 
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $satLat;
+    /**
+     * @SWG\Property()
+     * @var float
+     */
+    public $satLng;
+    /**
+     * @SWG\Property()
+     * @var int
+     */
+    public $satZoom;
+
     public $updateTime;
     public $createdTime;
 }

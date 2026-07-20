@@ -44,13 +44,13 @@
 
       <!-- Map section -->
       <div id="mapSection" class="mb-3" style="display: none">
-        <div class="d-flex align-items-center mb-2">
-          <ul id="mapTabs" class="nav nav-tabs me-auto" style="display: none">
+        <div class="d-flex flex-nowrap align-items-end mb-1">
+          <ul id="mapTabs" class="nav nav-tabs me-auto flex-nowrap" style="display: none">
             <li class="nav-item">
               <button
                 type="button"
                 id="btnTabOrienteering"
-                class="nav-link active"
+                class="nav-link active text-nowrap"
                 data-maptype="orienteering"
               >
                 Orienteering Map
@@ -60,7 +60,7 @@
               <button
                 type="button"
                 id="btnTabSatellite"
-                class="nav-link"
+                class="nav-link text-nowrap"
                 data-maptype="satellite"
               >
                 Satellite/Street Map
@@ -70,25 +70,43 @@
               <button
                 type="button"
                 id="btnTab3DTerrain"
-                class="nav-link"
+                class="nav-link text-nowrap"
                 data-maptype="terrain3d"
               >
                 3D Terrain
               </button>
             </li>
           </ul>
+          <div
+            id="calibInstructions"
+            class="alert alert-info collapse mb-0 py-1"
+            style="font-size: 13px"
+            role="alert"
+          >
+            <strong>Calibration mode:</strong> Click two points on the map to
+            measure the distance between them.
+          </div>
+          <div
+            id="georefInstructions"
+            class="alert alert-info collapse mb-0 py-1"
+            style="font-size: 13px"
+            role="alert"
+          ></div>
+          <div id="mapUpdatedAlert" style="display:none; margin-left:10px; font-size:12px; color:#28a745; font-weight:bold; white-space:nowrap;">&#10003; Map saved!</div>
+        </div>
+        <div class="d-flex flex-wrap align-items-center mb-2">
           <div id="mapOrienteeringButtons" class="me-1" style="display: none">
             <button
               type="button"
               id="btnUploadMap"
-              class="btn btn-outline-dark btn me-1"
+              class="btn btn-outline-dark btn-sm me-1 mb-1"
             >
               <i class="fa fa-upload"></i> Upload Map
             </button>
             <button
               type="button"
               id="btnDeleteMap"
-              class="btn btn-outline-dark btn"
+              class="btn btn-outline-dark btn-sm mb-1"
             >
               <i class="fa fa-trash"></i> Delete Map
             </button>
@@ -103,21 +121,21 @@
             <button
               type="button"
               id="btnSaveMapView"
-              class="btn btn-outline-dark btn me-1"
+              class="btn btn-outline-dark btn-sm me-1 mb-1"
             >
               <i class="fa fa-save"></i> Save current view
             </button>
             <button
               type="button"
               id="btnGeorefMap"
-              class="btn btn-outline-dark btn me-1"
+              class="btn btn-outline-dark btn-sm me-1 mb-1"
             >
               <i class="fa fa-globe"></i> Georeference Map
             </button>
             <button
               type="button"
               id="btnLockControls"
-              class="btn btn-outline-dark btn me-1"
+              class="btn btn-outline-dark btn-sm me-1 mb-1"
             >
               <i class="fa fa-lock"></i> Unlock controls
             </button>
@@ -126,21 +144,21 @@
             <button
               type="button"
               id="btnMeasure"
-              class="btn btn-outline-dark btn me-1"
+              class="btn btn-outline-dark btn-sm me-1 mb-1"
             >
               <i class="fa fa-arrows-h"></i> Measure distance
             </button>
             <button
               type="button"
               id="btnToggleGatewayLines"
-              class="btn btn-outline-dark btn me-1"
+              class="btn btn-outline-dark btn-sm me-1 mb-1"
             >
               <i class="fa fa-exchange"></i> Hide gateway lines
             </button>
             <button
               type="button"
               id="btnSelectArea"
-              class="btn btn-outline-dark btn me-1"
+              class="btn btn-outline-dark btn-sm me-1 mb-1"
               style="display: none"
             >
               <i class="fa fa-crop"></i> Select Area for 3D
@@ -151,22 +169,6 @@
             ></span>
           </div>
         </div>
-        <div id="mapUpdatedAlert" style="display:none; margin-left:10px; font-size:12px; color:#28a745; font-weight:bold; white-space:nowrap;">&#10003; Map saved!</div>
-        <div
-          id="calibInstructions"
-          class="alert alert-info collapse"
-          style="margin-bottom: 4px"
-          role="alert"
-        >
-          <strong>Calibration mode:</strong> Click two points on the map to
-          measure the distance between them.
-        </div>
-        <div
-          id="georefInstructions"
-          class="alert alert-info collapse"
-          style="margin-bottom: 4px"
-          role="alert"
-        ></div>
         <div id="mapContainer" style="display: none">
           <div id="orienteeringMapContainer">
             <div style="position: relative">

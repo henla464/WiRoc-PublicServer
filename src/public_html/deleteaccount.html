@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+
+	<!-- Required meta tags -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link href="libs/TableSorter/css/theme.bootstrap_4.min.css" rel="stylesheet" crossorigin="anonymous">
+	<!-- Bootstrap CSS -->
+	<link href="libs/bootstrap-5.3.3-dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+	<link rel="stylesheet" href="ui/css/wiroc.css" />
+
+	<title>WiRoc Monitor</title>
+  </head>
+  <body>
+	<div id="notLoggedInAlert" class="alert alert-warning collapse" style="margin-bottom:0;" role="alert">
+		<strong>You must be logged in to delete your account.</strong>
+		<button type="button" class="btn-close close" aria-label="Close"></button>
+	</div>
+	<div id="emailSentAlert" class="alert alert-success alert-dismissible collapse" style="margin-bottom:0;" role="alert">
+		<strong>A confirmation email has been sent. Please open the link in that email to delete your account.</strong>
+		<button type="button" class="btn-close close" aria-label="Close"></button>
+	</div>
+	<div id="accountDeletedAlert" class="alert alert-success alert-dismissible collapse" style="margin-bottom:0;" role="alert">
+		<strong>Your account has been deleted.</strong>
+		<button type="button" class="btn-close close" aria-label="Close"></button>
+	</div>
+	<div class="alert alert-danger collapse" id="errorAlert" role="alert">
+		<strong></strong>
+		<button type="button" class="btn-close close" aria-label="Close"></button>
+	</div>
+
+	<div id="nav-placeholder"></div>
+	<div id="signup-modal-placeholder"></div>
+	<div class="container-fluid recovery-form">
+			<h1>Delete account</h1>
+
+			<p>See <a href="accountdeletion.html">how your account and data are deleted</a>, including what is kept and for how long.</p>
+
+			<form id="requestDeletionForm">
+				<p>To delete your account you must confirm it by email. Click the button below and we will send a confirmation link to your email address. The link must be used within 30 minutes.</p>
+				<div class="form-group d-flex">
+					<button type="button" id="buttonSendDeletionEmail" class="btn btn-secondary small ms-auto">Send confirmation email</button>
+				</div>
+			</form>
+
+			<form id="deleteAccountForm">
+				<p>Click the button below to permanently delete your account. This cannot be undone. You must be logged in.</p>
+				<div class="form-group form-check">
+					<input type="checkbox" class="form-check-input" id="confirmDeleteCheck" required="required">
+					<label class="form-check-label" for="confirmDeleteCheck">I understand that deleting my account cannot be undone.</label>
+				</div>
+				<div class="form-group d-flex">
+					<button type="button" id="buttonDeleteAccount" class="btn btn-danger small ms-auto">Delete my account</button>
+				</div>
+			</form>
+
+			<!-- Optional JavaScript; choose one of the two! -->
+			<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+			<!-- Option 1: Bootstrap Bundle with Popper -->
+			<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+			<script src="libs/TableFilter/TableFilter.js" type="text/javascript"></script>
+			<script src="libs/TableSorter/js/jquery.tablesorter.min.js" type="text/javascript"></script>
+			<script src="libs/TableSorter/js/jquery.tablesorter.widgets.min.js" type="text/javascript"></script>
+			<script src="navinit.js"></script>
+
+			<script>
+				$.urlParam = function (name) {
+					var results = new RegExp('[\?&]' + name + '=([^&#]*)')
+										.exec(window.location.search);
+
+					return (results !== null) ? results[1] || 0 : false;
+				}
+
+				// Show the real reason a request failed instead of an unhelpful blob.
+				function showError(fail, prefix) {
+					var msg;
+					if (fail && fail.status === 401) {
+						msg = "You must be logged in to do this. Please log in and try again.";
+					} else if (fail && fail.responseJSON && fail.responseJSON.message) {
+						msg = fail.responseJSON.message;
+					} else if (fail && fail.responseText) {
+						// Server error pages are HTML; strip tags so the message is readable.
+						msg = fail.responseText.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 400);
+					} else {
+						msg = (fail && fail.statusText) ? fail.statusText : 'Unknown error';
+					}
+					$('#errorAlert>strong').text((prefix || '') + msg);
+					$('#errorAlert').removeClass('collapse');
+				}
+
+				var deletionGuid = $.urlParam('deletionGuid');
+				if (deletionGuid == "" || deletionGuid == null)	{
+					$("#requestDeletionForm").show();
+					$("#deleteAccountForm").hide();
+				} else {
+					$("#requestDeletionForm").hide();
+					$("#deleteAccountForm").show();
+				}
+
+				$(document).ready(function() {
+					$("#nav-placeholder").load("navigation.html", function() {
+						initNavigation();
+
+						getIsLoggedIn(function(loggedIn) {
+							if (!loggedIn) {
+								$("#notLoggedInAlert").removeClass('collapse');
+								$("#buttonSendDeletionEmail").prop('disabled', true);
+								$("#buttonDeleteAccount").prop('disabled', true);
+							}
+						});
+
+						$('#buttonSendDeletionEmail').click(function() {
+							$.ajax({
+									url: "/api/v1/Users/DeleteAccount/Request",
+									method: "POST",
+									dataType: "json"
+							}).then(function(cmdResp) {
+									if (cmdResp.code == 0) {
+										$('#errorAlert').addClass('collapse');
+										$('#emailSentAlert').removeClass('collapse');
+									} else {
+										$('#errorAlert>strong').text(cmdResp.message);
+										$('#errorAlert').removeClass('collapse');
+										$('#emailSentAlert').addClass('collapse');
+									}
+							}, function(fail) {
+									showError(fail, 'Could not send confirmation email: ');
+							});
+						});
+
+						$('#buttonDeleteAccount').click(function() {
+							if ($('#deleteAccountForm')[0].checkValidity()) {
+								postItemData = JSON.stringify({
+									"deletionGuid": deletionGuid
+								});
+
+								$.ajax({
+										url: "/api/v1/Users/DeleteAccount",
+										method: "POST",
+										data: postItemData,
+										dataType: "json"
+								}).then(function(cmdResp) {
+										if (cmdResp.code == 0) {
+											$('#errorAlert').addClass('collapse');
+											$('#deleteAccountForm').hide();
+											$('#requestDeletionForm').hide();
+											$('#accountDeletedAlert').removeClass('collapse');
+											// The session was cleared server side, reflect that in the nav bar.
+											$("#loggedInDiv").hide();
+											$("#loginDiv").show();
+											$(".dynamic-nav-item").remove();
+										} else {
+											$('#errorAlert>strong').text(cmdResp.message);
+											$('#errorAlert').removeClass('collapse');
+											$('#accountDeletedAlert').addClass('collapse');
+										}
+								}, function(fail) {
+										showError(fail, 'Could not delete account: ');
+								});
+							} else {
+								//Validate Form
+								$('#deleteAccountForm')[0].reportValidity();
+							}
+						});
+
+						$(document).on("click", ".close", function(){
+								$(this).parent().addClass('collapse');
+						});
+
+					});
+				});
+			</script>
+	</div>
+  </body>
+</html>

@@ -14,6 +14,30 @@ require 'PHPMailer/PHPMailer-master/src/PHPMailer.php';
 require 'PHPMailer/PHPMailer-master/src/SMTP.php';
 
 
+/**
+ * Point a PHPMailer instance at an SMTP host, preferring IPv4.
+ *
+ * Loopia publishes IPv6 (AAAA) records for mailcluster.loopia.se. PHP's
+ * stream_socket_client() then chooses the IPv6 address first; on a host with
+ * no working IPv6 route that connect hangs/fails and PHPMailer only reports
+ * the generic "SMTP connect() failed". Resolve to the IPv4 addresses instead,
+ * but keep the hostname as the TLS peer name so certificate verification and
+ * SNI still match.
+ */
+function wirocSetSmtpHost($mail, $host)
+{
+    $mail->Host = $host;
+    $ipv4 = gethostbynamel($host);
+    if (is_array($ipv4) && count($ipv4) > 0) {
+        $mail->Host = implode(';', $ipv4);
+        $mail->SMTPOptions = array_merge($mail->SMTPOptions, [
+            'ssl' => ['peer_name' => $host],
+        ]);
+    }
+    return $mail;
+}
+
+
 require '../vendor/autoload.php';
 //require __DIR__ . '/../vendor/autoload.php';
 
@@ -496,7 +520,86 @@ $app->post('/api/v1/User', function (Request $request, Response $response) {
         $response->getBody()->write(json_encode($res));
         return $response;
     })->setName("patchUser");
-    
+
+/**
+ * @SWG\Delete(
+ *     path="/api/v1/Users/{userId}",
+ *     description="Deletes any user account. Admin only.",
+ *     operationId="deleteUser",
+ *     @SWG\Parameter(
+ *         description="ID of the user to delete",
+ *         format="int64",
+ *         in="path",
+ *         name="userId",
+ *         required=true,
+ *         type="integer"
+ *     ),
+ *     produces={"application/json"},
+ *     @SWG\Response(
+ *         response=200,
+ *         description="command response",
+ *         @SWG\Schema(
+ *             ref="#/definitions/CommandResponse"
+ *         ),
+ *     ),
+ *     @SWG\Response(
+ *         response="default",
+ *         description="unexpected error",
+ *         @SWG\Schema(
+ *             ref="#/definitions/ErrorModel"
+ *         )
+ *     ),
+ *     security={
+ *       {"api_key": {}}
+ *     }
+ * )
+ */
+$app->delete('/api/v1/Users/{userId}', function (Request $request, Response $response) {
+    $cls = User::class;
+    $userId = $request->getAttribute('userId');
+
+    if (!ctype_digit((string)$userId)) {
+        $res = new CommandResponse();
+        $res->code = 3;
+        $res->message = "Invalid user id";
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    }
+
+    $user = $this->get('helper')->Get($cls, $cls::$tableName, $userId);
+    if (!$user) {
+        $res = new CommandResponse();
+        $res->code = 2;
+        $res->message = "User not found";
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    }
+
+    // An admin must not delete their own account here. This keeps the email
+    // confirmed self service flow in charge of your own account, and guarantees
+    // that at least the acting admin (and thus one admin) always remains.
+    if ((int)$user->id === (int)$_SESSION['userId']) {
+        $res = new CommandResponse();
+        $res->code = 4;
+        $res->message = "You cannot delete your own account here, use the Delete account page";
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    }
+
+    // Remove the user's own access grants so no orphaned access remains.
+    $this->get('helper')->DeleteBySql("DELETE FROM DeviceAccesses WHERE UserId = :id", ['id' => $user->id]);
+    $this->get('helper')->DeleteBySql("DELETE FROM CompetitionAccesses WHERE UserId = :id", ['id' => $user->id]);
+
+    // Delete the account.
+    $this->get('helper')->Delete($user->id, $cls::$tableName);
+
+    $res = new CommandResponse();
+    $res->code = 0;
+    $res->message = "User deleted";
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("deleteUser");
+
 
 # DEVICES
 /**
@@ -2423,6 +2526,75 @@ $app->delete('/api/v1/WiRocPython2Releases/{releaseId}', function (Request $requ
     return $response->withStatus(204);
 })->setName("deleteWiRocPython2Release");
 
+
+/**
+ * @SWG\Patch(
+ *     path="/api/v1/WiRocPython2Releases/{releaseId}",
+ *     description="Update the MD5 checksum of a WiRocPython2Release",
+ *     operationId="patchWiRocPython2Release",
+ *     @SWG\Parameter(
+ *         description="ID of the WiRocPython2Release",
+ *         format="int64",
+ *         in="path",
+ *         name="releaseId",
+ *         required=true,
+ *         type="integer"
+ *     ),
+ *     @SWG\Parameter(
+ *         name="body",
+ *         in="body",
+ *         description="Object with updated md5HashOfReleaseFile",
+ *         required=true,
+ *         @SWG\Schema(
+ *             type="object",
+ *             required={"md5HashOfReleaseFile"},
+ *             @SWG\Property(property="md5HashOfReleaseFile", type="string")
+ *         ),
+ *     ),
+ *     produces={"application/json"},
+ *     @SWG\Response(
+ *         response=200,
+ *         description="command response",
+ *         @SWG\Schema(
+ *             ref="#/definitions/CommandResponse"
+ *         ),
+ *     ),
+ *     @SWG\Response(
+ *         response="default",
+ *         description="unexpected error",
+ *         @SWG\Schema(
+ *             ref="#/definitions/ErrorModel"
+ *         )
+ *     ),
+ *     security={
+ *       {"api_key": {}}
+ *     }
+ * )
+ */
+$app->patch('/api/v1/WiRocPython2Releases/{releaseId}', function (Request $request, Response $response) {
+    $id = $request->getAttribute('releaseId');
+    $objectArray = json_decode($request->getBody(), true);
+
+    if (!isset($objectArray['md5HashOfReleaseFile'])) {
+        $res = new CommandResponse();
+        $res->code = 1;
+        $res->message = "Missing required field: md5HashOfReleaseFile";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(400);
+    }
+
+    $cls = WiRocPython2Release::class;
+    $updateArray = ['md5HashOfReleaseFile' => $objectArray['md5HashOfReleaseFile']];
+    $this->get('helper')->Update($cls, $updateArray, $cls::$tableName, $id);
+
+    $res = new CommandResponse();
+    $res->code = 0;
+    $res->message = "MD5 checksum updated";
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("patchWiRocPython2Release");
+
+
 # WiRocBLEAPIReleases
 /**
  * @SWG\Get(
@@ -2690,7 +2862,75 @@ $app->delete('/api/v1/WiRocBLEAPIReleases/{releaseId}', function (Request $reque
     return $response->withStatus(204);
 })->setName("deleteWiRocBLEAPIRelease");
 
-    
+
+/**
+ * @SWG\Patch(
+ *     path="/api/v1/WiRocBLEAPIReleases/{releaseId}",
+ *     description="Update the MD5 checksum of a WiRocBLEAPIRelease",
+ *     operationId="patchWiRocBLEAPIRelease",
+ *     @SWG\Parameter(
+ *         description="ID of the WiRocBLEAPIRelease",
+ *         format="int64",
+ *         in="path",
+ *         name="releaseId",
+ *         required=true,
+ *         type="integer"
+ *     ),
+ *     @SWG\Parameter(
+ *         name="body",
+ *         in="body",
+ *         description="Object with updated md5HashOfReleaseFile",
+ *         required=true,
+ *         @SWG\Schema(
+ *             type="object",
+ *             required={"md5HashOfReleaseFile"},
+ *             @SWG\Property(property="md5HashOfReleaseFile", type="string")
+ *         ),
+ *     ),
+ *     produces={"application/json"},
+ *     @SWG\Response(
+ *         response=200,
+ *         description="command response",
+ *         @SWG\Schema(
+ *             ref="#/definitions/CommandResponse"
+ *         ),
+ *     ),
+ *     @SWG\Response(
+ *         response="default",
+ *         description="unexpected error",
+ *         @SWG\Schema(
+ *             ref="#/definitions/ErrorModel"
+ *         )
+ *     ),
+ *     security={
+ *       {"api_key": {}}
+ *     }
+ * )
+ */
+$app->patch('/api/v1/WiRocBLEAPIReleases/{releaseId}', function (Request $request, Response $response) {
+    $id = $request->getAttribute('releaseId');
+    $objectArray = json_decode($request->getBody(), true);
+
+    if (!isset($objectArray['md5HashOfReleaseFile'])) {
+        $res = new CommandResponse();
+        $res->code = 1;
+        $res->message = "Missing required field: md5HashOfReleaseFile";
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus(400);
+    }
+
+    $cls = WiRocBLEAPIRelease::class;
+    $updateArray = ['md5HashOfReleaseFile' => $objectArray['md5HashOfReleaseFile']];
+    $this->get('helper')->Update($cls, $updateArray, $cls::$tableName, $id);
+
+    $res = new CommandResponse();
+    $res->code = 0;
+    $res->message = "MD5 checksum updated";
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("patchWiRocBLEAPIRelease");
+
+
 
 # ReleaseStatus
 /**
@@ -4523,18 +4763,20 @@ $app->post('/api/v1/Users/PasswordRecovery', function (Request $request, Respons
 
 
         $mail = new PHPMailer();
-        $mail->isSMTP(); 
-        $mail->Host = 'mailcluster.loopia.se'; 
-        $mail->SMTPAuth = true; 
+        $mail->isSMTP();
+        wirocSetSmtpHost($mail, 'mailcluster.loopia.se');
+        $mail->SMTPAuth = true;
         $mail->Username = $smtpUsername; // SMTP username
         $mail->Password = $smtpPassword; // SMTP password
-        $mail->SMTPSecure = 'tls'; 
+        $mail->SMTPSecure = 'tls';
         $mail->Port = 587;
+        // Fail fast instead of hanging the web request if the mail server is unreachable.
+        $mail->Timeout = 15;
         $mail->CharSet = 'UTF-8';
         $mail->From = $smtpFrom;;
-        $mail->FromName = 'Mailer';
+        $mail->FromName = 'WiRoc Monitor';
         $mail->addAddress($email); // Add a recipient
-        $mail->addReplyTo($smtpReplyTo, '');
+        $mail->addReplyTo($smtpFrom, 'WiRoc Monitor');
         $mail->Subject = 'Password recovery for monitor.wiroc.se';
         $mail->Body = 'Go to the <a href="https://monitor.wiroc.se/passwordrecovery.html?recoveryGuid=' . $recGuid . '">Password Recovery Page</a> to set a new password. Must be done within 10 minutes of the request.';
         $mail->AltBody = 'Go to the Password Recovery Page: https://monitor.wiroc.se/passwordrecovery.html?recoveryGuid=' . $recGuid . ' to set a new password. Must be done within 10 minutes of the request.';
@@ -4545,9 +4787,10 @@ $app->post('/api/v1/Users/PasswordRecovery', function (Request $request, Respons
             $response->getBody()->write(json_encode($res));
             return $response;
         } else {
+            error_log('PasswordRecovery email failed for ' . $email . ': ' . $mail->ErrorInfo);
             $res = new CommandResponse();
             $res->code = 1;
-            $res->message = "Error sending email";
+            $res->message = "Error sending email: " . $mail->ErrorInfo;
             $response->getBody()->write(json_encode($res));
             return $response;
         }
@@ -4654,6 +4897,189 @@ $app->post('/api/v1/Users/SetNewPassword', function (Request $request, Response 
     $response->getBody()->write(json_encode($res));
     return $response;
 })->setName("postSetNewPassword");
+
+/**
+ * @SWG\Post(
+ *     path="/api/v1/Users/DeleteAccount/Request",
+ *     description="Requests deletion of the logged in user's own account by sending a confirmation email",
+ *     operationId="postDeleteAccountRequest",
+ *     produces={"application/json"},
+ *     @SWG\Response(
+ *         response=200,
+ *         description="DeleteAccountRequest CommandResponse",
+ *         @SWG\Schema(
+ *             ref="#/definitions/CommandResponse"
+ *         ),
+ *     ),
+ *     @SWG\Response(
+ *         response="default",
+ *         description="unexpected error",
+ *         @SWG\Schema(
+ *             ref="#/definitions/ErrorModel"
+ *         )
+ *     ),
+ *     security={
+ *       {"api_key": {}}
+ *     }
+ * )
+ */
+$app->post('/api/v1/Users/DeleteAccount/Request', function (Request $request, Response $response) {
+    $cls = User::class;
+    $userId = $_SESSION['userId'];
+
+    $sqlSelect = "SELECT * FROM {$cls::$tableName} WHERE id = :id";
+    $user = $this->get('helper')->GetBySql($cls, $sqlSelect, ['id' => $userId]);
+
+    if ($user == null) {
+        $res = new CommandResponse();
+        $res->code = 2;
+        $res->message = "User not found";
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    }
+
+    $delGuid = GUID();
+    $objectArrayForUpdate = [];
+    $objectArrayForUpdate['deletionGuid'] = $delGuid;
+    $objectArrayForUpdate['id'] = $userId;
+    $sqlUpdate = "UPDATE {$cls::$tableName} SET deletionGuid = :deletionGuid, deletionTime = NOW() WHERE id = :id";
+    $this->get('helper')->RunSql($sqlUpdate, $objectArrayForUpdate);
+
+    $smtpUsername = $this->get('config')['smtp']['username'];
+    $smtpPassword = $this->get('config')['smtp']['password'];
+    $smtpFrom = $this->get('config')['smtp']['from'];
+    $smtpReplyTo = $this->get('config')['smtp']['replyto'];
+    // Sender used for the account-deletion email; falls back to the default From.
+    $smtpFromDeletion = ($this->get('config')['smtp']['fromdeletion'] ?? '') ?: $smtpFrom;
+    // ...and authenticate as that same mailbox, with its own password.
+    $smtpUsernameDeletion = ($this->get('config')['smtp']['usernamedeletion'] ?? '') ?: $smtpFromDeletion;
+    $smtpPasswordDeletion = ($this->get('config')['smtp']['passworddeletion'] ?? '') ?: $smtpPassword;
+
+    $mail = new PHPMailer();
+    $mail->isSMTP();
+    wirocSetSmtpHost($mail, 'mailcluster.loopia.se');
+    $mail->SMTPAuth = true;
+    $mail->Username = $smtpUsernameDeletion; // SMTP username
+    $mail->Password = $smtpPasswordDeletion; // SMTP password
+    $mail->SMTPSecure = 'tls';
+    $mail->Port = 587;
+    // Fail fast instead of hanging the web request if the mail server is unreachable.
+    $mail->Timeout = 15;
+    $mail->CharSet = 'UTF-8';
+    $mail->From = $smtpFromDeletion;
+    $mail->FromName = 'WiRoc Monitor';
+    $mail->addAddress($user->email); // Add a recipient
+    $mail->addReplyTo($smtpFromDeletion, 'WiRoc Monitor');
+    $mail->Subject = 'Delete your account at monitor.wiroc.se';
+    $mail->Body = 'Go to the <a href="https://monitor.wiroc.se/deleteaccount.html?deletionGuid=' . $delGuid . '">Delete Account Page</a> to permanently delete your account. You must be logged in. The link must be used within 30 minutes of the request. If you did not request this, you can safely ignore this email.';
+    $mail->AltBody = 'Go to the Delete Account Page: https://monitor.wiroc.se/deleteaccount.html?deletionGuid=' . $delGuid . ' to permanently delete your account. You must be logged in. The link must be used within 30 minutes of the request. If you did not request this, you can safely ignore this email.';
+    if ($mail->send()) {
+        $res = new CommandResponse();
+        $res->code = 0;
+        $res->message = "Email sent";
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    } else {
+        error_log('DeleteAccount confirmation email failed for ' . $user->email . ': ' . $mail->ErrorInfo);
+        $res = new CommandResponse();
+        $res->code = 1;
+        $res->message = "Error sending email: " . $mail->ErrorInfo;
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    }
+})->setName("postDeleteAccountRequest");
+
+/**
+ * @SWG\Post(
+ *     path="/api/v1/Users/DeleteAccount",
+ *     description="Deletes the logged in user's own account given a valid deletionGuid received by email",
+ *     operationId="postDeleteAccount",
+ *     @SWG\Parameter(
+ *         name="DeleteAccount",
+ *         in="body",
+ *         description="deletionGuid received in the confirmation email",
+ *         required=true,
+ *         @SWG\Schema(ref="#/definitions/DeleteAccount"),
+ *     ),
+ *     produces={"application/json"},
+ *     @SWG\Response(
+ *         response=200,
+ *         description="DeleteAccount CommandResponse",
+ *         @SWG\Schema(
+ *             ref="#/definitions/CommandResponse"
+ *         ),
+ *     ),
+ *     @SWG\Response(
+ *         response="default",
+ *         description="unexpected error",
+ *         @SWG\Schema(
+ *             ref="#/definitions/ErrorModel"
+ *         )
+ *     ),
+ *     security={
+ *       {"api_key": {}}
+ *     }
+ * )
+ */
+$app->post('/api/v1/Users/DeleteAccount', function (Request $request, Response $response) {
+    $cls = User::class;
+    $objectArray = json_decode($request->getBody(), true);
+
+    $deletionGuid = "";
+    if (is_array($objectArray) && array_key_exists("deletionGuid", $objectArray)) {
+        $deletionGuid = trim($objectArray['deletionGuid']);
+    }
+
+    if ($deletionGuid == "") {
+        $res = new CommandResponse();
+        $res->code = 3;
+        $res->message = "No deletion guid supplied";
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    }
+
+    $sqlSelect = "SELECT * FROM {$cls::$tableName} WHERE deletionGuid = :deletionGuid";
+    $user = $this->get('helper')->GetBySql($cls, $sqlSelect, ['deletionGuid' => $deletionGuid]);
+
+    // The confirmation link must belong to the currently logged in user.
+    if ($user == null || (int)$user->id !== (int)$_SESSION['userId']) {
+        $res = new CommandResponse();
+        $res->code = 2;
+        $res->message = "Invalid confirmation link";
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    }
+
+    $dateTimeNow = new DateTime();
+    $dateTimeDeletion = new DateTime($user->deletionTime);
+    $dateTimeDeletion->modify("+30 minutes");
+
+    if (!($dateTimeDeletion > $dateTimeNow)) {
+        $res = new CommandResponse();
+        $res->code = 1;
+        $res->message = "The confirmation link has expired, please request a new one";
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    }
+
+    // Remove the user's own access grants so no orphaned access remains.
+    $this->get('helper')->DeleteBySql("DELETE FROM DeviceAccesses WHERE UserId = :id", ['id' => $user->id]);
+    $this->get('helper')->DeleteBySql("DELETE FROM CompetitionAccesses WHERE UserId = :id", ['id' => $user->id]);
+
+    // Delete the account.
+    $this->get('helper')->Delete($user->id, $cls::$tableName);
+
+    // Log out the now deleted user.
+    $_SESSION['userId'] = null;
+    $_SESSION['userEmail'] = null;
+    $_SESSION['userIsAdmin'] = null;
+
+    $res = new CommandResponse();
+    $res->code = 0;
+    $res->message = "Account deleted";
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("postDeleteAccount");
 
 
 /**

@@ -205,7 +205,7 @@ class Helper
 		$stmt = $this->db->query($sql);
 
 	
-		$sql = 'CREATE TABLE IF NOT EXISTS Users (id int NOT NULL AUTO_INCREMENT, email varchar(255) UNIQUE NOT NULL, hashedPassword varchar(255), createdTime datetime, updateTime datetime, isAdmin boolean, recoveryGuid varchar(50), recoveryTime datetime, PRIMARY KEY (id))';
+		$sql = 'CREATE TABLE IF NOT EXISTS Users (id int NOT NULL AUTO_INCREMENT, email varchar(255) UNIQUE NOT NULL, hashedPassword varchar(255), createdTime datetime, updateTime datetime, isAdmin boolean, recoveryGuid varchar(50), recoveryTime datetime, deletionGuid varchar(50), deletionTime datetime, PRIMARY KEY (id))';
 		$stmt = $this->db->query($sql);
 		$sql = 'UPDATE Users SET isAdmin = 1 WHERE email="laselase@gmail.com"';
 		$stmt = $this->db->query($sql);
@@ -344,6 +344,12 @@ class Helper
             $sql = "ALTER TABLE Devices ADD COLUMN IF NOT EXISTS $col";
             $stmt = $this->db->query($sql);
         }
+
+        $sql = "ALTER TABLE Users ADD COLUMN IF NOT EXISTS deletionGuid varchar(50)";
+        $stmt = $this->db->query($sql);
+        $sql = "ALTER TABLE Users ADD COLUMN IF NOT EXISTS deletionTime datetime";
+        $stmt = $this->db->query($sql);
+
         $sql = "CREATE TABLE IF NOT EXISTS DeviceAccesses (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50) NOT NULL, UserId int NOT NULL,
                 GrantedAt datetime, GrantedByUserId int, updateTime datetime, createdTime datetime, PRIMARY KEY (id),
                 UNIQUE INDEX idx_deviceaccess_btaddress_userid (BTAddress, UserId))";

@@ -78,6 +78,7 @@ class AuthorizationMap {
             
             'getUsers',
             'patchUser',
+            'deleteUser',
             'getDeviceUpdateDeviceName',
             'getDeviceSetBatteryIsLow',
             'getDeviceSetBatteryIsLowReceived',
@@ -90,10 +91,12 @@ class AuthorizationMap {
             'getWiRocPython2Releases',
             'getWiRocPython2Release',
             'postWiRocPython2Release',
+            'patchWiRocPython2Release',
             'deleteWiRocPython2Release',
             'getWiRocBLEAPIReleases',
             'getWiRocBLEAPIRelease',
             'postWiRocBLEAPIRelease',
+            'patchWiRocBLEAPIRelease',
             'deleteWiRocBLEAPIRelease',
             'getReleaseStatuses',
             'getReleaseStatus',
@@ -137,7 +140,9 @@ class AuthorizationMap {
             'getCompetitionControlsWithDevices',
             'getCompetitionMapFile',
             'getLogArchivesAnalyze',
-            'postElevation');
+            'postElevation',
+            'postDeleteAccountRequest',
+            'postDeleteAccount');
     }
 
     public function needsAuthorization(ServerRequestInterface $request) {

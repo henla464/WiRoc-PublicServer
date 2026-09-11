@@ -26,9 +26,23 @@ class User
     public $isAdmin;
     public $recoveryGuid;
     public $recoveryTime;
+    public $deletionGuid;
+    public $deletionTime;
 	public $updateTime;
     public $createdTime;
 }
+
+/**
+ *  @SWG\Definition(
+ *   definition="DeleteAccount",
+ *   type="object",
+ *   allOf={
+ *       @SWG\Schema(
+ *           @SWG\Property(property="deletionGuid", type="string")
+ *       )
+ *   }
+ * )
+ */
 
 /**
  *  @SWG\Definition(

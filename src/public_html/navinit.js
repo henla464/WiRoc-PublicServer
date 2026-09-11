@@ -189,6 +189,7 @@ function setupDynamicNav() {
   getIsAdmin(function (isAdmin) {
     if (isAdmin) {
       $("ul.navbar-nav").append(
+        '<li class="nav-item dynamic-nav-item"><a class="nav-link" href="users.html">Users</a></li>' +
         '<li class="nav-item dynamic-nav-item"><a class="nav-link" href="wirocpython2releases.html">WiRocPython2 Releases</a></li>' +
         '<li class="nav-item dynamic-nav-item"><a class="nav-link" href="wirocbleapireleases.html">WiRocBLEAPI Releases</a></li>' +
         '<li class="nav-item dynamic-nav-item"><a class="nav-link" href="wirocpython2releaseupgradescripts.html">WiRocPython2 Upgrade Scripts</a></li>' +

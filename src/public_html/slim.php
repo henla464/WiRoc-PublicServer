@@ -1325,6 +1325,227 @@ $app->post('/api/v1/Devices/{BTAddress}/SetConnectedToInternetTime', function (R
 
 
 /**
+ * @SWG\Post(
+ *     path="/api/v1/Devices/{BTAddress}/MeshTopology",
+ *     description="Stores the latest LoRa mesh topology snapshot reported by a root device. Upsert keyed on BTAddress.",
+ *     operationId="postDeviceMeshTopology",
+ *     @SWG\Parameter(description="BT Address of the reporting root device", in="path", name="BTAddress", required=true, type="string"),
+ *     @SWG\Parameter(name="topology", in="body", required=true,
+ *         @SWG\Schema(ref="#/definitions/NewMeshTopology")),
+ *     produces={"application/json"},
+ *     @SWG\Response(response=200, description="Snapshot stored"),
+ *     security={ {"api_key": {}} }
+ * )
+ */
+$app->post('/api/v1/Devices/{BTAddress}/MeshTopology', function (Request $request, Response $response) {
+    $BTAddress = $request->getAttribute('BTAddress');
+    $helper = $this->get('helper');
+
+    $sendError = function ($status, $message) use ($response) {
+        $res = new CommandResponse();
+        $res->code = 1;
+        $res->message = $message;
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus($status);
+    };
+
+    $body = (string)$request->getBody();
+    if (strlen($body) > 262144) {
+        return $sendError(413, "Snapshot too large");
+    }
+    $objectArray = json_decode($body, true);
+    if (!is_array($objectArray)) {
+        return $sendError(400, "Invalid JSON body");
+    }
+    if (isset($objectArray['BTAddress']) && strcasecmp($objectArray['BTAddress'], $BTAddress) !== 0) {
+        return $sendError(400, "BTAddress in body does not match path");
+    }
+    if (!preg_match('/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/', $BTAddress)) {
+        return $sendError(400, "Invalid BTAddress format. Expected format: 00:00:00:00:00:00");
+    }
+
+    $cls = Device::class;
+    $device = $helper->GetBySql($cls, "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress", ['BTAddress' => $BTAddress]);
+    if (!$device) {
+        return $response->withStatus(404);
+    }
+
+    $nodes = $objectArray['nodes'] ?? null;
+    if (!is_array($nodes)) {
+        return $sendError(400, "nodes must be an array");
+    }
+    if (count($nodes) > 1000) {
+        return $sendError(413, "Too many nodes");
+    }
+
+    // Resolve addresses within the snapshot in a first pass so every node's
+    // deviceId is known even when a duplicate addr appears.
+    $addrToDeviceId = [];
+    foreach ($nodes as $node) {
+        if (!is_array($node) || !isset($node['addr'])) {
+            return $sendError(400, "Each node needs addr, parent and deviceId");
+        }
+        $addr = (int)$node['addr'];
+        $deviceId = strtoupper(trim((string)($node['deviceId'] ?? '')));
+        if ($addr < 1 || !preg_match('/^[0-9A-F]{12}$/', $deviceId)) {
+            return $sendError(400, "Invalid node addr or deviceId");
+        }
+        $addrToDeviceId[$addr] = $deviceId;
+    }
+
+    $cleanNodes = [];
+    foreach ($nodes as $node) {
+        $addr = (int)$node['addr'];
+        $clean = [
+            'addr' => $addr,
+            'parent' => isset($node['parent']) ? max(0, (int)$node['parent']) : 0,
+            'deviceId' => $addrToDeviceId[$addr],
+        ];
+        if (isset($node['hopCount'])) {
+            $clean['hopCount'] = max(0, (int)$node['hopCount']);
+        }
+        if (!empty($node['neighbours']) && is_array($node['neighbours'])) {
+            $neighbours = [];
+            foreach (array_slice($node['neighbours'], 0, 64) as $neighbour) {
+                if (!is_array($neighbour) || !isset($neighbour['addr'])) continue;
+                $entry = ['addr' => (int)$neighbour['addr']];
+                if (isset($neighbour['cost'])) $entry['cost'] = (int)$neighbour['cost'];
+                $neighbours[] = $entry;
+            }
+            if ($neighbours) $clean['neighbours'] = $neighbours;
+        }
+        $cleanNodes[$addr] = $clean;
+    }
+
+    $snapshotTime = isset($objectArray['snapshotTime']) ? (int)$objectArray['snapshotTime'] : time();
+    $isRoot = filter_var($objectArray['isRoot'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+
+    $mtCls = MeshTopology::class;
+    $existing = $helper->GetBySql($mtCls, "SELECT * FROM {$mtCls::$tableName} WHERE BTAddress = :BTAddress", ['BTAddress' => $BTAddress]);
+    $applied = true;
+    if ($existing && $snapshotTime < (int)$existing->snapshotTime) {
+        $applied = false;
+    } elseif ($existing) {
+        $helper->RunSql(
+            "UPDATE {$mtCls::$tableName} SET `snapshotTime` = :snapshotTime, `isRoot` = :isRoot, `nodes` = :nodes, `updateTime` = NOW() WHERE BTAddress = :BTAddress",
+            ['snapshotTime' => $snapshotTime, 'isRoot' => $isRoot, 'nodes' => json_encode(array_values($cleanNodes)), 'BTAddress' => $BTAddress]
+        );
+    } else {
+        $helper->RunSql(
+            "INSERT INTO {$mtCls::$tableName} SET `BTAddress` = :BTAddress, `snapshotTime` = :snapshotTime, `isRoot` = :isRoot, `nodes` = :nodes, `updateTime` = NOW(), `createdTime` = NOW()",
+            ['BTAddress' => $BTAddress, 'snapshotTime' => $snapshotTime, 'isRoot' => $isRoot, 'nodes' => json_encode(array_values($cleanNodes))]
+        );
+    }
+
+    $res = new \stdClass();
+    $res->code = 0;
+    $res->applied = $applied;
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("postDeviceMeshTopology");
+
+
+/**
+ * @SWG\Post(
+ *     path="/api/v1/Devices/{BTAddress}/MeshState",
+ *     description="Stores the latest ATC/MESHSTATE row for one mesh node. Upsert keyed on BTAddress.",
+ *     operationId="postDeviceMeshState",
+ *     @SWG\Parameter(description="BT Address of the reporting node", in="path", name="BTAddress", required=true, type="string"),
+ *     @SWG\Parameter(name="state", in="body", required=true,
+ *         @SWG\Schema(ref="#/definitions/NewMeshState")),
+ *     produces={"application/json"},
+ *     @SWG\Response(response=200, description="State stored"),
+ *     security={ {"api_key": {}} }
+ * )
+ */
+$app->post('/api/v1/Devices/{BTAddress}/MeshState', function (Request $request, Response $response) {
+    $BTAddress = $request->getAttribute('BTAddress');
+    $helper = $this->get('helper');
+
+    $sendError = function ($status, $message) use ($response) {
+        $res = new CommandResponse();
+        $res->code = 1;
+        $res->message = $message;
+        $response->getBody()->write(json_encode($res));
+        return $response->withStatus($status);
+    };
+
+    $body = (string)$request->getBody();
+    if (strlen($body) > 65536) {
+        return $sendError(413, "State too large");
+    }
+    $objectArray = json_decode($body, true);
+    if (!is_array($objectArray)) {
+        return $sendError(400, "Invalid JSON body");
+    }
+    if (isset($objectArray['BTAddress']) && strcasecmp($objectArray['BTAddress'], $BTAddress) !== 0) {
+        return $sendError(400, "BTAddress in body does not match path");
+    }
+    if (!preg_match('/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/', $BTAddress)) {
+        return $sendError(400, "Invalid BTAddress format. Expected format: 00:00:00:00:00:00");
+    }
+
+    $cls = Device::class;
+    $device = $helper->GetBySql($cls, "SELECT * FROM {$cls::$tableName} WHERE BTAddress = :BTAddress", ['BTAddress' => $BTAddress]);
+    if (!$device) {
+        return $response->withStatus(404);
+    }
+
+    $intField = function ($name) use ($objectArray) {
+        return isset($objectArray[$name]) ? (int)$objectArray[$name] : null;
+    };
+    $values = [
+        'BTAddress' => $BTAddress,
+        'snapshotTime' => isset($objectArray['snapshotTime']) ? (int)$objectArray['snapshotTime'] : time(),
+        'isRoot' => filter_var($objectArray['isRoot'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 1 : 0,
+        'addr' => $intField('addr'),
+        'state' => $intField('state'),
+        'parentAddr' => $intField('parentAddr'),
+        'hopCount' => $intField('hopCount'),
+        'pathCost' => $intField('pathCost'),
+        'neighbourCount' => $intField('neighbourCount'),
+        'transmitQueue' => $intField('transmitQueue'),
+        'allocatedAddresses' => $intField('allocatedAddresses'),
+        'epoch' => $intField('epoch'),
+        'overheadPercent' => isset($objectArray['overheadPercent']) ? (float)$objectArray['overheadPercent'] : null,
+        'ackTimeoutMs' => $intField('ackTimeoutMs'),
+        'standby' => filter_var($objectArray['standby'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 1 : 0,
+    ];
+
+    $msCls = MeshState::class;
+    $existing = $helper->GetBySql($msCls, "SELECT * FROM {$msCls::$tableName} WHERE BTAddress = :BTAddress", ['BTAddress' => $BTAddress]);
+    $applied = true;
+    if ($existing && $values['snapshotTime'] < (int)$existing->snapshotTime) {
+        $applied = false;
+    } elseif ($existing) {
+        $helper->RunSql(
+            "UPDATE {$msCls::$tableName} SET `snapshotTime` = :snapshotTime, `isRoot` = :isRoot, `addr` = :addr, `state` = :state,
+                `parentAddr` = :parentAddr, `hopCount` = :hopCount, `pathCost` = :pathCost, `neighbourCount` = :neighbourCount,
+                `transmitQueue` = :transmitQueue, `allocatedAddresses` = :allocatedAddresses, `epoch` = :epoch,
+                `overheadPercent` = :overheadPercent, `ackTimeoutMs` = :ackTimeoutMs, `standby` = :standby, `updateTime` = NOW()
+                WHERE BTAddress = :BTAddress",
+            $values
+        );
+    } else {
+        $helper->RunSql(
+            "INSERT INTO {$msCls::$tableName} SET `BTAddress` = :BTAddress, `snapshotTime` = :snapshotTime, `isRoot` = :isRoot,
+                `addr` = :addr, `state` = :state, `parentAddr` = :parentAddr, `hopCount` = :hopCount, `pathCost` = :pathCost,
+                `neighbourCount` = :neighbourCount, `transmitQueue` = :transmitQueue, `allocatedAddresses` = :allocatedAddresses,
+                `epoch` = :epoch, `overheadPercent` = :overheadPercent, `ackTimeoutMs` = :ackTimeoutMs, `standby` = :standby,
+                `updateTime` = NOW(), `createdTime` = NOW()",
+            $values
+        );
+    }
+
+    $res = new \stdClass();
+    $res->code = 0;
+    $res->applied = $applied;
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("postDeviceMeshState");
+
+
+/**
      * @SWG\Post(
      *     path="/api/v1/Devices/{BTAddress}/SetCompetition",
      *     description="Set the competitionId property",
@@ -3580,6 +3801,165 @@ $app->get('/api/v1/Competitions/{competitionId}/Controls/withDevices', function 
 })->setName("getCompetitionControlsWithDevices");
 
 /**
+ * @SWG\Get(
+ *     path="/api/v1/Competitions/{competitionId}/MeshTopology",
+ *     description="Returns the newest fresh root mesh topology for a competition, resolved to control positions, plus per-node mesh state and neighbour links.",
+ *     operationId="getCompetitionMeshTopology",
+ *     @SWG\Parameter(description="ID of the Competition", format="int64", in="path", name="competitionId", required=true, type="integer"),
+ *     @SWG\Response(response=200, description="Merged mesh topology"),
+ *     security={ {} }
+ * )
+ */
+$app->get('/api/v1/Competitions/{competitionId}/MeshTopology', function (Request $request, Response $response) {
+    $competitionId = $request->getAttribute('competitionId');
+    $helper = $this->get('helper');
+
+    $err = $helper->requireCompetitionViewAccess($response, $competitionId);
+    if ($err) return $err;
+
+    $deviceSql = "SELECT Devices.BTAddress, Devices.name, Devices.controlId,
+            UPPER(REPLACE(Devices.BTAddress, ':', '')) AS deviceId,
+            Controls.controlNumber, Controls.controlType, Controls.mapX, Controls.mapY,
+            CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -6 MINUTE) THEN true ELSE false END recentlyReported,
+            CASE WHEN Devices.connectedToInternetTime > DATE_ADD(SYSDATE(), INTERVAL -1 MINUTE) THEN true ELSE false END connectedToInternet
+        FROM Devices LEFT JOIN Controls ON Devices.controlId = Controls.id
+        WHERE Devices.competitionId = :competitionId";
+    $devices = $helper->GetAllBySql(MeshTopologyNode::class, $deviceSql, ['competitionId' => $competitionId]);
+
+    $deviceByBTAddress = [];
+    $deviceByDeviceId = [];
+    foreach ($devices as $device) {
+        $deviceByBTAddress[$device->BTAddress] = $device;
+        $deviceByDeviceId[strtoupper($device->deviceId)] = $device;
+    }
+
+    $stateSql = "SELECT ms.* FROM MeshStates ms JOIN Devices d ON d.BTAddress = ms.BTAddress
+        WHERE d.competitionId = :competitionId
+          AND ms.updateTime > DATE_ADD(SYSDATE(), INTERVAL -10 MINUTE)";
+    $states = $helper->GetAllBySql(MeshState::class, $stateSql, ['competitionId' => $competitionId]);
+    $stateByBTAddress = [];
+    foreach ($states as $state) {
+        $stateByBTAddress[$state->BTAddress] = $state;
+    }
+
+    // Root-only uploads: the newest fresh root snapshot is the tree.
+    $mtCls = MeshTopology::class;
+    $snapshotSql = "SELECT m.* FROM {$mtCls::$tableName} m JOIN Devices d ON d.BTAddress = m.BTAddress
+        WHERE d.competitionId = :competitionId AND m.isRoot = 1
+          AND m.updateTime > DATE_ADD(SYSDATE(), INTERVAL -10 MINUTE)
+        ORDER BY m.snapshotTime DESC LIMIT 1";
+    $snapshot = $helper->GetBySql($mtCls, $snapshotSql, ['competitionId' => $competitionId]);
+
+    $res = new \stdClass();
+    $res->updatedTime = null;
+    $res->health = null;
+    $res->nodes = [];
+    $res->links = [];
+    if (!$snapshot) {
+        $response->getBody()->write(json_encode($res));
+        return $response;
+    }
+
+    $snapshotNodes = json_decode($snapshot->nodes, true);
+    if (!is_array($snapshotNodes)) $snapshotNodes = [];
+
+    $addrToDeviceId = [];
+    foreach ($snapshotNodes as $node) {
+        $addrToDeviceId[(int)$node['addr']] = strtoupper($node['deviceId']);
+    }
+
+    $isDrawable = function ($device) {
+        return $device !== null && $device->mapX !== null && $device->mapY !== null;
+    };
+
+    $nodes = [];
+    $drawableDeviceIds = [];
+    foreach ($snapshotNodes as $node) {
+        $deviceId = strtoupper($node['deviceId']);
+        $device = $deviceByDeviceId[$deviceId] ?? null;
+        if (!$isDrawable($device)) continue;
+
+        $parentDeviceId = null;
+        $parentAddr = (int)($node['parent'] ?? 0);
+        if ($parentAddr > 0 && isset($addrToDeviceId[$parentAddr]) && $addrToDeviceId[$parentAddr] !== $deviceId) {
+            $parentDeviceId = $addrToDeviceId[$parentAddr];
+        }
+        $parentDevice = $parentDeviceId !== null ? ($deviceByDeviceId[$parentDeviceId] ?? null) : null;
+
+        $state = $stateByBTAddress[$device->BTAddress] ?? null;
+        $topologyHopCount = isset($node['hopCount']) ? (int)$node['hopCount'] : null;
+        $nodes[] = [
+            'BTAddress' => $device->BTAddress,
+            'deviceId' => $deviceId,
+            'parentBTAddress' => $isDrawable($parentDevice) ? $parentDevice->BTAddress : null,
+            'hopCount' => $state && $state->hopCount !== null ? (int)$state->hopCount : $topologyHopCount,
+            'state' => $state ? (int)$state->state : null,
+            'pathCost' => $state && $state->pathCost !== null ? (int)$state->pathCost : null,
+            'transmitQueue' => $state && $state->transmitQueue !== null ? (int)$state->transmitQueue : null,
+            'standby' => $state ? (bool)$state->standby : false,
+            'snapshotTime' => (int)$snapshot->snapshotTime,
+            'controlId' => $device->controlId,
+            'controlNumber' => $device->controlNumber,
+            'controlType' => $device->controlType,
+            'mapX' => $device->mapX,
+            'mapY' => $device->mapY,
+            'deviceName' => $device->name,
+            'recentlyReported' => (bool)$device->recentlyReported,
+            'connectedToInternet' => (bool)$device->connectedToInternet,
+        ];
+        $drawableDeviceIds[$deviceId] = true;
+    }
+
+    // Neighbour links: resolve snapshot-local addr -> deviceId, keep only links
+    // whose both ends are drawable, dedupe A-B/B-A, keep the best (lowest) cost.
+    $links = [];
+    foreach ($snapshotNodes as $node) {
+        $fromDeviceId = strtoupper($node['deviceId']);
+        if (!isset($drawableDeviceIds[$fromDeviceId])) continue;
+        if (empty($node['neighbours']) || !is_array($node['neighbours'])) continue;
+        foreach ($node['neighbours'] as $neighbour) {
+            if (!isset($neighbour['addr'])) continue;
+            $toDeviceId = $addrToDeviceId[(int)$neighbour['addr']] ?? null;
+            if ($toDeviceId === null || $toDeviceId === $fromDeviceId) continue;
+            if (!isset($drawableDeviceIds[$toDeviceId])) continue;
+            $key = $fromDeviceId < $toDeviceId ? "$fromDeviceId|$toDeviceId" : "$toDeviceId|$fromDeviceId";
+            $cost = isset($neighbour['cost']) ? (int)$neighbour['cost'] : null;
+            if (!isset($links[$key]) || ($cost !== null && ($links[$key]['cost'] === null || $cost < $links[$key]['cost']))) {
+                $links[$key] = [
+                    'fromBTAddress' => $deviceByDeviceId[$fromDeviceId]->BTAddress,
+                    'toBTAddress' => $deviceByDeviceId[$toDeviceId]->BTAddress,
+                    'cost' => $cost,
+                ];
+            }
+        }
+    }
+
+    $rootState = $stateByBTAddress[$snapshot->BTAddress] ?? null;
+    if ($rootState) {
+        $res->health = [
+            'epoch' => $rootState->epoch !== null ? (int)$rootState->epoch : null,
+            'allocatedAddresses' => $rootState->allocatedAddresses !== null ? (int)$rootState->allocatedAddresses : null,
+            'overheadPercent' => $rootState->overheadPercent !== null ? (float)$rootState->overheadPercent : null,
+            'ackTimeoutMs' => $rootState->ackTimeoutMs !== null ? (int)$rootState->ackTimeoutMs : null,
+            'snapshotTime' => (int)$rootState->snapshotTime,
+        ];
+    }
+
+    usort($nodes, function ($a, $b) {
+        $ah = $a['hopCount'] === null ? PHP_INT_MAX : $a['hopCount'];
+        $bh = $b['hopCount'] === null ? PHP_INT_MAX : $b['hopCount'];
+        if ($ah !== $bh) return $ah <=> $bh;
+        return strcmp($a['BTAddress'], $b['BTAddress']);
+    });
+
+    $res->updatedTime = (int)$snapshot->snapshotTime;
+    $res->nodes = $nodes;
+    $res->links = array_values($links);
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("getCompetitionMeshTopology");
+
+/**
  * @SWG\Patch(
  *     path="/api/v1/Controls/{controlId}/MapPosition",
  *     description="Update a control's position on the map. Requires competition edit access.",
@@ -5246,9 +5626,9 @@ $app->get('/api/v1/LogArchives/Analyze', function (Request $request, Response $r
     // MessageType name filter (sender only)
     $msgTypes = $request->getQueryParams()['msgTypes'] ?? '';
     $showStatus = $request->getQueryParams()['showStatus'] ?? '0';
-    $allowed = ['SI', 'SRR', 'LORA', 'REPEATER', 'STATUS'];
+    $allowed = ['SI', 'SRR', 'LORA', 'REPEATER', 'STATUS', 'SITEST'];
     $safeTypes = [];
-    if ($showStatus === '1') $safeTypes[] = 'STATUS';
+    if ($showStatus === '1') $safeTypes[] = "'STATUS'";
     if (!empty($msgTypes)) {
         $types = explode(',', $msgTypes);
         foreach ($types as $t) {

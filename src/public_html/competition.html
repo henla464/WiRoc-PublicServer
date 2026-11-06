@@ -157,6 +157,14 @@
             </button>
             <button
               type="button"
+              id="btnToggleMeshLinks"
+              class="btn btn-outline-dark btn-sm me-1 mb-1"
+              style="display: none"
+            >
+              <i class="fa fa-signal"></i> Hide mesh links
+            </button>
+            <button
+              type="button"
               id="btnSelectArea"
               class="btn btn-outline-dark btn-sm me-1 mb-1"
               style="display: none"
@@ -789,6 +797,8 @@
                       }
                     });
                     $("#controlsSection").show();
+                    fetchMeshTopology();
+                    setInterval(fetchMeshTopology, 30000);
                   } else {
                     loadDeviceTable();
                   }
@@ -1081,6 +1091,12 @@
         var gatewayLinesGroup = null;
         var satelliteGatewayLinesGroup = null;
         var gatewayLinesVisible = true;
+        var meshLinksGroup = null;
+        var satelliteMeshLinksGroup = null;
+        var meshLinksVisible = true;
+        var meshNodes = [];
+        var meshLinks = [];
+        var meshFetchInFlight = false;
         var hasViewAccess = false;
         var hasEditAccess = false;
         var isLoggedIn = false;
@@ -2130,6 +2146,7 @@
                         entry.y = pos.lat;
                         adjustControlSizes();
                         drawGatewayLinesOrient();
+                        drawMeshLinksOrient();
                       }
                     });
 
@@ -2156,6 +2173,7 @@
 
               adjustControlSizes();
               drawGatewayLinesOrient();
+              drawMeshLinksOrient();
               placingControls = false;
               // Also update satellite map
               if (georefPoints.p1Lat) {
@@ -2640,10 +2658,13 @@
             });
             adjustingSatellite();
             drawGatewayLinesSatellite();
+            drawMeshLinksSatellite();
             satelliteMap.off("zoomend", adjustingSatellite);
             satelliteMap.on("zoomend", adjustingSatellite);
             satelliteMap.off("zoomend", drawGatewayLinesSatellite);
             satelliteMap.on("zoomend", drawGatewayLinesSatellite);
+            satelliteMap.off("zoomend", drawMeshLinksSatellite);
+            satelliteMap.on("zoomend", drawMeshLinksSatellite);
             placingSatellite = false;
           });
         }
@@ -2797,6 +2818,178 @@
               }.bind(this),
             );
           });
+        }
+
+        function fetchMeshTopology() {
+          if (!competitionId || meshFetchInFlight || document.hidden) return;
+          meshFetchInFlight = true;
+          $.ajax({
+            url: "/api/v1/Competitions/" + competitionId + "/MeshTopology",
+            dataType: "json",
+          })
+            .then(function (res) {
+              meshFetchInFlight = false;
+              meshNodes = (res && res.nodes) || [];
+              meshLinks = (res && res.links) || [];
+              $("#btnToggleMeshLinks").toggle(meshLinks.length > 0);
+              drawMeshLinksOrient();
+              drawMeshLinksSatellite();
+            })
+            .fail(function () {
+              meshFetchInFlight = false;
+            });
+        }
+
+        function meshNodeByBTAddress(btAddress) {
+          for (var i = 0; i < meshNodes.length; i++) {
+            if (meshNodes[i].BTAddress === btAddress) return meshNodes[i];
+          }
+          return null;
+        }
+
+        function meshLinkColor(cost) {
+          var colors = { 1: "#e67e22", 2: "#d35400", 3: "#a04000", 6: "#7b241c" };
+          return colors[cost] || "#e67e22";
+        }
+
+        function meshNodeIsJoined(node) {
+          // state: 0=unassigned, 1=joining, 2=joined; null = no state row yet
+          return node.state == null || node.state === 2;
+        }
+
+        function drawMeshLinksOrient() {
+          if (!orienteeringMap) return;
+          if (meshLinksGroup) {
+            orienteeringMap.removeLayer(meshLinksGroup);
+          }
+          meshLinksGroup = L.layerGroup();
+          if (meshLinksVisible) meshLinksGroup.addTo(orienteeringMap);
+          if (!meshLinksVisible || meshLinks.length === 0) return;
+
+          var lineScale = Math.pow(2, orienteeringMap.getZoom() / 2);
+          $.each(meshLinks, function () {
+            var a = meshNodeByBTAddress(this.fromBTAddress);
+            var b = meshNodeByBTAddress(this.toBTAddress);
+            if (!a || !b) return;
+            // CRS.Simple: lat = mapX, lng = mapY
+            var aLL = [a.mapX, a.mapY];
+            var bLL = [b.mapX, b.mapY];
+            var joined = meshNodeIsJoined(a) && meshNodeIsJoined(b);
+            var color = meshLinkColor(this.cost);
+
+            L.polyline([aLL, bLL], {
+              color: color,
+              weight: Math.max(1, Math.round(3 * lineScale)),
+              opacity: joined ? 0.9 : 0.35,
+              interactive: false,
+            }).addTo(meshLinksGroup);
+
+            var midLL = [(a.mapX + b.mapX) / 2, (a.mapY + b.mapY) / 2];
+            L.marker(midLL, {
+              icon: L.divIcon({
+                className: "mesh-cost-label",
+                html:
+                  '<div style="background:' +
+                  color +
+                  ";color:#fff;border-radius:3px;padding:1px 4px;font-size:" +
+                  Math.max(9, Math.round(11 * lineScale)) +
+                  "px;font-weight:bold;white-space:nowrap;opacity:" +
+                  (joined ? 1 : 0.45) +
+                  ';">' +
+                  (this.cost == null ? "?" : this.cost) +
+                  "</div>",
+                iconSize: [0, 0],
+                iconAnchor: [0, 0],
+              }),
+              interactive: false,
+            }).addTo(meshLinksGroup);
+          });
+        }
+
+        function drawMeshLinksSatellite() {
+          if (!satelliteMap || !georefPoints.p1Lat) return;
+          if (satelliteMeshLinksGroup) {
+            satelliteMap.removeLayer(satelliteMeshLinksGroup);
+          }
+          satelliteMeshLinksGroup = L.layerGroup();
+          if (meshLinksVisible) satelliteMeshLinksGroup.addTo(satelliteMap);
+          if (!meshLinksVisible || meshLinks.length === 0) return;
+
+          var lineScale = Math.pow(
+            2,
+            Math.max(0, satelliteMap.getZoom() - 12) / 2,
+          );
+          $.each(meshLinks, function () {
+            var a = meshNodeByBTAddress(this.fromBTAddress);
+            var b = meshNodeByBTAddress(this.toBTAddress);
+            if (!a || !b) return;
+            var aLL = pixelToLatLng(a.mapY, a.mapX);
+            var bLL = pixelToLatLng(b.mapY, b.mapX);
+            if (!aLL || !bLL) return;
+            var joined = meshNodeIsJoined(a) && meshNodeIsJoined(b);
+            var color = meshLinkColor(this.cost);
+
+            L.polyline([aLL, bLL], {
+              color: color,
+              weight: Math.max(1, Math.round(2 * lineScale)),
+              opacity: joined ? 0.9 : 0.35,
+              interactive: false,
+            }).addTo(satelliteMeshLinksGroup);
+
+            var midLL = L.latLng(
+              (aLL.lat + bLL.lat) / 2,
+              (aLL.lng + bLL.lng) / 2,
+            );
+            L.marker(midLL, {
+              icon: L.divIcon({
+                className: "mesh-cost-label",
+                html:
+                  '<div style="background:' +
+                  color +
+                  ";color:#fff;border-radius:3px;padding:1px 4px;font-size:" +
+                  Math.max(9, Math.round(10 * lineScale)) +
+                  "px;font-weight:bold;white-space:nowrap;opacity:" +
+                  (joined ? 1 : 0.45) +
+                  ';">' +
+                  (this.cost == null ? "?" : this.cost) +
+                  "</div>",
+                iconSize: [0, 0],
+                iconAnchor: [0, 0],
+              }),
+              interactive: false,
+            }).addTo(satelliteMeshLinksGroup);
+          });
+        }
+
+        function toggleMeshLinks() {
+          meshLinksVisible = !meshLinksVisible;
+          $("#btnToggleMeshLinks").html(
+            meshLinksVisible
+              ? '<i class="fa fa-signal"></i> Hide mesh links'
+              : '<i class="fa fa-signal"></i> Show mesh links',
+          );
+          if (orienteeringMap) {
+            if (meshLinksVisible && meshLinksGroup) {
+              orienteeringMap.addLayer(meshLinksGroup);
+            } else if (
+              !meshLinksVisible &&
+              meshLinksGroup &&
+              orienteeringMap.hasLayer(meshLinksGroup)
+            ) {
+              orienteeringMap.removeLayer(meshLinksGroup);
+            }
+          }
+          if (satelliteMap) {
+            if (meshLinksVisible && satelliteMeshLinksGroup) {
+              satelliteMap.addLayer(satelliteMeshLinksGroup);
+            } else if (
+              !meshLinksVisible &&
+              satelliteMeshLinksGroup &&
+              satelliteMap.hasLayer(satelliteMeshLinksGroup)
+            ) {
+              satelliteMap.removeLayer(satelliteMeshLinksGroup);
+            }
+          }
         }
 
         function toggleGatewayLines() {
@@ -4552,6 +4745,7 @@
             mapInstance.on("zoomend", function () {
               adjustControlSizes();
               drawGatewayLinesOrient();
+              drawMeshLinksOrient();
               adjustPopupSizes();
               renderScaleBar();
               mapInstance.closePopup();
@@ -5687,6 +5881,10 @@
 
             $("#btnToggleGatewayLines").click(function () {
               toggleGatewayLines();
+            });
+
+            $("#btnToggleMeshLinks").click(function () {
+              toggleMeshLinks();
             });
 
             $("#profileHeight1, #profileHeight2").on("input", function () {

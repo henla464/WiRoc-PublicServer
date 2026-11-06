@@ -442,6 +442,20 @@ class Helper
 			$sql = "ALTER TABLE CompetitionMaps ADD COLUMN IF NOT EXISTS terrain3dOrbitTargetZ double";
 			$stmt = $this->db->query($sql);
 
+        $sql = 'CREATE TABLE IF NOT EXISTS MeshTopologies (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50) NOT NULL,
+                snapshotTime bigint, isRoot tinyint NOT NULL DEFAULT 0, nodes longtext,
+                updateTime datetime, createdTime datetime, PRIMARY KEY (id),
+                UNIQUE INDEX idx_meshtopologies_btaddress (BTAddress))';
+        $stmt = $this->db->query($sql);
+
+        $sql = 'CREATE TABLE IF NOT EXISTS MeshStates (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50) NOT NULL,
+                snapshotTime bigint, isRoot tinyint NOT NULL DEFAULT 0, addr int, state int, parentAddr int,
+                hopCount int, pathCost int, neighbourCount int, transmitQueue int, allocatedAddresses int,
+                epoch int, overheadPercent double, ackTimeoutMs int, standby tinyint NOT NULL DEFAULT 0,
+                updateTime datetime, createdTime datetime, PRIMARY KEY (id),
+                UNIQUE INDEX idx_meshstates_btaddress (BTAddress))';
+        $stmt = $this->db->query($sql);
+
         $res = new CommandResponse();
         $res->code = 0;
         $res->message = "Devices columns added";

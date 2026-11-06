@@ -134,6 +134,10 @@
                 <label class="form-check-label small" for="chkMT_SRR">SRR</label>
               </div>
               <div class="form-check form-check-inline mb-0">
+                <input class="form-check-input" type="checkbox" id="chkMT_SITEST">
+                <label class="form-check-label small" for="chkMT_SITEST">SITEST</label>
+              </div>
+              <div class="form-check form-check-inline mb-0">
                 <input class="form-check-input" type="checkbox" id="chkMT_LORA">
                 <label class="form-check-label small" for="chkMT_LORA">LORA</label>
               </div>
@@ -435,6 +439,7 @@
             // Restore MessageType checkboxes (SI/SRR default checked, others unchecked)
             $('#chkMT_SI').prop('checked', ls.get('chkMT_SI') !== '0');
             $('#chkMT_SRR').prop('checked', ls.get('chkMT_SRR') !== '0');
+            $('#chkMT_SITEST').prop('checked', ls.get('chkMT_SITEST') === '1');
             $('#chkMT_LORA').prop('checked', ls.get('chkMT_LORA') === '1');
             $('#chkMT_REPEATER').prop('checked', ls.get('chkMT_REPEATER') === '1');
             // Restore STATUS checkbox (default unchecked)
@@ -1837,9 +1842,10 @@
 
         // Show STATUS checkbox
         // Save MessageType checkboxes to localStorage
-        $('#chkMT_SI, #chkMT_SRR, #chkMT_LORA, #chkMT_REPEATER, #chkShowStatus').on('change', function () {
+        $('#chkMT_SI, #chkMT_SRR, #chkMT_SITEST, #chkMT_LORA, #chkMT_REPEATER, #chkShowStatus').on('change', function () {
           ls.set('chkMT_SI', $('#chkMT_SI').prop('checked') ? '1' : '0');
           ls.set('chkMT_SRR', $('#chkMT_SRR').prop('checked') ? '1' : '0');
+          ls.set('chkMT_SITEST', $('#chkMT_SITEST').prop('checked') ? '1' : '0');
           ls.set('chkMT_LORA', $('#chkMT_LORA').prop('checked') ? '1' : '0');
           ls.set('chkMT_REPEATER', $('#chkMT_REPEATER').prop('checked') ? '1' : '0');
           ls.set('showStatus', $('#chkShowStatus').prop('checked') ? '1' : '0');
@@ -1896,7 +1902,7 @@
           if (toDate) url += "&toDate=" + encodeURIComponent(toDate);
           // Collect checked MessageTypeNames
           var msgTypes = [];
-          $.each(['SI','SRR','LORA','REPEATER'], function (_, mt) {
+          $.each(['SI','SRR','SITEST','LORA','REPEATER'], function (_, mt) {
             if ($('#chkMT_' + mt).prop('checked')) msgTypes.push(mt);
           });
           if (msgTypes.length > 0) url += "&msgTypes=" + encodeURIComponent(msgTypes.join(','));

@@ -2852,6 +2852,18 @@
           return colors[cost] || "#e67e22";
         }
 
+        function meshLinkTooltip(link, a, b) {
+          var el = document.createElement("div");
+          var cost = document.createElement("div");
+          cost.textContent = "Cost: " + (link.cost == null ? "?" : link.cost);
+          var ends = document.createElement("div");
+          ends.textContent =
+            (a.deviceName || a.deviceId) + " ↔ " + (b.deviceName || b.deviceId);
+          el.appendChild(cost);
+          el.appendChild(ends);
+          return el;
+        }
+
         function meshNodeIsJoined(node) {
           // state: 0=unassigned, 1=joining, 2=joined; null = no state row yet
           return node.state == null || node.state === 2;
@@ -2885,14 +2897,14 @@
             }).addTo(meshLinksGroup);
 
             var midLL = [(a.mapX + b.mapX) / 2, (a.mapY + b.mapY) / 2];
-            L.marker(midLL, {
+            var midMarker = L.marker(midLL, {
               icon: L.divIcon({
                 className: "mesh-cost-label",
                 html:
-                  '<div style="background:' +
+                  '<div style="display:inline-block;transform:translate(-50%,-50%);background:' +
                   color +
                   ";color:#fff;border-radius:3px;padding:1px 4px;font-size:" +
-                  Math.max(9, Math.round(11 * lineScale)) +
+                  Math.max(12, Math.round(16 * lineScale)) +
                   "px;font-weight:bold;white-space:nowrap;opacity:" +
                   (joined ? 1 : 0.45) +
                   ';">' +
@@ -2901,8 +2913,12 @@
                 iconSize: [0, 0],
                 iconAnchor: [0, 0],
               }),
-              interactive: false,
+              interactive: true,
             }).addTo(meshLinksGroup);
+            midMarker.bindTooltip(meshLinkTooltip(this, a, b), {
+              direction: "top",
+              offset: [0, -4],
+            });
           });
         }
 
@@ -2940,14 +2956,14 @@
               (aLL.lat + bLL.lat) / 2,
               (aLL.lng + bLL.lng) / 2,
             );
-            L.marker(midLL, {
+            var midMarker = L.marker(midLL, {
               icon: L.divIcon({
                 className: "mesh-cost-label",
                 html:
-                  '<div style="background:' +
+                  '<div style="display:inline-block;transform:translate(-50%,-50%);background:' +
                   color +
                   ";color:#fff;border-radius:3px;padding:1px 4px;font-size:" +
-                  Math.max(9, Math.round(10 * lineScale)) +
+                  Math.max(12, Math.round(14 * lineScale)) +
                   "px;font-weight:bold;white-space:nowrap;opacity:" +
                   (joined ? 1 : 0.45) +
                   ';">' +
@@ -2956,8 +2972,12 @@
                 iconSize: [0, 0],
                 iconAnchor: [0, 0],
               }),
-              interactive: false,
+              interactive: true,
             }).addTo(satelliteMeshLinksGroup);
+            midMarker.bindTooltip(meshLinkTooltip(this, a, b), {
+              direction: "top",
+              offset: [0, -4],
+            });
           });
         }
 

@@ -450,10 +450,16 @@ class Helper
 
         $sql = 'CREATE TABLE IF NOT EXISTS MeshStates (id int NOT NULL AUTO_INCREMENT, BTAddress varchar(50) NOT NULL,
                 snapshotTime bigint, isRoot tinyint NOT NULL DEFAULT 0, addr int, state int, parentAddr int,
-                hopCount int, pathCost int, neighbourCount int, transmitQueue int, allocatedAddresses int,
+                hopCount int, pathCost int, neighbourCount int, transmitQueue int, txOk int, txBusy int,
+                allocatedAddresses int,
                 epoch int, overheadPercent double, ackTimeoutMs int, standby tinyint NOT NULL DEFAULT 0,
                 updateTime datetime, createdTime datetime, PRIMARY KEY (id),
                 UNIQUE INDEX idx_meshstates_btaddress (BTAddress))';
+        $stmt = $this->db->query($sql);
+
+        $sql = "ALTER TABLE MeshStates ADD COLUMN IF NOT EXISTS txOk int";
+        $stmt = $this->db->query($sql);
+        $sql = "ALTER TABLE MeshStates ADD COLUMN IF NOT EXISTS txBusy int";
         $stmt = $this->db->query($sql);
 
         $res = new CommandResponse();

@@ -1202,6 +1202,7 @@
               if (this.batteryIsLow == 1)
                 html += ' <span style="color:red">(LOW)</span>';
               html += "<br/>";
+              html += meshInfoHtml(this.deviceBTAddress);
             });
           } else {
             html += "<em>No device assigned</em><br/>";
@@ -2034,13 +2035,17 @@
                 var controlId = this.id;
 
                 // Popup and control symbol
-                var popupHtml = buildControlPopup(
+                // Function content: mesh data arrives after this draw pass
+                var popupArgs = [
                   this.controlType,
                   this.controlNumber,
                   this.controlName,
                   this.description,
                   devices,
-                );
+                ];
+                var popupHtml = function () {
+                  return buildControlPopup.apply(null, popupArgs);
+                };
                 var symbolColor = getControlColor(this.controlType);
                 var circle = null;
                 var symbolMarker = null;
@@ -2100,7 +2105,6 @@
                     offset: L.point(0, 0),
                   });
                 }
-
                 var layerEntry = {
                   controlId: controlId,
                   circle: circle,
@@ -2520,13 +2524,17 @@
               var color = getControlColor(this.controlType);
               var devices = this.devices;
 
-              var popupHtml = buildControlPopup(
+              // Function content: mesh data arrives after this draw pass
+              var popupArgs = [
                 this.controlType,
                 this.controlNumber,
                 this.controlName,
                 this.description,
                 devices,
-              );
+              ];
+              var popupHtml = function () {
+                return buildControlPopup.apply(null, popupArgs);
+              };
 
               var sym = null,
                 symbolMarker = null,
@@ -2847,6 +2855,43 @@
           return null;
         }
 
+        function meshInfoHtml(btAddress) {
+          var node = meshNodeByBTAddress(btAddress);
+          if (!node) return "";
+          // state: 0=unassigned, 1=joining, 2=joined; null = no state row yet
+          var html =
+            "<b>Mesh</b><br/>Type: " +
+            (node.isRoot
+              ? node.standby
+                ? "mesh root standby"
+                : "mesh root"
+              : "mesh node") +
+            "<br/>Status: " +
+            (node.state === 2
+              ? "joined"
+              : node.state === 1
+                ? "joining"
+                : node.state === 0
+                  ? "unassigned"
+                  : "no state") +
+            "<br/>";
+          if (node.hopCount != null) html += "Hops: " + node.hopCount + "<br/>";
+          var parent = node.parentBTAddress
+            ? meshNodeByBTAddress(node.parentBTAddress)
+            : null;
+          if (parent)
+            html +=
+              "Parent: " + (parent.deviceName || parent.deviceId) + "<br/>";
+          if (node.pathCost != null)
+            html += "Path cost: " + node.pathCost + "<br/>";
+          if (node.transmitQueue != null)
+            html += "Tx queue: " + node.transmitQueue + "<br/>";
+          if (node.txOk != null) html += "Tx OK: " + node.txOk + "<br/>";
+          if (node.txBusy != null) html += "Tx Busy: " + node.txBusy + "<br/>";
+          if (node.standby) html += "Standby: yes<br/>";
+          return html;
+        }
+
         function meshLinkColor(cost) {
           var colors = { 1: "#e67e22", 2: "#d35400", 3: "#a04000", 6: "#7b241c" };
           return colors[cost] || "#e67e22";
@@ -2862,6 +2907,50 @@
           el.appendChild(cost);
           el.appendChild(ends);
           return el;
+        }
+
+        // Converge-cast: chevron on the tree edge pointing child -> parent
+        // (toward the root). White casing keeps it readable over the line.
+        function drawMeshRootArrow(map, group, childLL, parentLL, color, weight, opacity) {
+          var cpChild = map.latLngToContainerPoint(childLL);
+          var cpParent = map.latLngToContainerPoint(parentLL);
+          var dx = cpParent.x - cpChild.x;
+          var dy = cpParent.y - cpChild.y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 10) return;
+          var ux = dx / dist;
+          var uy = dy / dist;
+          var size = Math.max(8, weight * 1.6);
+          var cx = cpChild.x + dx * 0.8;
+          var cy = cpChild.y + dy * 0.8;
+          var tip = L.point(cx + ux * size, cy + uy * size);
+          var back = L.point(cx - ux * size, cy - uy * size);
+          var wingX = -uy * size * 0.8;
+          var wingY = ux * size * 0.8;
+          var pts = [
+            map.containerPointToLatLng([back.x + wingX, back.y + wingY]),
+            map.containerPointToLatLng([tip.x, tip.y]),
+            map.containerPointToLatLng([back.x - wingX, back.y - wingY]),
+          ];
+          L.polyline(pts, {
+            color: "#fff",
+            weight: weight + 4,
+            opacity: opacity * 0.9,
+            interactive: false,
+          }).addTo(group);
+          L.polyline(pts, {
+            color: color,
+            weight: weight,
+            opacity: opacity,
+            interactive: false,
+          }).addTo(group);
+        }
+
+        // Converge-cast tree edge in link data? Returns [child, parent] or null.
+        function meshTreeDirection(a, b) {
+          if (b.parentBTAddress === a.BTAddress) return [b, a];
+          if (a.parentBTAddress === b.BTAddress) return [a, b];
+          return null;
         }
 
         function meshNodeIsJoined(node) {
@@ -2888,10 +2977,12 @@
             var bLL = [b.mapX, b.mapY];
             var joined = meshNodeIsJoined(a) && meshNodeIsJoined(b);
             var color = meshLinkColor(this.cost);
+            var tree = meshTreeDirection(a, b);
+            var weight = Math.max(1, Math.round((tree ? 5 : 3) * lineScale));
 
             L.polyline([aLL, bLL], {
               color: color,
-              weight: Math.max(1, Math.round(3 * lineScale)),
+              weight: weight,
               opacity: joined ? 0.9 : 0.35,
               interactive: false,
             }).addTo(meshLinksGroup);
@@ -2919,6 +3010,18 @@
               direction: "top",
               offset: [0, -4],
             });
+
+            if (tree) {
+              drawMeshRootArrow(
+                orienteeringMap,
+                meshLinksGroup,
+                [tree[0].mapX, tree[0].mapY],
+                [tree[1].mapX, tree[1].mapY],
+                color,
+                weight,
+                joined ? 1 : 0.45,
+              );
+            }
           });
         }
 
@@ -2944,10 +3047,12 @@
             if (!aLL || !bLL) return;
             var joined = meshNodeIsJoined(a) && meshNodeIsJoined(b);
             var color = meshLinkColor(this.cost);
+            var tree = meshTreeDirection(a, b);
+            var weight = Math.max(1, Math.round((tree ? 4 : 2) * lineScale));
 
             L.polyline([aLL, bLL], {
               color: color,
-              weight: Math.max(1, Math.round(2 * lineScale)),
+              weight: weight,
               opacity: joined ? 0.9 : 0.35,
               interactive: false,
             }).addTo(satelliteMeshLinksGroup);
@@ -2978,6 +3083,22 @@
               direction: "top",
               offset: [0, -4],
             });
+
+            if (tree) {
+              var cLL = pixelToLatLng(tree[0].mapY, tree[0].mapX);
+              var pLL = pixelToLatLng(tree[1].mapY, tree[1].mapX);
+              if (cLL && pLL) {
+                drawMeshRootArrow(
+                  satelliteMap,
+                  satelliteMeshLinksGroup,
+                  cLL,
+                  pLL,
+                  color,
+                  weight,
+                  joined ? 1 : 0.45,
+                );
+              }
+            }
           });
         }
 

@@ -30,6 +30,10 @@ class MeshState
     /** @SWG\Property() @var integer */
     public $transmitQueue;
     /** @SWG\Property() @var integer */
+    public $txOk;
+    /** @SWG\Property() @var integer */
+    public $txBusy;
+    /** @SWG\Property() @var integer */
     public $allocatedAddresses;
     /** @SWG\Property() @var integer */
     public $epoch;

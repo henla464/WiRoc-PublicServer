@@ -242,6 +242,11 @@ class Helper
 		$stmt = $this->db->query($sql);
 		
 
+			$sql = 'CREATE TABLE IF NOT EXISTS McpTokens (id int NOT NULL AUTO_INCREMENT, UserId int NOT NULL, name varchar(50), tokenHash char(64) NOT NULL,
+					lastUsedTime datetime, updateTime datetime, createdTime datetime, PRIMARY KEY (id),
+					UNIQUE INDEX idx_mcptokens_tokenhash (tokenHash), INDEX idx_mcptokens_userid (UserId))';
+			$stmt = $this->db->query($sql);
+
 			$sql = 'CREATE TABLE IF NOT EXISTS CompetitionAccesses (id int NOT NULL AUTO_INCREMENT, competitionId int NOT NULL, UserId int NOT NULL,
 					GrantedAt datetime, GrantedByUserId int, updateTime datetime, createdTime datetime, PRIMARY KEY (id),
 					UNIQUE INDEX idx_competitionaccess_competition_userid (competitionId, UserId))';
@@ -338,7 +343,10 @@ class Helper
 
 	public function UpdateDatabaseSchema() {
         $columns = [
-	    "hardwareVersion varchar(20)"
+	    "hardwareVersion varchar(20)",
+	    "publicIPAddress varchar(45)",
+	    "localIPAddress varchar(45)",
+	    "ipAddressTime datetime"
         ];
         foreach ($columns as $col) {
             $sql = "ALTER TABLE Devices ADD COLUMN IF NOT EXISTS $col";
@@ -358,6 +366,11 @@ class Helper
         $sql = 'CREATE TABLE IF NOT EXISTS CompetitionAccesses (id int NOT NULL AUTO_INCREMENT, competitionId int NOT NULL, UserId int NOT NULL,
                 GrantedAt datetime, GrantedByUserId int, updateTime datetime, createdTime datetime, PRIMARY KEY (id),
                 UNIQUE INDEX idx_competitionaccess_competition_userid (competitionId, UserId))';
+        $stmt = $this->db->query($sql);
+
+        $sql = 'CREATE TABLE IF NOT EXISTS McpTokens (id int NOT NULL AUTO_INCREMENT, UserId int NOT NULL, name varchar(50), tokenHash char(64) NOT NULL,
+                lastUsedTime datetime, updateTime datetime, createdTime datetime, PRIMARY KEY (id),
+                UNIQUE INDEX idx_mcptokens_tokenhash (tokenHash), INDEX idx_mcptokens_userid (UserId))';
         $stmt = $this->db->query($sql);
 
         $sql = 'CREATE TABLE IF NOT EXISTS Controls (id int NOT NULL AUTO_INCREMENT, competitionId int NOT NULL, controlNumber int NOT NULL,
@@ -466,6 +479,247 @@ class Helper
         $res->code = 0;
         $res->message = "Devices columns added";
         return $res;
+    }
+
+    public function QueryAll($sql, $values = []) {
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($values);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function GetDevicesViewRows($headBTAddress = '', $competitionId = '', $sortSql = '', $limitSql = '', $visibleToUserId = null) {
+        $cls = DeviceView::class;
+        $sql = 'SELECT CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -6 MINUTE) THEN true ELSE false END recentlyReported,
+        CASE WHEN Devices.connectedToInternetTime > DATE_ADD(SYSDATE(), INTERVAL -1 MINUTE) THEN true ELSE false END connectedToInternet,
+        Devices.*, Competitions.name as competitionName, Controls.controlNumber as controlNumber, Controls.name as controlName, Controls.controlType as controlType, IFNULL(DeviceStatuses.batteryLevel, 0) as batteryLevel, IFNULL(DeviceStatuses.createdTime, "1980-01-01T00:00:08.000Z") as batteryLevelTime
+        FROM Devices LEFT JOIN Competitions ON Devices.competitionId = Competitions.id
+        LEFT JOIN Controls ON Devices.controlId = Controls.id
+        LEFT JOIN DeviceStatuses ON (DeviceStatuses.Id = (SELECT Id FROM DeviceStatuses WHERE BTAddress = Devices.BTAddress ORDER BY createdTime DESC LIMIT 1))';
+
+        $sqlParam = [];
+        $conditions = [];
+        if (trim($headBTAddress) != '') {
+            $conditions[] = 'Devices.headBTAddress = :headBTAddress';
+            $sqlParam['headBTAddress'] = $headBTAddress;
+        }
+        if (trim($competitionId) != '') {
+            $conditions[] = 'Devices.competitionId = :competitionId';
+            $sqlParam['competitionId'] = $competitionId;
+        }
+        if ($visibleToUserId !== null) {
+            // same rule as UserCanMonitorDevice: competition the user can view, or an explicit device grant
+            $conditions[] = '(Devices.competitionId IN (SELECT c.id FROM Competitions c WHERE c.createdByUserId = :visUserId1
+                    OR c.id IN (SELECT ca.competitionId FROM CompetitionAccesses ca WHERE ca.UserId = :visUserId2))
+                OR Devices.BTAddress IN (SELECT da.BTAddress FROM DeviceAccesses da WHERE da.UserId = :visUserId3))';
+            $sqlParam['visUserId1'] = $visibleToUserId;
+            $sqlParam['visUserId2'] = $visibleToUserId;
+            $sqlParam['visUserId3'] = $visibleToUserId;
+        }
+        if ($conditions) {
+            $sql .= ' WHERE ' . implode(' AND ', $conditions);
+        }
+        $sql .= $sortSql . ' ' . $limitSql;
+
+        return $this->GetAllBySql($cls, $sql, $sqlParam);
+    }
+
+    public function BuildCompetitionMeshTopology($competitionId) {
+        $deviceSql = "SELECT Devices.BTAddress, Devices.name, Devices.controlId,
+            UPPER(REPLACE(Devices.BTAddress, ':', '')) AS deviceId,
+            Controls.controlNumber, Controls.controlType, Controls.mapX, Controls.mapY,
+            CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -6 MINUTE) THEN true ELSE false END recentlyReported,
+            CASE WHEN Devices.connectedToInternetTime > DATE_ADD(SYSDATE(), INTERVAL -1 MINUTE) THEN true ELSE false END connectedToInternet
+        FROM Devices LEFT JOIN Controls ON Devices.controlId = Controls.id
+        WHERE Devices.competitionId = :competitionId";
+        $devices = $this->GetAllBySql(MeshTopologyNode::class, $deviceSql, ['competitionId' => $competitionId]);
+
+        $deviceByDeviceId = [];
+        foreach ($devices as $device) {
+            $deviceByDeviceId[strtoupper($device->deviceId)] = $device;
+        }
+
+        $stateSql = "SELECT ms.* FROM MeshStates ms JOIN Devices d ON d.BTAddress = ms.BTAddress
+        WHERE d.competitionId = :competitionId
+          AND ms.updateTime > DATE_ADD(SYSDATE(), INTERVAL -10 MINUTE)";
+        $states = $this->GetAllBySql(MeshState::class, $stateSql, ['competitionId' => $competitionId]);
+        $stateByBTAddress = [];
+        foreach ($states as $state) {
+            $stateByBTAddress[$state->BTAddress] = $state;
+        }
+
+        // Root-only uploads: the newest fresh root snapshot is the tree.
+        $mtCls = MeshTopology::class;
+        $snapshotSql = "SELECT m.* FROM {$mtCls::$tableName} m JOIN Devices d ON d.BTAddress = m.BTAddress
+        WHERE d.competitionId = :competitionId AND m.isRoot = 1
+          AND m.updateTime > DATE_ADD(SYSDATE(), INTERVAL -10 MINUTE)
+        ORDER BY m.snapshotTime DESC LIMIT 1";
+        $snapshot = $this->GetBySql($mtCls, $snapshotSql, ['competitionId' => $competitionId]);
+
+        $res = ['updatedTime' => null, 'health' => null, 'nodes' => [], 'links' => []];
+        if (!$snapshot) {
+            return $res;
+        }
+
+        $snapshotNodes = json_decode($snapshot->nodes, true);
+        if (!is_array($snapshotNodes)) $snapshotNodes = [];
+
+        $addrToDeviceId = [];
+        foreach ($snapshotNodes as $node) {
+            $addrToDeviceId[(int)$node['addr']] = strtoupper($node['deviceId']);
+        }
+
+        $isDrawable = function ($device) {
+            return $device !== null && $device->mapX !== null && $device->mapY !== null;
+        };
+
+        $nodes = [];
+        $drawableDeviceIds = [];
+        foreach ($snapshotNodes as $node) {
+            $deviceId = strtoupper($node['deviceId']);
+            $device = $deviceByDeviceId[$deviceId] ?? null;
+            if (!$isDrawable($device)) continue;
+
+            $parentDeviceId = null;
+            $parentAddr = (int)($node['parent'] ?? 0);
+            if ($parentAddr > 0 && isset($addrToDeviceId[$parentAddr]) && $addrToDeviceId[$parentAddr] !== $deviceId) {
+                $parentDeviceId = $addrToDeviceId[$parentAddr];
+            }
+            $parentDevice = $parentDeviceId !== null ? ($deviceByDeviceId[$parentDeviceId] ?? null) : null;
+
+            $state = $stateByBTAddress[$device->BTAddress] ?? null;
+            $topologyHopCount = isset($node['hopCount']) ? (int)$node['hopCount'] : null;
+            $nodes[] = [
+                'BTAddress' => $device->BTAddress,
+                'deviceId' => $deviceId,
+                'addr' => (int)$node['addr'],
+                'isRoot' => $device->BTAddress === $snapshot->BTAddress,
+                'parentBTAddress' => $isDrawable($parentDevice) ? $parentDevice->BTAddress : null,
+                'hopCount' => $state && $state->hopCount !== null ? (int)$state->hopCount : $topologyHopCount,
+                'state' => $state ? (int)$state->state : null,
+                'pathCost' => $state && $state->pathCost !== null ? (int)$state->pathCost : null,
+                'transmitQueue' => $state && $state->transmitQueue !== null ? (int)$state->transmitQueue : null,
+                'txOk' => $state && $state->txOk !== null ? (int)$state->txOk : null,
+                'txBusy' => $state && $state->txBusy !== null ? (int)$state->txBusy : null,
+                'standby' => $state ? (bool)$state->standby : false,
+                'snapshotTime' => (int)$snapshot->snapshotTime,
+                'controlId' => $device->controlId,
+                'controlNumber' => $device->controlNumber,
+                'controlType' => $device->controlType,
+                'mapX' => $device->mapX,
+                'mapY' => $device->mapY,
+                'deviceName' => $device->name,
+                'recentlyReported' => (bool)$device->recentlyReported,
+                'connectedToInternet' => (bool)$device->connectedToInternet,
+            ];
+            $drawableDeviceIds[$deviceId] = true;
+        }
+
+        // Neighbour links: resolve snapshot-local addr -> deviceId, keep only links
+        // whose both ends are drawable, dedupe A-B/B-A, keep the best (lowest) cost.
+        $links = [];
+        foreach ($snapshotNodes as $node) {
+            $fromDeviceId = strtoupper($node['deviceId']);
+            if (!isset($drawableDeviceIds[$fromDeviceId])) continue;
+            if (empty($node['neighbours']) || !is_array($node['neighbours'])) continue;
+            foreach ($node['neighbours'] as $neighbour) {
+                if (!isset($neighbour['addr'])) continue;
+                $toDeviceId = $addrToDeviceId[(int)$neighbour['addr']] ?? null;
+                if ($toDeviceId === null || $toDeviceId === $fromDeviceId) continue;
+                if (!isset($drawableDeviceIds[$toDeviceId])) continue;
+                $key = $fromDeviceId < $toDeviceId ? "$fromDeviceId|$toDeviceId" : "$toDeviceId|$fromDeviceId";
+                $cost = isset($neighbour['cost']) ? (int)$neighbour['cost'] : null;
+                if (!isset($links[$key]) || ($cost !== null && ($links[$key]['cost'] === null || $cost < $links[$key]['cost']))) {
+                    $links[$key] = [
+                        'fromBTAddress' => $deviceByDeviceId[$fromDeviceId]->BTAddress,
+                        'toBTAddress' => $deviceByDeviceId[$toDeviceId]->BTAddress,
+                        'cost' => $cost,
+                    ];
+                }
+            }
+        }
+
+        $rootState = $stateByBTAddress[$snapshot->BTAddress] ?? null;
+        if ($rootState) {
+            $res['health'] = [
+                'epoch' => $rootState->epoch !== null ? (int)$rootState->epoch : null,
+                'allocatedAddresses' => $rootState->allocatedAddresses !== null ? (int)$rootState->allocatedAddresses : null,
+                'overheadPercent' => $rootState->overheadPercent !== null ? (float)$rootState->overheadPercent : null,
+                'ackTimeoutMs' => $rootState->ackTimeoutMs !== null ? (int)$rootState->ackTimeoutMs : null,
+                'snapshotTime' => (int)$rootState->snapshotTime,
+            ];
+        }
+
+        usort($nodes, function ($a, $b) {
+            $ah = $a['hopCount'] === null ? PHP_INT_MAX : $a['hopCount'];
+            $bh = $b['hopCount'] === null ? PHP_INT_MAX : $b['hopCount'];
+            if ($ah !== $bh) return $ah <=> $bh;
+            return strcmp($a['BTAddress'], $b['BTAddress']);
+        });
+
+        $res['updatedTime'] = (int)$snapshot->snapshotTime;
+        $res['nodes'] = $nodes;
+        $res['links'] = array_values($links);
+        return $res;
+    }
+
+    /**
+     * Competition access rules without $_SESSION / PSR-7, so the MCP endpoint can apply the same rules.
+     * Admins and creators always pass; others need a CompetitionAccesses row.
+     */
+    public function UserHasCompetitionAccess($userId, $isAdmin, $competitionId, $requireEdit = false) {
+        if ($isAdmin) return true;
+        $compCls = Competition::class;
+        $competition = $this->Get($compCls, $compCls::$tableName, $competitionId);
+        if (!$competition) return false;
+        if ($competition->createdByUserId == $userId) return true;
+        try {
+            $compAccessCls = CompetitionAccess::class;
+            $sql = "SELECT accessRole FROM {$compAccessCls::$tableName} WHERE competitionId = :competitionId AND UserId = :UserId";
+            if ($requireEdit) $sql .= " AND accessRole = 'edit'";
+            return $this->GetBySql($compAccessCls, $sql, ['competitionId' => $competitionId, 'UserId' => $userId]) !== null;
+        } catch (\PDOException $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Competitions the user may see, with the user's accessRole ('edit' for admins and creators).
+     */
+    public function GetCompetitionsForUser($userId, $isAdmin) {
+        $comps = $this->QueryAll("SELECT id, name, createdTime, createdByUserId FROM Competitions ORDER BY id LIMIT 200");
+        if ($isAdmin) {
+            foreach ($comps as &$c) { $c['accessRole'] = 'edit'; }
+            unset($c);
+            return $comps;
+        }
+        $grants = [];
+        foreach ($this->QueryAll("SELECT competitionId, accessRole FROM CompetitionAccesses WHERE UserId = :userId", ['userId' => $userId]) as $grant) {
+            $grants[(int)$grant['competitionId']] = $grant['accessRole'];
+        }
+        $visible = [];
+        foreach ($comps as $c) {
+            if ($c['createdByUserId'] == $userId) {
+                $c['accessRole'] = 'edit';
+            } elseif (isset($grants[(int)$c['id']])) {
+                $c['accessRole'] = $grants[(int)$c['id']];
+            } else {
+                continue;
+            }
+            $visible[] = $c;
+        }
+        return $visible;
+    }
+
+    /**
+     * Device monitoring rule without $_SESSION: device in a competition the user can view,
+     * or an explicit DeviceAccesses grant. Mirrors the filter in GetDevicesViewRows.
+     */
+    public function UserCanMonitorDevice($userId, $BTAddress) {
+        $sql = "SELECT 1 FROM Devices d WHERE d.BTAddress = :BTAddress AND (
+                d.competitionId IN (SELECT c.id FROM Competitions c WHERE c.createdByUserId = :userId1
+                    OR c.id IN (SELECT ca.competitionId FROM CompetitionAccesses ca WHERE ca.UserId = :userId2))
+                OR d.BTAddress IN (SELECT da.BTAddress FROM DeviceAccesses da WHERE da.UserId = :userId3)) LIMIT 1";
+        return $this->QueryAll($sql, ['BTAddress' => $BTAddress, 'userId1' => $userId, 'userId2' => $userId, 'userId3' => $userId]) !== [];
     }
 
     /**

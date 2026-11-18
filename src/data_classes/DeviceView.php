@@ -53,6 +53,7 @@ class DeviceView
      */
     public $hardwareVersion;
     public $recentlyReported;
+    public $connectedToInternet;
     public $reportTime;
 	public $updateTime;
     public $createdTime;
@@ -61,6 +62,9 @@ class DeviceView
     public $controlType;
     public $batteryLevel;
     public $batteryLevelTime;
+    public $publicIPAddress;
+    public $localIPAddress;
+    public $ipAddressTime;
 }
 
 /**

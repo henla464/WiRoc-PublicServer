@@ -1,4 +1,7 @@
 <?php
+// Login sessions: 8h idle timeout instead of the host default 24 min; cookie stays session-scoped and HttpOnly.
+ini_set('session.gc_maxlifetime', 8 * 3600);
+session_set_cookie_params(['lifetime' => 0, 'httponly' => true, 'samesite' => 'Lax']);
 session_start();
 
 use DI\Container;
@@ -589,6 +592,7 @@ $app->delete('/api/v1/Users/{userId}', function (Request $request, Response $res
     // Remove the user's own access grants so no orphaned access remains.
     $this->get('helper')->DeleteBySql("DELETE FROM DeviceAccesses WHERE UserId = :id", ['id' => $user->id]);
     $this->get('helper')->DeleteBySql("DELETE FROM CompetitionAccesses WHERE UserId = :id", ['id' => $user->id]);
+    $this->get('helper')->DeleteBySql("DELETE FROM McpTokens WHERE UserId = :id", ['id' => $user->id]);
 
     // Delete the account.
     $this->get('helper')->Delete($user->id, $cls::$tableName);
@@ -706,14 +710,6 @@ $app->get('/api/v1/Devices', function ($request, $response) use ($app) {
      */
 $app->get('/api/v1/DevicesView', function ($request, $response) use ($app) {
 	$cls = DeviceView::class;
-	$sql = 'SELECT CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -6 MINUTE) THEN true ELSE false END recentlyReported, 
-        CASE WHEN Devices.connectedToInternetTime > DATE_ADD(SYSDATE(), INTERVAL -1 MINUTE) THEN true ELSE false END connectedToInternet,
-        Devices.*, Competitions.name as competitionName, Controls.controlNumber as controlNumber, Controls.name as controlName, Controls.controlType as controlType, IFNULL(DeviceStatuses.batteryLevel, 0) as batteryLevel, IFNULL(DeviceStatuses.createdTime, "1980-01-01T00:00:08.000Z") as batteryLevelTime
-        FROM Devices LEFT JOIN Competitions ON Devices.competitionId = Competitions.id
-        LEFT JOIN Controls ON Devices.controlId = Controls.id
-        LEFT JOIN DeviceStatuses ON (DeviceStatuses.Id = (SELECT Id FROM DeviceStatuses WHERE BTAddress = Devices.BTAddress ORDER BY createdTime DESC LIMIT 1))';
-
-    $sqlParam = [];
     $sort = $this->get('helper')->getSort($cls, $request);
     $limit = $this->get('helper')->getLimit($request);
     $queryParams = $request->getQueryParams();
@@ -721,24 +717,9 @@ $app->get('/api/v1/DevicesView', function ($request, $response) use ($app) {
     $headBTAddress = $headBTAddress == 'undefined' ? '': $headBTAddress;
     $competitionId = $queryParams['limitToCompetitionId'] ?? '';
     $competitionId = $competitionId == 'undefined' ? '': $competitionId;
-    
-    if (trim($headBTAddress) != '' || trim($competitionId) != '') {
-        $sql .= ' WHERE ';
-    }
-    if (trim($headBTAddress) != '') {
-        $sql .= 'Devices.headBTAddress = :headBTAddress';
-        $sqlParam['headBTAddress'] = $headBTAddress;
-    }
-    if (trim($headBTAddress) != '' && trim($competitionId) != '') {
-        $sql .= ' AND ';
-    }
-    if (trim($competitionId) != '') {
-        $sql .= 'Devices.competitionId = :competitionId';
-        $sqlParam['competitionId'] = $competitionId;
-    }
-    $sql .= $sort . ' ' . $limit;
-    
-    $response->getBody()->write(json_encode($this->get('helper')->GetAllBySql($cls, $sql, $sqlParam, $request)));
+
+    $rows = $this->get('helper')->GetDevicesViewRows($headBTAddress, $competitionId, $sort, $limit);
+    $response->getBody()->write(json_encode($rows));
     return $response;
 
 })->setName("getDevicesView");
@@ -1309,12 +1290,28 @@ $app->post('/api/v1/Devices', function (Request $request, Response $response) {
 $app->post('/api/v1/Devices/{BTAddress}/SetConnectedToInternetTime', function (Request $request, Response $response) {
     $BTAddress = $request->getAttribute('BTAddress');
     $cls = Device::class;
-    
+
+    $body = json_decode($request->getBody(), true);
+    $localIPAddress = is_array($body) ? ($body['localIPAddress'] ?? null) : null;
+    $localIPAddress = ($localIPAddress && filter_var($localIPAddress, FILTER_VALIDATE_IP)) ? $localIPAddress : null;
+    $publicIPAddress = filter_var($_SERVER['REMOTE_ADDR'] ?? '', FILTER_VALIDATE_IP) ?: null;
+
 	$objectArray = [];
 	$objectArray['BTAddress'] = $BTAddress;
-	$sql = "UPDATE {$cls::$tableName} SET `connectedToInternetTime` = NOW(), `reportTime` = NOW(), `updateTime` = NOW() WHERE BTAddress = :BTAddress";
-    $this->get('helper')->RunSql($sql, $objectArray);
-  	
+	$objectArray['publicIPAddress'] = $publicIPAddress;
+	$objectArray['localIPAddress'] = $localIPAddress;
+	$sql = "UPDATE {$cls::$tableName} SET `connectedToInternetTime` = NOW(), `reportTime` = NOW(), `updateTime` = NOW(),
+	        `publicIPAddress` = COALESCE(:publicIPAddress, `publicIPAddress`),
+	        `localIPAddress` = COALESCE(:localIPAddress, `localIPAddress`),
+	        `ipAddressTime` = NOW() WHERE BTAddress = :BTAddress";
+    try {
+        $this->get('helper')->RunSql($sql, $objectArray);
+    } catch (PDOException $e) {
+        // ponytail: IP columns absent (UpdateDatabaseSchema not run yet) must not break device reporting
+        $this->get('helper')->RunSql("UPDATE {$cls::$tableName} SET `connectedToInternetTime` = NOW(), `reportTime` = NOW(), `updateTime` = NOW() WHERE BTAddress = :BTAddress",
+            ['BTAddress' => $BTAddress]);
+    }
+
     $routeContext = RouteContext::fromRequest($request);
     $routeParser = $routeContext->getRouteParser();
     $btAddressUrl = str_replace(':','%3A', $BTAddress);
@@ -3819,148 +3816,7 @@ $app->get('/api/v1/Competitions/{competitionId}/MeshTopology', function (Request
     $err = $helper->requireCompetitionViewAccess($response, $competitionId);
     if ($err) return $err;
 
-    $deviceSql = "SELECT Devices.BTAddress, Devices.name, Devices.controlId,
-            UPPER(REPLACE(Devices.BTAddress, ':', '')) AS deviceId,
-            Controls.controlNumber, Controls.controlType, Controls.mapX, Controls.mapY,
-            CASE WHEN Devices.reportTime > DATE_ADD(SYSDATE(), INTERVAL -6 MINUTE) THEN true ELSE false END recentlyReported,
-            CASE WHEN Devices.connectedToInternetTime > DATE_ADD(SYSDATE(), INTERVAL -1 MINUTE) THEN true ELSE false END connectedToInternet
-        FROM Devices LEFT JOIN Controls ON Devices.controlId = Controls.id
-        WHERE Devices.competitionId = :competitionId";
-    $devices = $helper->GetAllBySql(MeshTopologyNode::class, $deviceSql, ['competitionId' => $competitionId]);
-
-    $deviceByBTAddress = [];
-    $deviceByDeviceId = [];
-    foreach ($devices as $device) {
-        $deviceByBTAddress[$device->BTAddress] = $device;
-        $deviceByDeviceId[strtoupper($device->deviceId)] = $device;
-    }
-
-    $stateSql = "SELECT ms.* FROM MeshStates ms JOIN Devices d ON d.BTAddress = ms.BTAddress
-        WHERE d.competitionId = :competitionId
-          AND ms.updateTime > DATE_ADD(SYSDATE(), INTERVAL -10 MINUTE)";
-    $states = $helper->GetAllBySql(MeshState::class, $stateSql, ['competitionId' => $competitionId]);
-    $stateByBTAddress = [];
-    foreach ($states as $state) {
-        $stateByBTAddress[$state->BTAddress] = $state;
-    }
-
-    // Root-only uploads: the newest fresh root snapshot is the tree.
-    $mtCls = MeshTopology::class;
-    $snapshotSql = "SELECT m.* FROM {$mtCls::$tableName} m JOIN Devices d ON d.BTAddress = m.BTAddress
-        WHERE d.competitionId = :competitionId AND m.isRoot = 1
-          AND m.updateTime > DATE_ADD(SYSDATE(), INTERVAL -10 MINUTE)
-        ORDER BY m.snapshotTime DESC LIMIT 1";
-    $snapshot = $helper->GetBySql($mtCls, $snapshotSql, ['competitionId' => $competitionId]);
-
-    $res = new \stdClass();
-    $res->updatedTime = null;
-    $res->health = null;
-    $res->nodes = [];
-    $res->links = [];
-    if (!$snapshot) {
-        $response->getBody()->write(json_encode($res));
-        return $response;
-    }
-
-    $snapshotNodes = json_decode($snapshot->nodes, true);
-    if (!is_array($snapshotNodes)) $snapshotNodes = [];
-
-    $addrToDeviceId = [];
-    foreach ($snapshotNodes as $node) {
-        $addrToDeviceId[(int)$node['addr']] = strtoupper($node['deviceId']);
-    }
-
-    $isDrawable = function ($device) {
-        return $device !== null && $device->mapX !== null && $device->mapY !== null;
-    };
-
-    $nodes = [];
-    $drawableDeviceIds = [];
-    foreach ($snapshotNodes as $node) {
-        $deviceId = strtoupper($node['deviceId']);
-        $device = $deviceByDeviceId[$deviceId] ?? null;
-        if (!$isDrawable($device)) continue;
-
-        $parentDeviceId = null;
-        $parentAddr = (int)($node['parent'] ?? 0);
-        if ($parentAddr > 0 && isset($addrToDeviceId[$parentAddr]) && $addrToDeviceId[$parentAddr] !== $deviceId) {
-            $parentDeviceId = $addrToDeviceId[$parentAddr];
-        }
-        $parentDevice = $parentDeviceId !== null ? ($deviceByDeviceId[$parentDeviceId] ?? null) : null;
-
-        $state = $stateByBTAddress[$device->BTAddress] ?? null;
-        $topologyHopCount = isset($node['hopCount']) ? (int)$node['hopCount'] : null;
-        $nodes[] = [
-            'BTAddress' => $device->BTAddress,
-            'deviceId' => $deviceId,
-            'isRoot' => $device->BTAddress === $snapshot->BTAddress,
-            'parentBTAddress' => $isDrawable($parentDevice) ? $parentDevice->BTAddress : null,
-            'hopCount' => $state && $state->hopCount !== null ? (int)$state->hopCount : $topologyHopCount,
-            'state' => $state ? (int)$state->state : null,
-            'pathCost' => $state && $state->pathCost !== null ? (int)$state->pathCost : null,
-            'transmitQueue' => $state && $state->transmitQueue !== null ? (int)$state->transmitQueue : null,
-            'txOk' => $state && $state->txOk !== null ? (int)$state->txOk : null,
-            'txBusy' => $state && $state->txBusy !== null ? (int)$state->txBusy : null,
-            'standby' => $state ? (bool)$state->standby : false,
-            'snapshotTime' => (int)$snapshot->snapshotTime,
-            'controlId' => $device->controlId,
-            'controlNumber' => $device->controlNumber,
-            'controlType' => $device->controlType,
-            'mapX' => $device->mapX,
-            'mapY' => $device->mapY,
-            'deviceName' => $device->name,
-            'recentlyReported' => (bool)$device->recentlyReported,
-            'connectedToInternet' => (bool)$device->connectedToInternet,
-        ];
-        $drawableDeviceIds[$deviceId] = true;
-    }
-
-    // Neighbour links: resolve snapshot-local addr -> deviceId, keep only links
-    // whose both ends are drawable, dedupe A-B/B-A, keep the best (lowest) cost.
-    $links = [];
-    foreach ($snapshotNodes as $node) {
-        $fromDeviceId = strtoupper($node['deviceId']);
-        if (!isset($drawableDeviceIds[$fromDeviceId])) continue;
-        if (empty($node['neighbours']) || !is_array($node['neighbours'])) continue;
-        foreach ($node['neighbours'] as $neighbour) {
-            if (!isset($neighbour['addr'])) continue;
-            $toDeviceId = $addrToDeviceId[(int)$neighbour['addr']] ?? null;
-            if ($toDeviceId === null || $toDeviceId === $fromDeviceId) continue;
-            if (!isset($drawableDeviceIds[$toDeviceId])) continue;
-            $key = $fromDeviceId < $toDeviceId ? "$fromDeviceId|$toDeviceId" : "$toDeviceId|$fromDeviceId";
-            $cost = isset($neighbour['cost']) ? (int)$neighbour['cost'] : null;
-            if (!isset($links[$key]) || ($cost !== null && ($links[$key]['cost'] === null || $cost < $links[$key]['cost']))) {
-                $links[$key] = [
-                    'fromBTAddress' => $deviceByDeviceId[$fromDeviceId]->BTAddress,
-                    'toBTAddress' => $deviceByDeviceId[$toDeviceId]->BTAddress,
-                    'cost' => $cost,
-                ];
-            }
-        }
-    }
-
-    $rootState = $stateByBTAddress[$snapshot->BTAddress] ?? null;
-    if ($rootState) {
-        $res->health = [
-            'epoch' => $rootState->epoch !== null ? (int)$rootState->epoch : null,
-            'allocatedAddresses' => $rootState->allocatedAddresses !== null ? (int)$rootState->allocatedAddresses : null,
-            'overheadPercent' => $rootState->overheadPercent !== null ? (float)$rootState->overheadPercent : null,
-            'ackTimeoutMs' => $rootState->ackTimeoutMs !== null ? (int)$rootState->ackTimeoutMs : null,
-            'snapshotTime' => (int)$rootState->snapshotTime,
-        ];
-    }
-
-    usort($nodes, function ($a, $b) {
-        $ah = $a['hopCount'] === null ? PHP_INT_MAX : $a['hopCount'];
-        $bh = $b['hopCount'] === null ? PHP_INT_MAX : $b['hopCount'];
-        if ($ah !== $bh) return $ah <=> $bh;
-        return strcmp($a['BTAddress'], $b['BTAddress']);
-    });
-
-    $res->updatedTime = (int)$snapshot->snapshotTime;
-    $res->nodes = $nodes;
-    $res->links = array_values($links);
-    $response->getBody()->write(json_encode($res));
+    $response->getBody()->write(json_encode($helper->BuildCompetitionMeshTopology($competitionId)));
     return $response;
 })->setName("getCompetitionMeshTopology");
 
@@ -5450,6 +5306,7 @@ $app->post('/api/v1/Users/DeleteAccount', function (Request $request, Response $
     // Remove the user's own access grants so no orphaned access remains.
     $this->get('helper')->DeleteBySql("DELETE FROM DeviceAccesses WHERE UserId = :id", ['id' => $user->id]);
     $this->get('helper')->DeleteBySql("DELETE FROM CompetitionAccesses WHERE UserId = :id", ['id' => $user->id]);
+    $this->get('helper')->DeleteBySql("DELETE FROM McpTokens WHERE UserId = :id", ['id' => $user->id]);
 
     // Delete the account.
     $this->get('helper')->Delete($user->id, $cls::$tableName);
@@ -6305,6 +6162,77 @@ $app->post('/api/v1/elevation', function (Request $request, Response $response) 
     $response->getBody()->write($result);
     return $response->withHeader('Content-Type', 'application/json')->withStatus($httpCode);
 })->setName("postElevation");
+
+/**
+ * @SWG\Get(
+ *     path="/api/v1/McpTokens",
+ *     description="List the MCP access tokens of the logged in user.",
+ *     operationId="getMcpTokens",
+ *     produces={"application/json"},
+ *     @SWG\Response(response=200, description="Tokens (id, name, createdTime, lastUsedTime)"),
+ *     security={ {} }
+ * )
+ */
+$app->get('/api/v1/McpTokens', function (Request $request, Response $response) {
+    $rows = $this->get('helper')->QueryAll(
+        "SELECT id, name, createdTime, lastUsedTime FROM McpTokens WHERE UserId = :UserId ORDER BY id",
+        ['UserId' => $_SESSION['userId']]
+    );
+    $response->getBody()->write(json_encode($rows));
+    return $response;
+})->setName("getMcpTokens");
+
+/**
+ * @SWG\Post(
+ *     path="/api/v1/McpTokens",
+ *     description="Create an MCP access token for the logged in user. The token is only returned once.",
+ *     operationId="postMcpToken",
+ *     produces={"application/json"},
+ *     @SWG\Response(response=200, description="id, name and the new token"),
+ *     security={ {} }
+ * )
+ */
+$app->post('/api/v1/McpTokens', function (Request $request, Response $response) {
+    $body = json_decode($request->getBody(), true);
+    $name = is_array($body) ? trim((string)($body['name'] ?? '')) : '';
+    if ($name === '') $name = 'Claude';
+    if (strlen($name) > 50) $name = substr($name, 0, 50);
+
+    $token = 'wiroc_' . bin2hex(random_bytes(24));
+    $this->get('helper')->RunSql(
+        "INSERT INTO McpTokens (UserId, name, tokenHash, createdTime) VALUES (:UserId, :name, :tokenHash, NOW())",
+        ['UserId' => $_SESSION['userId'], 'name' => $name, 'tokenHash' => hash('sha256', $token)]
+    );
+
+    $res = new \stdClass();
+    $res->id = (int)$this->get('db')->lastInsertId();
+    $res->name = $name;
+    $res->token = $token;
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("postMcpToken");
+
+/**
+ * @SWG\Delete(
+ *     path="/api/v1/McpTokens/{tokenId}",
+ *     description="Delete one of the logged in user's MCP access tokens.",
+ *     operationId="deleteMcpToken",
+ *     produces={"application/json"},
+ *     @SWG\Response(response=200, description="command response"),
+ *     security={ {} }
+ * )
+ */
+$app->delete('/api/v1/McpTokens/{tokenId}', function (Request $request, Response $response) {
+    $this->get('helper')->RunSql(
+        "DELETE FROM McpTokens WHERE id = :id AND UserId = :UserId",
+        ['id' => $request->getAttribute('tokenId'), 'UserId' => $_SESSION['userId']]
+    );
+    $res = new CommandResponse();
+    $res->code = 0;
+    $res->message = "Token deleted";
+    $response->getBody()->write(json_encode($res));
+    return $response;
+})->setName("deleteMcpToken");
 
 $app->run();
 

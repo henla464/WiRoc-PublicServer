@@ -145,7 +145,10 @@ class AuthorizationMap {
             'getLogArchivesAnalyze',
             'postElevation',
             'postDeleteAccountRequest',
-            'postDeleteAccount');
+            'postDeleteAccount',
+            'getMcpTokens',
+            'postMcpToken',
+            'deleteMcpToken');
     }
 
     public function needsAuthorization(ServerRequestInterface $request) {

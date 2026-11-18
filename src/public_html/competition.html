@@ -2866,6 +2866,8 @@
                 ? "mesh root standby"
                 : "mesh root"
               : "mesh node") +
+            "<br/>Address: " +
+            (node.addr != null ? node.addr : "-") +
             "<br/>Status: " +
             (node.state === 2
               ? "joined"

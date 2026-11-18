@@ -68,6 +68,9 @@ class Device
     public $releaseStatusKeyName; /* this device will only see new firmwares with this release status or higher */
     public $reportTime;
     public $connectedToInternetTime;
+    public $publicIPAddress;
+    public $localIPAddress;
+    public $ipAddressTime;
     public $updateTime;
     public $createdTime;
 }
